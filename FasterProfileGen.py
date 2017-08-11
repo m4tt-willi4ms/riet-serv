@@ -56,7 +56,9 @@ def set_data_flags(two_theta,two_theta_peaks,y_data_flags,delta_theta=0.5):
       num_overlapping_profiles = 0
       for j,tt_peak in enumerate(two_theta_peaks):
          if abs(tt-tt_peak) < delta_theta and num_overlapping_profiles < max_overlapping_profiles:
-            y_data_flags[i,num_overlapping_profiles] = j
+            if abs(tt-tt_peak) < 0.01:
+               print 'Two-theta: {}, Peak: {}, (i,j) = ({},{})'.format(tt,tt_peak,i,j)
+            y_data_flags[i,num_overlapping_profiles] = j+1
             num_overlapping_profiles += 1
 
 def Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags):
@@ -66,7 +68,8 @@ def Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags):
       for j in xrange(0,y_data_flags.all()[1],1):
          if not y_data_flags[i,j] == 0:
             tmp_val += PseudoVoigtProfile(x,two_theta[i], \
-                              Rel_Peak_Intensity[y_data_flags[i,j]][0],Rel_Peak_Intensity[y_data_flags[i,j]][1])
+                              Rel_Peak_Intensity[y_data_flags[i,j]-1][0],Rel_Peak_Intensity[y_data_flags[i,j]-1][1])
+      # TODO: Add background contribution
       result[i] = tmp_val
    return result
 
@@ -128,23 +131,17 @@ def WSS(two_theta,x,y,Rel_Peak_Intensity,y_data_flags):
    f = 0
    # set_data_flags(two_theta,zip(*Rel_Peak_Intensity)[0],y_data_flags)
    # y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags)
+   y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags)
    for i in xrange(0,len(two_theta),1):
-      for j in xrange(0,y_data_flags.all()[1],1):
-         y_calc = 0
-         if not y_data_flags[i,j] == 0:
-            y_calc += PseudoVoigtProfile(x,two_theta[i], \
-               Rel_Peak_Intensity[y_data_flags[i,j]][0],Rel_Peak_Intensity[y_data_flags[i,j]][1])
-      f+= 1/y[i]*(y[i]-y_calc)**2
+      f+= 1/y[i]*(y[i]-y_calc[i])**2
    return f
 
 def WSS_grad(two_theta,x,y,f,epsilon,Rel_Peak_Intensity,y_data_flags):
-
    grad = flex.double(len(x))
    for j in xrange(0,len(x),1):
-      x[j] = x[j]+epsilon
+      x[j] += epsilon
       grad[j] = (WSS(two_theta,x,y,Rel_Peak_Intensity,y_data_flags)-f)/epsilon
-      x[j] = x[j]-epsilon
-      print grad[j]
+      x[j] -= epsilon
    return grad
 
 def Background_Polynomial(two_theta,x_bkgd):
@@ -175,11 +172,11 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
       d_min=d_min).sort()
    # f_miller_indices = f_miller_set.indices() 
 
-   for scatterer in tmp_structure.scatterers():
-      if (scatterer.label == "Al1"):
-         scatterer.scattering_type = "Al"
-      if (scatterer.label == "O1"):
-         scatterer.scattering_type = "O"
+   # for scatterer in tmp_structure.scatterers():
+   #    if (scatterer.label == "Al1"):
+   #       scatterer.scattering_type = "Al"
+   #    if (scatterer.label == "O1"):
+   #       scatterer.scattering_type = "O"
 
    # wavelength = 1.54
    # wavelength = 1.540593 
@@ -204,7 +201,7 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
    # tmp_structure.replace_scatterers(tmp_structure.scatterers(), \
       # site_symmetry_table='existing')
    # tmp_structure.show_scatterers()
-   tmp_structure.scattering_type_registry(table="wk1995"), # "it1992", "wk1995" "n_gaussian"\
+   tmp_structure.scattering_type_registry(table="it1992"), # "it1992", "wk1995" "n_gaussian"\
       # types_without_a_scattering_contribution=["?"])
    # tmp_structure.set_inelastic_form_factors( \
    #    photon=wavelengths.characteristic(lammbda),table="sasaki")
@@ -278,18 +275,18 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
 def driver1(use_fortran_library=False):
    two_theta = []
    y = []
-   with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
-   # with open(r"Jade-Al2O3-Sim.xye") as file:
+   # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
+   with open(r"Jade-Al2O3-Sim.xye") as file:
       for line in file.readlines()[1:]:
-         two_thetatmp, ytmp, ztmp = line.split()
-         # two_thetatmp, ytmp = line.split()
+         # two_thetatmp, ytmp, ztmp = line.split()
+         two_thetatmp, ytmp = line.split()
          if float(two_thetatmp) < 80.0:
             two_theta.append(float(two_thetatmp))
             y.append(float(ytmp))
    n = 6
    x = flex.double(n)
    x[0] = 0.0
-   x[1] = 0.05
+   x[1] = 0.0
    x[2] = 0.0
    x[3] = 0.0
    x[4] = 0.0001
@@ -312,6 +309,8 @@ def driver1(use_fortran_library=False):
 
    delta_theta = 0.5
    set_data_flags(two_theta,zip(*Relative_Peak_Intensity)[0],y_data_flags,delta_theta)
+
+   y_data_flags.to_list()
 
    # for i in xrange(0,len(two_theta),1):
    #    print 'Two-theta = {}: '.format(two_theta[i]),
@@ -366,12 +365,12 @@ def driver1(use_fortran_library=False):
    l=l,
    u=u,
    nbd=nbd,
-   factr=1.0e+7,
+   factr=1.0e+12,
    pgtol=1.0e-5,
    iprint=iprint)
 
    f = WSS(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
-   epsilon = 1e-8
+   epsilon = 1e-9
    g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,y_data_flags)
 
    labels = ["eta", "two_thetapeak", "U", "V", "W", "Amplitude"]#, "x_bkgd_0", \
@@ -465,6 +464,7 @@ def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Pea
    iprint=iprint)
 
    f = WSS(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+
    epsilon = 1e-8
    g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,y_data_flags)
 
