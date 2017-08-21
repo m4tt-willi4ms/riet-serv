@@ -73,7 +73,6 @@ def Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags):
       result[i] = tmp_val
    return result
 
-
 # def ycalc_plot(x,two_theta):
 #    # eta=x[0]
 #    # two_thetapeak = x[1]
@@ -172,11 +171,11 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
       d_min=d_min).sort()
    # f_miller_indices = f_miller_set.indices() 
 
-   # for scatterer in tmp_structure.scatterers():
-   #    if (scatterer.label == "Al1"):
-   #       scatterer.scattering_type = "Al"
-   #    if (scatterer.label == "O1"):
-   #       scatterer.scattering_type = "O"
+   for scatterer in tmp_structure.scatterers():
+      if (scatterer.label == "Al1"):
+         scatterer.scattering_type = "Al"
+      if (scatterer.label == "O1"):
+         scatterer.scattering_type = "O"
 
    # wavelength = 1.54
    # wavelength = 1.540593 
@@ -296,10 +295,14 @@ def driver1(use_fortran_library=False):
    # x[8] = 0
    #Test7
 
+   t2 = time.time()
    fn = "1000032.cif"
    # fn = "9007634.cif"
    Relative_Peak_Intensity = Rel_Peak_Intensity(fn) \
                               + Rel_Peak_Intensity(fn,"CUA2")
+
+   t3 = time.time()
+   print str(round(t3-t2,4)) + " seconds\n"
 
    # print zip(*Relative_Peak_Intensity)
    # print Relative_Peak_Intensity
@@ -310,7 +313,7 @@ def driver1(use_fortran_library=False):
    delta_theta = 0.5
    set_data_flags(two_theta,zip(*Relative_Peak_Intensity)[0],y_data_flags,delta_theta)
 
-   y_data_flags.to_list()
+   # y_data_flags.to_list()
 
    # for i in xrange(0,len(two_theta),1):
    #    print 'Two-theta = {}: '.format(two_theta[i]),
@@ -343,9 +346,9 @@ def driver1(use_fortran_library=False):
    nbd[0] = 2
    l[0] = 0
    u[0] = 1
-   nbd[4] = 2
-   l[4] = -0.0005
-   u[4] = 0.0005
+   # nbd[4] = 2
+   # l[4] = -0.0005
+   # u[4] = 0.0005
    # nbd[2] = 2
    # l[2] = -0.005
    # u[2] = 0.005
