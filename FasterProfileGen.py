@@ -37,8 +37,10 @@ def two_thetabar_squared(two_theta,two_thetapeak,U,V,W):
    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
    return (two_theta-two_thetapeak)**2/omegaUVW_squared
 
-
-def PseudoVoigtProfile(x,two_theta,two_theta_calc_peak,I_res_calc):
+def PseudoVoigtProfile(x,two_theta,two_theta_calc_peak,I_res_calc,delta_theta):
+   result = np.zeros(len(two_theta))
+   mask = np.abs(two_theta-two_theta_calc_peak) < delta_theta
+   print two_theta[mask]
    eta=x[0]
    two_theta0 = x[1]
    U = x[2]
@@ -50,46 +52,31 @@ def PseudoVoigtProfile(x,two_theta,two_theta_calc_peak,I_res_calc):
    return I_res_calc*Amp*(eta/(1 \
          +tt_bar_sq) +(1-eta)*np.exp(-np.log(2)*tt_bar_sq))
 
-def set_data_flags(two_theta,two_theta_peaks,y_data_flags,delta_theta=0.5):
-   max_overlapping_profiles = y_data_flags.all()[1]
-   for i, tt in enumerate(two_theta):
-      num_overlapping_profiles = 0
-      for j,tt_peak in enumerate(two_theta_peaks):
-         if abs(tt-tt_peak) < delta_theta and num_overlapping_profiles < max_overlapping_profiles:
-            if abs(tt-tt_peak) < 0.01:
-               print 'Two-theta: {}, Peak: {}, (i,j) = ({},{})'.format(tt,tt_peak,i,j)
-            y_data_flags[i,num_overlapping_profiles] = j+1
-            num_overlapping_profiles += 1
-
-def Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags):
-   result = flex.double(len(two_theta))
-   for i in xrange(0,len(two_theta),1):
-      tmp_val = 0
-      for j in xrange(0,y_data_flags.all()[1],1):
-         if not y_data_flags[i,j] == 0:
-            tmp_val += PseudoVoigtProfile(x,two_theta[i], \
-                              Rel_Peak_Intensity[y_data_flags[i,j]-1][0],Rel_Peak_Intensity[y_data_flags[i,j]-1][1])
-      # TODO: Add background contribution
-      result[i] = tmp_val
+def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
+   print Rel_Peak_Intensity
+   two_theta_peaks = Rel_Peak_Intensity[:,0]
+   two_theta_peaks.shape = (len(Rel_Peak_Intensity),1)
+   print two_theta_peaks
+   mask = np.abs(two_theta-two_theta_peaks)< delta_theta
+   print mask
+   result = np.zeros(len(two_theta))
+   result += np.sum(PseudoVoigtProfile(x,two_theta,Rel_Peak_Intensity[:,0],Rel_Peak_Intensity[:,1],delta_theta))
+   # result = flex.double(len(two_theta))
+   # for i in xrange(0,len(two_theta),1):
+   #    tmp_val = 0
+   #    for j in xrange(0,delta_theta.all()[1],1):
+   #       if not delta_theta[i,j] == 0:
+   #          tmp_val += PseudoVoigtProfile(x,two_theta[i], \
+   #                            Rel_Peak_Intensity[delta_theta[i,j]-1][0],Rel_Peak_Intensity[delta_theta[i,j]-1][1])
+   #    # TODO: Add background contribution
+   #    result[i] = tmp_val
    return result
 
-# def ycalc_plot(x,two_theta):
-#    # eta=x[0]
-#    # two_thetapeak = x[1]
-#    # Uval = x[2]
-#    # Vval = x[3]
-#    # Wval = x[4]
-#    # Amp = x[5]
-#    # yf = Amp*(eta/(1+two_thetabar_squared_plot(two_theta,two_thetapeak,Uval,Vval,Wval))+(1-eta)*np.exp(-np.log(2)*two_thetabar_squared_plot(two_theta,two_thetapeak,Uval,Vval,Wval)))
-#    return yf
-#    # for 2t in two_theta:
-
-
-def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,y_data_flags):
+def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    plt.figure(figsize=(12, 8))
    plt.subplot(3,1,1)
    # for i in xrange(0,len(two_theta)):
-   #    if y_data_flags[i]:
+   #    if delta_theta[i]:
    #       color = 'blue'
    #    else: color = 'green'
    #    plt.scatter(two_theta[i],y[i], color=color,s=1)
@@ -97,13 +84,13 @@ def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,y_data_flags):
    plt.title(r"Profile: $Al_2 O_3$ - "+ filename)
    # plt.axis([20,60,0,1500])
 
-   plt.plot(two_theta,Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags), label=r'$I_{\rm calc}$')
+   plt.plot(two_theta,Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta), label=r'$I_{\rm calc}$')
    plt.legend(bbox_to_anchor=(.8,.7))
    plt.ylabel(r"$I$")
 
    plt.subplot(3,1,2)
    # for i in xrange(0,len(two_theta)):
-   #    if y_data_flags[i]:
+   #    if delta_theta[i]:
    #       color = 'blue'
    #    else: color = 'green'
    #    plt.scatter(two_theta[i],y[i], color=color,s=1)
@@ -111,13 +98,13 @@ def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,y_data_flags):
    # plt.title(r"Profile: $Al_2 O_3$")
    # plt.axis([20,60,0,1500])
 
-   plt.plot(two_theta,Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags), label=r'$I_{\rm calc}$')
+   plt.plot(two_theta,Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta), label=r'$I_{\rm calc}$')
    plt.legend(bbox_to_anchor=(.8,.7))
    plt.ylabel(r"$I$")
 
    plt.subplot(3,1,3)
    zf = flex.double(len(two_theta))
-   y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags)
+   y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta)
    for i in xrange(len(two_theta)):
       zf[i] = 1/y[i]*(y[i]-y_calc[i])**2
    plt.scatter(two_theta,zf)
@@ -126,20 +113,15 @@ def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,y_data_flags):
 
    plt.show()#block=False)
 
-def WSS(two_theta,x,y,Rel_Peak_Intensity,y_data_flags):
-   f = 0
-   # set_data_flags(two_theta,zip(*Rel_Peak_Intensity)[0],y_data_flags)
-   # y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags)
-   y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,y_data_flags)
-   for i in xrange(0,len(two_theta),1):
-      f+= 1/y[i]*(y[i]-y_calc[i])**2
-   return f
+def WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta):
+   y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta)
+   return np.sum(1/y*(y-y_calc)**2)
 
-def WSS_grad(two_theta,x,y,f,epsilon,Rel_Peak_Intensity,y_data_flags):
+def WSS_grad(two_theta,x,y,f,epsilon,Rel_Peak_Intensity,delta_theta):
    grad = flex.double(len(x))
    for j in xrange(0,len(x),1):
       x[j] += epsilon
-      grad[j] = (WSS(two_theta,x,y,Rel_Peak_Intensity,y_data_flags)-f)/epsilon
+      grad[j] = (WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta)-f)/epsilon
       x[j] -= epsilon
    return grad
 
@@ -282,6 +264,7 @@ def driver1(use_fortran_library=False):
          if float(two_thetatmp) < 80.0:
             two_theta.append(float(two_thetatmp))
             y.append(float(ytmp))
+   # n: Number of refinement parameters
    n = 6
    x = flex.double(n)
    x[0] = 0.0
@@ -294,35 +277,38 @@ def driver1(use_fortran_library=False):
    # x[7] = 0
    # x[8] = 0
    #Test7
+   two_theta = np.array(two_theta)
+   y = np.array(y)
 
    t2 = time.time()
    fn = "1000032.cif"
    # fn = "9007634.cif"
    Relative_Peak_Intensity = Rel_Peak_Intensity(fn) \
                               + Rel_Peak_Intensity(fn,"CUA2")
+   Relative_Peak_Intensity = np.array(Relative_Peak_Intensity)
 
    t3 = time.time()
    print str(round(t3-t2,4)) + " seconds\n"
 
    # print zip(*Relative_Peak_Intensity)
    # print Relative_Peak_Intensity
-   max_overlapping_profiles = 5
-   y_data_flags = flex.int(len(two_theta*max_overlapping_profiles))
-   y_data_flags.reshape(flex.grid(len(two_theta),max_overlapping_profiles))
+   # max_overlapping_profiles = 5
+   # delta_theta = flex.int(len(two_theta*max_overlapping_profiles))
+   # delta_theta.reshape(flex.grid(len(two_theta),max_overlapping_profiles))
 
    delta_theta = 0.5
-   set_data_flags(two_theta,zip(*Relative_Peak_Intensity)[0],y_data_flags,delta_theta)
+   # set_data_flags(two_theta,zip(*Relative_Peak_Intensity)[0],delta_theta,delta_theta)
 
-   # y_data_flags.to_list()
+   # delta_theta.to_list()
 
    # for i in xrange(0,len(two_theta),1):
    #    print 'Two-theta = {}: '.format(two_theta[i]),
-   #    for j in xrange(0,y_data_flags.all()[1],1):
-   #       print y_data_flags[i,j],
+   #    for j in xrange(0,delta_theta.all()[1],1):
+   #       print delta_theta[i,j],
    #    print ''
-   # print list(y_data_flags)
-   # print y_data_flags[]
-   # print y_data_flags.as_numpy_array().tostring()
+   # print list(delta_theta)
+   # print delta_theta[]
+   # print delta_theta.as_numpy_array().tostring()
 
    nbd = flex.int(n)
    # x = flex.double(n)
@@ -372,9 +358,9 @@ def driver1(use_fortran_library=False):
    pgtol=1.0e-5,
    iprint=iprint)
 
-   f = WSS(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+   f = WSS(two_theta,x.as_numpy_array(),y,Relative_Peak_Intensity,delta_theta)
    epsilon = 1e-9
-   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,y_data_flags)
+   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
 
    labels = ["eta", "two_thetapeak", "U", "V", "W", "Amplitude"]#, "x_bkgd_0", \
    #"x_bkgd_1", "x_bkgd_2"]
@@ -382,14 +368,14 @@ def driver1(use_fortran_library=False):
    for i in xrange(0,len(labels),1):
       print labels[i] + ": " + str(x[i])
 
-   showplot(fn,two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+   showplot(fn,two_theta,x,y,Relative_Peak_Intensity,delta_theta)
 
    t0 = time.time()
 
    while True:
       if (minimizer.process(x, f, g, use_fortran_library)):
-         f = WSS(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
-         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,y_data_flags)
+         f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
+         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
       elif (minimizer.is_terminated()):
          break
 
@@ -410,7 +396,7 @@ def driver1(use_fortran_library=False):
 
    print "\nTime elapsed: " + str(round(totaltime,4)) + " seconds\n"
 
-   showplot(fn,two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+   showplot(fn,two_theta,x,y,Relative_Peak_Intensity,delta_theta)
 
 
 
@@ -449,7 +435,7 @@ def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Pea
    two_theta_peaks = zip(*Relative_Peak_Intensity)[0]
    print two_theta_peaks
 
-   y_data_flags = set_data_flags(two_theta_total,two_theta_peaks,delta_theta)
+   delta_theta = set_data_flags(two_theta_total,two_theta_peaks,delta_theta)
 
 
 
@@ -466,10 +452,10 @@ def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Pea
    pgtol=1.0e-5,
    iprint=iprint)
 
-   f = WSS(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+   f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
 
    epsilon = 1e-8
-   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,y_data_flags)
+   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
 
    labels = ["eta", "two_thetapeak", "U", "V", "W", "Amplitude", "x_bkgd_0", \
    "x_bkgd_1", "x_bkgd_2"]
@@ -479,15 +465,15 @@ def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Pea
 
    exit()
 
-   showplot(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+   showplot(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
 
    t0 = time.time()
 
 
    while True:
       if (minimizer.process(x, f, g, use_fortran_library)):
-         f = WSS(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
-         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,y_data_flags)
+         f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
+         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
       elif (minimizer.is_terminated()):
          break
 
@@ -508,7 +494,7 @@ def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Pea
 
    print "\nTime elapsed: " + str(round(totaltime,4)) + " seconds\n"
 
-   showplot(two_theta,x,y,Relative_Peak_Intensity,y_data_flags)
+   showplot(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
 
 def run():
    # driver1(use_fortran_library=("--fortran" in sys.argv[1:]))
