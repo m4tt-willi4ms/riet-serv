@@ -24,7 +24,7 @@ from libtbx import easy_pickle
 
 def two_thetabar_squared(two_theta,two_thetapeak,U,V,W):
    # tan_theta_mid = math.tan(math.pi/360*two_theta_mid)
-   tan_thetapeak = math.tan(math.pi/360.0*two_thetapeak)
+   tan_thetapeak = np.tan(math.pi/360.0*two_thetapeak)
    # omegaUVW_squared = abs(U*(tan_thetapeak-tan_theta_mid)**2 \
    #    +V*(tan_thetapeak-tan_theta_mid)+W)
    #tantwo_thetapeak = math.tan(math.pi/360*two_thetapeak)
@@ -37,30 +37,38 @@ def two_thetabar_squared(two_theta,two_thetapeak,U,V,W):
    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
    return (two_theta-two_thetapeak)**2/omegaUVW_squared
 
-def PseudoVoigtProfile(x,two_theta,two_theta_calc_peak,I_res_calc,delta_theta):
-   result = np.zeros(len(two_theta))
-   mask = np.abs(two_theta-two_theta_calc_peak) < delta_theta
-   print two_theta[mask]
-   eta=x[0]
-   two_theta0 = x[1]
-   U = x[2]
-   V = x[3]
-   W = x[4]
-   Amp = x[5]
+def Add(a,b):
+   return a+b
+
+def PseudoVoigtProfile(eta,two_theta0,U,V,W,Amp,two_theta,two_theta_calc_peak,I_res_calc):
    tt_bar_sq = two_thetabar_squared(two_theta,two_theta_calc_peak \
       +two_theta0,U,V,W)
    return I_res_calc*Amp*(eta/(1 \
          +tt_bar_sq) +(1-eta)*np.exp(-np.log(2)*tt_bar_sq))
 
 def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
-   print Rel_Peak_Intensity
+   # print Rel_Peak_Intensity
    two_theta_peaks = Rel_Peak_Intensity[:,0]
    two_theta_peaks.shape = (len(Rel_Peak_Intensity),1)
-   print two_theta_peaks
-   mask = np.abs(two_theta-two_theta_peaks)< delta_theta
-   print mask
+   Intensities = Rel_Peak_Intensity[:,1]
+   Intensities.shape = (len(Rel_Peak_Intensity),1)
+   # print two_theta_peaks
+   # Rel_Peak_Intensity = Rel_Peak_Intensity.T
+   mask = np.abs(two_theta - two_theta_peaks)< delta_theta
+   # print mask
+   # PVProfileVec = np.vectorize(PseudoVoigtProfile,excluded=['eta','two_theta0','U','V','W','Amp','delta_theta','two_theta_calc_peak','I_res_calc'])
+   
    result = np.zeros(len(two_theta))
-   result += np.sum(PseudoVoigtProfile(x,two_theta,Rel_Peak_Intensity[:,0],Rel_Peak_Intensity[:,1],delta_theta))
+   for i in xrange(0,len(Rel_Peak_Intensity),1):
+      result[mask[i]] += PseudoVoigtProfile(
+          x[0], # eta
+         x[1], # two_theta_0
+         x[2], # U
+         x[3], # V
+         x[4], # W
+         x[5], # Amplitude
+         two_theta[mask[i]],two_theta_peaks[i],Intensities[i])
+   return result
    # result = flex.double(len(two_theta))
    # for i in xrange(0,len(two_theta),1):
    #    tmp_val = 0
@@ -70,7 +78,6 @@ def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
    #                            Rel_Peak_Intensity[delta_theta[i,j]-1][0],Rel_Peak_Intensity[delta_theta[i,j]-1][1])
    #    # TODO: Add background contribution
    #    result[i] = tmp_val
-   return result
 
 def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    plt.figure(figsize=(12, 8))
@@ -267,12 +274,12 @@ def driver1(use_fortran_library=False):
    # n: Number of refinement parameters
    n = 6
    x = flex.double(n)
-   x[0] = 0.0
-   x[1] = 0.0
-   x[2] = 0.0
-   x[3] = 0.0
-   x[4] = 0.0001
-   x[5] = 0.001
+   x[0] = 0.0 # eta
+   x[1] = 0.0 # two_theta_0
+   x[2] = 0.0 # U
+   x[3] = 0.0 # V
+   x[4] = 0.0001 # W
+   x[5] = 0.001 # Amplitude
    # x[6] = 0
    # x[7] = 0
    # x[8] = 0
