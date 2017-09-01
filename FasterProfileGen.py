@@ -37,9 +37,6 @@ def two_thetabar_squared(two_theta,two_thetapeak,U,V,W):
    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
    return (two_theta-two_thetapeak)**2/omegaUVW_squared
 
-def Add(a,b):
-   return a+b
-
 def PseudoVoigtProfile(eta,two_theta0,U,V,W,Amp,two_theta,two_theta_calc_peak,I_res_calc):
    tt_bar_sq = two_thetabar_squared(two_theta,two_theta_calc_peak \
       +two_theta0,U,V,W)
@@ -52,12 +49,7 @@ def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
    two_theta_peaks.shape = (len(Rel_Peak_Intensity),1)
    Intensities = Rel_Peak_Intensity[:,1]
    Intensities.shape = (len(Rel_Peak_Intensity),1)
-   # print two_theta_peaks
-   # Rel_Peak_Intensity = Rel_Peak_Intensity.T
    mask = np.abs(two_theta - two_theta_peaks)< delta_theta
-   # print mask
-   # PVProfileVec = np.vectorize(PseudoVoigtProfile,excluded=['eta','two_theta0','U','V','W','Amp','delta_theta','two_theta_calc_peak','I_res_calc'])
-   
    result = np.zeros(len(two_theta))
    for i in xrange(0,len(Rel_Peak_Intensity),1):
       result[mask[i]] += PseudoVoigtProfile(
@@ -68,16 +60,7 @@ def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
          x[4], # W
          x[5], # Amplitude
          two_theta[mask[i]],two_theta_peaks[i],Intensities[i])
-   return result
-   # result = flex.double(len(two_theta))
-   # for i in xrange(0,len(two_theta),1):
-   #    tmp_val = 0
-   #    for j in xrange(0,delta_theta.all()[1],1):
-   #       if not delta_theta[i,j] == 0:
-   #          tmp_val += PseudoVoigtProfile(x,two_theta[i], \
-   #                            Rel_Peak_Intensity[delta_theta[i,j]-1][0],Rel_Peak_Intensity[delta_theta[i,j]-1][1])
-   #    # TODO: Add background contribution
-   #    result[i] = tmp_val
+   return result+Background_Polynomial(two_theta,np.array([x[6],x[7],x[8]]))
 
 def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    plt.figure(figsize=(12, 8))
@@ -124,20 +107,19 @@ def WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    y_calc = Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta)
    return np.sum(1/y*(y-y_calc)**2)
 
-def WSS_grad(two_theta,x,y,f,epsilon,Rel_Peak_Intensity,delta_theta):
+def WSS_grad(two_theta,x,y,f,epsilon,Rel_Peak_Intensity,delta_theta,mask):
    grad = flex.double(len(x))
    for j in xrange(0,len(x),1):
-      x[j] += epsilon
-      grad[j] = (WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta)-f)/epsilon
-      x[j] -= epsilon
+      if mask[j]:
+         x[j] += epsilon
+         grad[j] = (WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta)-f)/epsilon
+         x[j] -= epsilon
    return grad
 
 def Background_Polynomial(two_theta,x_bkgd):
-   result = flex.double(len(two_theta))
-   for i in xrange(0,len(two_theta)):
-      for j in xrange(0, len(x_bkgd)):
-         result[i] += x_bkgd[j]*pow(two_theta[i],j)
-   return result
+   powers = np.array(range(len(x_bkgd)))
+   powers.shape = (len(x_bkgd),1)
+   return np.dot(x_bkgd,np.power(two_theta,powers))
 
 def Rel_Peak_Intensity(fn,lammbda="CUA1"):
    # print str(fn) + ': '
@@ -272,18 +254,38 @@ def driver1(use_fortran_library=False):
             two_theta.append(float(two_thetatmp))
             y.append(float(ytmp))
    # n: Number of refinement parameters
-   n = 6
+   n = 9
    x = flex.double(n)
-   x[0] = 0.0 # eta
+   mask = []
+   labels = []#, "x_bkgd_0", \
+   x[0] = 1.0 # eta
+   labels.append("eta")
+   mask.append(True)
    x[1] = 0.0 # two_theta_0
+   labels.append("two_thetapeak")
+   mask.append(True)
    x[2] = 0.0 # U
+   labels.append("U")
+   mask.append(True)
    x[3] = 0.0 # V
+   labels.append("V")
+   mask.append(True)
    x[4] = 0.0001 # W
+   labels.append("W")
+   mask.append(True)
    x[5] = 0.001 # Amplitude
-   # x[6] = 0
-   # x[7] = 0
-   # x[8] = 0
-   #Test7
+   labels.append("Amplitude")
+   mask.append(True)
+   x[6] = 0 #Bkgd0
+   labels.append("Bkgd0")
+   mask.append(True)
+   x[7] = 0 #Bkgd1
+   labels.append("Bkgd1")
+   mask.append(True)
+   x[8] = 0 #Bkgd2
+   labels.append("Bkgd2")
+   mask.append(True)
+
    two_theta = np.array(two_theta)
    y = np.array(y)
 
@@ -361,15 +363,15 @@ def driver1(use_fortran_library=False):
    l=l,
    u=u,
    nbd=nbd,
-   factr=1.0e+12,
+   factr=1.0e+10,
    pgtol=1.0e-5,
    iprint=iprint)
 
    f = WSS(two_theta,x.as_numpy_array(),y,Relative_Peak_Intensity,delta_theta)
    epsilon = 1e-9
-   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
+   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta,mask)
 
-   labels = ["eta", "two_thetapeak", "U", "V", "W", "Amplitude"]#, "x_bkgd_0", \
+   
    #"x_bkgd_1", "x_bkgd_2"]
    print "BEFORE:"
    for i in xrange(0,len(labels),1):
@@ -382,7 +384,7 @@ def driver1(use_fortran_library=False):
    while True:
       if (minimizer.process(x, f, g, use_fortran_library)):
          f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
-         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
+         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta,mask)
       elif (minimizer.is_terminated()):
          break
 
