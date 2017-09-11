@@ -38,10 +38,13 @@ def two_thetabar_squared(two_theta,two_thetapeak,U,V,W):
    return (two_theta-two_thetapeak)**2/omegaUVW_squared
 
 def PseudoVoigtProfile(eta,two_theta0,U,V,W,Amp,two_theta,two_theta_calc_peak,I_res_calc):
-   tt_bar_sq = two_thetabar_squared(two_theta,two_theta_calc_peak \
-      +two_theta0,U,V,W)
+   tan_thetapeak = np.tan(math.pi/360.0*two_theta_calc_peak)
+   omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
+   two_thetabar_squared = (two_theta-two_theta0-two_theta_calc_peak)**2/omegaUVW_squared
+   # tt_bar_sq = two_thetabar_squared(two_theta-two_theta0,two_theta_calc_peak \
+      # ,U,V,W)
    return I_res_calc*Amp*(eta/(1 \
-         +tt_bar_sq) +(1-eta)*np.exp(-np.log(2)*tt_bar_sq))
+         +two_thetabar_squared) +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
 
 def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
    # print Rel_Peak_Intensity
@@ -84,11 +87,12 @@ def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    #       color = 'blue'
    #    else: color = 'green'
    #    plt.scatter(two_theta[i],y[i], color=color,s=1)
-   plt.scatter(two_theta,y,label='Data',s=1, color='red')
+   pltmask = np.logical_and(two_theta >25, two_theta < 26.25)
+   plt.scatter(two_theta[pltmask],y[pltmask],label='Data',s=1, color='red')
    # plt.title(r"Profile: $Al_2 O_3$")
    # plt.axis([20,60,0,1500])
 
-   plt.plot(two_theta,Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta), label=r'$I_{\rm calc}$')
+   plt.plot(two_theta[pltmask],Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta)[pltmask], label=r'$I_{\rm calc}$')
    plt.legend(bbox_to_anchor=(.8,.7))
    plt.ylabel(r"$I$")
 
@@ -109,19 +113,26 @@ def WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta):
 
 def WSS_grad(two_theta,x,y,f,epsilon,Rel_Peak_Intensity,delta_theta,mask):
    grad = flex.double(len(x))
+   # print str(x.as_numpy_array())
    for j in xrange(0,len(x),1):
       if mask[j]:
          x[j] += epsilon
+         # print j, x[j]
          grad[j] = (WSS(two_theta,x,y,Rel_Peak_Intensity,delta_theta)-f)/epsilon
          x[j] -= epsilon
+         # print x[j], grad[j]
+      else: 
+         grad[j] = 0.0
    return grad
 
 def Background_Polynomial(two_theta,x_bkgd):
    powers = np.array(range(len(x_bkgd)))
    powers.shape = (len(x_bkgd),1)
+   # print str(two_theta)
+   # print str(np.dot(x_bkgd,np.power(two_theta,powers)))
    return np.dot(x_bkgd,np.power(two_theta,powers))
 
-def Rel_Peak_Intensity(fn,lammbda="CUA1"):
+def Rel_Peak_Intensity(x,fn,lammbda="CUA1"):
    # print str(fn) + ': '
    with open(fn, 'r') as file:
       tmp_as_cif = file.read()
@@ -136,7 +147,7 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
    # tmp_structure.show_scatterers()
    # print tmp_structure.scatterers()[0].fp
    anomalous_flag = True
-   d_min = 1
+   d_min = 0.8
 
    f_miller_set = tmp_structure.build_miller_set(anomalous_flag, \
       d_min=d_min).sort()
@@ -153,16 +164,18 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
    wavelength = wavelengths.characteristic(lammbda).as_angstrom()
    # wavelength2 = wavelengths.characteristic("CUA2").as_angstrom()
    s_wave = 'Wavelength: %f' % wavelength  + ' Angstroms'
-   print s_wave
    number_of_atoms = 0
    s_chem_formula = 'Chemical Formula: '
    # print tmp_structure.unit_cell_content()
-   for x in tmp_structure.unit_cell_content().items():
-      number_of_atoms += x[1]
-      s_chem_formula += '%s%.0f ' % (x[0], x[1])
+   for item in tmp_structure.unit_cell_content().items():
+      number_of_atoms += item[1]
+      s_chem_formula += '%s%.0f ' % (item[0], item[1])
    s_num_atoms = 'Number of atoms in unit cell: %d' % number_of_atoms
-   print s_num_atoms
-   print s_chem_formula
+   
+   if ("--Verbose" in sys.argv[1:]):
+      print s_wave
+      print s_num_atoms
+      print s_chem_formula   
 
    # print tmp_structure.scattering_type_registry
 
@@ -197,13 +210,14 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
    Imax = 0.0
    assert len(f_calc_sq) == len(f_two_thetas_calc)
    if lammbda == "CUA2":
-      K_alpha_2_factor = 0.48
+      K_alpha_2_factor = x[10]
    else: K_alpha_2_factor = 1
+   cos_pref_angle_sq = x[9]
    
    for i in xrange(0,len(f_two_thetas_calc),1):
       two_theta = f_two_thetas_calc[i]
-      factor = f_calc_mult[i]*K_alpha_2_factor*abs((1+math.cos(math.pi/180*two_theta)**2) \
-         /math.sin(math.pi/360*two_theta)/math.sin(math.pi/180*two_theta))
+      factor = f_calc_mult[i]*K_alpha_2_factor*abs((1+cos_pref_angle_sq*math.cos(math.pi/180*two_theta)**2) \
+         /(1+cos_pref_angle_sq)/math.sin(math.pi/360*two_theta)/math.sin(math.pi/180*two_theta))
       I = f_calc_sq[i]*factor
       # Ifactor.append(factor)
       if (I > Imax):
@@ -234,70 +248,48 @@ def Rel_Peak_Intensity(fn,lammbda="CUA1"):
    for miller_index,two_theta,d_spacing,fc,fcsq,fcsqres,m in \
       zip(f_miller_indices, f_two_thetas_calc, f_d_spacings, f_calc2, \
          f_calc_sq, f_calc_sq_res, f_calc_mult):
-      if (fcsqres/Imax > 0.01):
+      if (fcsqres/Imax > 0.001):
          s = '{:13} {:7.3f} {:8.4f} {:14.2f} {:8.2f} {:10.2f} {:8.2f} {:3}' \
          .format(miller_index,two_theta,d_spacing,fc,fcsq,fcsqres,fcsqres/Imax*100,m)
          f.write(s +'\n')
-         print s
+         if ("--Verbose" in sys.argv[1:]):
+            print s
    f.close()
    return zip(f_two_thetas_calc,result_data)
 
-def driver1(use_fortran_library=False):
+def driver1(x,labels,mask,use_fortran_library=False,use_bkgd_mask=False):
    two_theta = []
    y = []
-   # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
-   with open(r"Jade-Al2O3-Sim.xye") as file:
+   with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
+   # with open(r"Jade-Al2O3-Sim.xye") as file:
       for line in file.readlines()[1:]:
-         # two_thetatmp, ytmp, ztmp = line.split()
-         two_thetatmp, ytmp = line.split()
-         if float(two_thetatmp) < 80.0:
-            two_theta.append(float(two_thetatmp))
-            y.append(float(ytmp))
-   # n: Number of refinement parameters
-   n = 9
-   x = flex.double(n)
-   mask = []
-   labels = []#, "x_bkgd_0", \
-   x[0] = 1.0 # eta
-   labels.append("eta")
-   mask.append(True)
-   x[1] = 0.0 # two_theta_0
-   labels.append("two_thetapeak")
-   mask.append(True)
-   x[2] = 0.0 # U
-   labels.append("U")
-   mask.append(True)
-   x[3] = 0.0 # V
-   labels.append("V")
-   mask.append(True)
-   x[4] = 0.0001 # W
-   labels.append("W")
-   mask.append(True)
-   x[5] = 0.001 # Amplitude
-   labels.append("Amplitude")
-   mask.append(True)
-   x[6] = 0 #Bkgd0
-   labels.append("Bkgd0")
-   mask.append(True)
-   x[7] = 0 #Bkgd1
-   labels.append("Bkgd1")
-   mask.append(True)
-   x[8] = 0 #Bkgd2
-   labels.append("Bkgd2")
-   mask.append(True)
-
+         two_thetatmp, ytmp, ztmp = line.split()
+         # two_thetatmp, ytmp = line.split()
+         # if float(two_thetatmp) < 32.0:
+         two_theta.append(float(two_thetatmp))
+         y.append(float(ytmp))
+ 
    two_theta = np.array(two_theta)
    y = np.array(y)
 
    t2 = time.time()
    fn = "1000032.cif"
    # fn = "9007634.cif"
-   Relative_Peak_Intensity = Rel_Peak_Intensity(fn) \
-                              + Rel_Peak_Intensity(fn,"CUA2")
+   Relative_Peak_Intensity = Rel_Peak_Intensity(x,fn) \
+                              + Rel_Peak_Intensity(x,fn,"CUA2")
    Relative_Peak_Intensity = np.array(Relative_Peak_Intensity)
 
    t3 = time.time()
-   print str(round(t3-t2,4)) + " seconds\n"
+   print "CIF Card Read-time: " + str(round(t3-t2,4)) + " seconds\n"
+
+   if use_bkgd_mask == True:
+      bkgd_mask = two_theta < 0
+      for peak in Relative_Peak_Intensity[:,0]:
+         bkgd_mask = np.logical_or(bkgd_mask,abs(two_theta-peak)<0.5)
+      bkgd_mask = np.invert(bkgd_mask)
+      two_theta = two_theta[bkgd_mask]
+      y = y[bkgd_mask]
+   
 
    # print zip(*Relative_Peak_Intensity)
    # print Relative_Peak_Intensity
@@ -319,6 +311,7 @@ def driver1(use_fortran_library=False):
    # print delta_theta[]
    # print delta_theta.as_numpy_array().tostring()
 
+   n = len(x)
    nbd = flex.int(n)
    # x = flex.double(n)
    l = flex.double(n)
@@ -341,18 +334,28 @@ def driver1(use_fortran_library=False):
    nbd[0] = 2
    l[0] = 0
    u[0] = 1
+   # nbd[1] = 2
+   # l[1] = -5
+   # u[1] = 5
    # nbd[4] = 2
    # l[4] = -0.0005
    # u[4] = 0.0005
-   # nbd[2] = 2
-   # l[2] = -0.005
-   # u[2] = 0.005
-   # nbd[3] = 2
-   # l[3] = -0.005
-   # u[3] = 0.005
+   nbd[2] = 2
+   l[2] = -x[4]
+   u[2] = x[4]
+   nbd[3] = 2
+   l[3] = -x[4]
+   u[3] = x[4]
    # nbd[3] = 2
    # l[3] = 0
    # u[3] = 2
+   nbd[9] = 2
+   l[9] = 0
+   u[9] = 1
+   nbd[10] = 2
+   l[10] = 0.4
+   u[10] = 0.6
+   print "Limits:"
    print "l"+str(list(l))
    print 'u'+str(list(u))
    # for i in xrange(n):
@@ -363,8 +366,8 @@ def driver1(use_fortran_library=False):
    l=l,
    u=u,
    nbd=nbd,
-   factr=1.0e+10,
-   pgtol=1.0e-5,
+   factr=1.0e+6,
+   pgtol=1.0e-7,
    iprint=iprint)
 
    f = WSS(two_theta,x.as_numpy_array(),y,Relative_Peak_Intensity,delta_theta)
@@ -373,7 +376,7 @@ def driver1(use_fortran_library=False):
 
    
    #"x_bkgd_1", "x_bkgd_2"]
-   print "BEFORE:"
+   print "\nBEFORE:"
    for i in xrange(0,len(labels),1):
       print labels[i] + ": " + str(x[i])
 
@@ -383,6 +386,9 @@ def driver1(use_fortran_library=False):
 
    while True:
       if (minimizer.process(x, f, g, use_fortran_library)):
+         Relative_Peak_Intensity = Rel_Peak_Intensity(x,fn) \
+                              + Rel_Peak_Intensity(x,fn,"CUA2")
+         Relative_Peak_Intensity = np.array(Relative_Peak_Intensity)
          f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
          g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta,mask)
       elif (minimizer.is_terminated()):
@@ -406,8 +412,6 @@ def driver1(use_fortran_library=False):
    print "\nTime elapsed: " + str(round(totaltime,4)) + " seconds\n"
 
    showplot(fn,two_theta,x,y,Relative_Peak_Intensity,delta_theta)
-
-
 
 def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Peak_Intensity,refine_flags):
    
@@ -445,8 +449,6 @@ def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Pea
    print two_theta_peaks
 
    delta_theta = set_data_flags(two_theta_total,two_theta_peaks,delta_theta)
-
-
 
    print "l"+str(list(l))
    print 'u'+str(list(u))
@@ -509,6 +511,7 @@ def run():
    # driver1(use_fortran_library=("--fortran" in sys.argv[1:]))
    two_theta = []
    y = []
+
    with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
       for line in file.readlines()[1:]:
          two_thetatmp, ytmp, ztmp = line.split()#, ztmp
@@ -563,10 +566,8 @@ def run():
    refine_flags.append([True,True,True,True,True,True,False,False,False])
 
    for r_f in refine_flags:
-      # print r_f
       x = Rietveld_Refine(x,nbd,l,u,two_theta,y,Relative_Peak_Intensity, \
          r_f)
-# print "OK"
 
 class Logger(object):
    def __init__(self):
@@ -579,5 +580,100 @@ class Logger(object):
 
 if (__name__ == "__main__"):
    sys.stdout = Logger()
-   driver1(use_fortran_library=("--fortran" in sys.argv[1:]))
+
+     # n: Number of refinement parameters
+   n = 11
+   x = flex.double(n)
+   labels = []#, "x_bkgd_0", \
+   x[0] = 0.5 # eta
+   labels.append("eta")
+   # mask.append(True)
+   x[1] = 0.0 # two_theta_0
+   labels.append("two_thetapeak")
+   # mask.append(True)
+   x[2] = 0.0 # U
+   labels.append("U")
+   # mask.append(True)
+   x[3] = 0.0 # V
+   labels.append("V")
+   # mask.append(True)
+   x[4] = 0.0006 # W
+   labels.append("W")
+   # mask.append(True)
+   x[5] = 0.001 # Amplitude
+   labels.append("Amplitude")
+   # mask.append(True)
+   x[6] = 0 #Bkgd0
+   labels.append("Bkgd0")
+   # mask.append(True)
+   x[7] = 0 #Bkgd1
+   labels.append("Bkgd1")
+   # mask.append(True)
+   x[8] = 0 #Bkgd2
+   labels.append("Bkgd2")
+   # mask.append(True)
+   x[9] = 1 #Cos_preferred_angle_sq
+   labels.append("Cos_preferred_angle_squared")
+
+   x[10] = 0.48 #K_alpha2_factor
+   labels.append("K_alpha2_factor")
+
+   driver1(x,labels,[
+      True,   #eta
+      True,    #2-theta_0
+      False,   #U
+      False,   #V
+      False,   #W
+      True,    #Amplitude
+      False,   #Background_Polynomial_0
+      False,   #Background_Polynomial_1
+      False,   #Background_Polynomial_2
+      False,   #Cos_preferred_angle_squared
+      False    #K_alpha2_factor
+      ],use_fortran_library=("--fortran" in sys.argv[1:])
+      )
+
+   # driver1(x,labels,[
+   #    True,   #eta
+   #    False,    #2-theta_0
+   #    False,   #U
+   #    False,   #V
+   #    True,   #W
+   #    True,    #Amplitude
+   #    False,   #Background_Polynomial_0
+   #    False,   #Background_Polynomial_1
+   #    False   #Background_Polynomial_2
+   #    ],use_fortran_library=("--fortran" in sys.argv[1:])
+   #    )
+
+   driver1(x,labels,[
+      False,   #eta
+      False,    #2-theta_0
+      False,   #U
+      False,   #V
+      False,   #W
+      False,    #Amplitude
+      True,   #Background_Polynomial_0
+      True,   #Background_Polynomial_1
+      True,   #Background_Polynomial_2
+      False,   #Cos_preferred_angle_squared
+      False    #K_alpha2_factor
+      ],use_fortran_library=("--fortran" in sys.argv[1:])
+      ,use_bkgd_mask = True)
+
+
+   driver1(x,labels,[
+      True,   #eta
+      False,    #2-theta_0
+      True,   #U
+      True,   #V
+      True,   #W
+      True,    #Amplitude
+      False,   #Background_Polynomial_0
+      False,   #Background_Polynomial_1
+      False,   #Background_Polynomial_2
+      True,   #Cos_preferred_angle_squared
+      True    #K_alpha2_factor
+      ],use_fortran_library=("--fortran" in sys.argv[1:])
+      )
    # run()
