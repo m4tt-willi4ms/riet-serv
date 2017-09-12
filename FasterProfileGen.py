@@ -139,6 +139,7 @@ def Background_Polynomial(two_theta,x_bkgd):
    # print str(two_theta)
    # print str(np.dot(x_bkgd,np.power(two_theta,powers)))
    return np.dot(x_bkgd,np.power(two_theta,powers))
+   cSLKjcSH
 
 def Rel_Peak_Intensity(fn,theta_max,lammbda="CUA1"):
    # print str(fn) + ': '
