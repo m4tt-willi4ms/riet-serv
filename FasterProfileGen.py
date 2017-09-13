@@ -418,7 +418,7 @@ def driver1(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak
 
    print "\nR_wp: " + str(np.sqrt(f/sumobs))
    print "R_e: " + str(np.sqrt((len(two_theta)-len(x))/sumobs))
-   print "Goodness-of-Fit = " + str(np.sqrt(f/(len(two_theta)-len(x))))
+   print "Goodness-of-Fit: " + str(np.sqrt(f/(len(two_theta)-len(x))))
 
    print "\nTime elapsed: " + str(round(totaltime,4)) + " seconds\n"
 
