@@ -38,6 +38,10 @@ from libtbx import easy_pickle
 #    return (two_theta-two_thetapeak)**2/omegaUVW_squared
 
 def PseudoVoigtProfile(eta_0,two_theta0,U,V,W,Amp,eta_1,eta_2,two_theta,two_theta_calc_peak,I_res_calc):
+   """
+         Computes the Pseudo-Voigt profile *test*
+         using the function $y = mx +b$
+   """
    tan_thetapeak = np.tan(math.pi/360.0*two_theta_calc_peak)
    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
    two_thetabar_squared = (two_theta-two_theta0-two_theta_calc_peak)**2/omegaUVW_squared
@@ -50,11 +54,11 @@ def PseudoVoigtProfile(eta_0,two_theta0,U,V,W,Amp,eta_1,eta_2,two_theta,two_thet
 def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
    # print Rel_Peak_Intensity
    two_theta_peaks = Rel_Peak_Intensity[0,:]
-   # print two_theta_peaks
+   print two_theta_peaks
    two_theta_peaks.shape = (Rel_Peak_Intensity.shape[1],1)
    # print two_theta_peaks
    Intensities = Rel_Peak_Intensity[1,:]
-   # print Intensities
+   print Intensities
    Intensities.shape = (Rel_Peak_Intensity.shape[1],1)
    # print Intensities
    mask = np.abs(two_theta - two_theta_peaks)< delta_theta
@@ -72,7 +76,7 @@ def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
          two_theta[mask[i]],two_theta_peaks[i],Intensities[i])
    return result+Background_Polynomial(two_theta,np.array([x[6],x[7],x[8]]))
 
-def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
+def showplot(plottitle,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    plt.figure(figsize=(12, 8))
    plt.subplot(3,1,1)
    # for i in xrange(0,len(two_theta)):
@@ -81,7 +85,7 @@ def showplot(filename,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    #    else: color = 'green'
    #    plt.scatter(two_theta[i],y[i], color=color,s=1)
    plt.scatter(two_theta,y,label='Data',s=1, color='red')
-   plt.title(r"Profile: $Al_2 O_3$ - "+ filename)
+   plt.title(plottitle)
    # plt.axis([20,60,0,1500])
 
    plt.plot(two_theta,Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta), label=r'$I_{\rm calc}$')
@@ -139,9 +143,8 @@ def Background_Polynomial(two_theta,x_bkgd):
    # print str(two_theta)
    # print str(np.dot(x_bkgd,np.power(two_theta,powers)))
    return np.dot(x_bkgd,np.power(two_theta,powers))
-   cSLKjcSH
 
-def Rel_Peak_Intensity(fn,theta_max,lammbda="CUA1"):
+def Rel_Peak_Intensity(fn,two_theta_max,lammbda="CUA1"):
    # print str(fn) + ': '
    with open(fn, 'r') as file:
       tmp_as_cif = file.read()
@@ -163,7 +166,7 @@ def Rel_Peak_Intensity(fn,theta_max,lammbda="CUA1"):
    # wavelength2 = wavelengths.characteristic("CUA2").as_angstrom()
    s_wave = 'Wavelength: %f' % wavelength  + ' Angstroms'
    
-   d_min = wavelength/2/math.sin(math.pi/180*theta_max)
+   d_min = wavelength/2/math.sin(math.pi/360*two_theta_max)
 
    f_miller_set = tmp_structure.build_miller_set(anomalous_flag, \
       d_min=d_min).sort()#.expand_to_p1()
@@ -184,7 +187,7 @@ def Rel_Peak_Intensity(fn,theta_max,lammbda="CUA1"):
       s_chem_formula += '%s%.0f ' % (item[0], item[1])
    s_num_atoms = 'Number of atoms in unit cell: %d' % number_of_atoms
    
-   print list(f_miller_set.expand_to_p1().indices())
+   # print list(f_miller_set.expand_to_p1().indices())
 
    if ("--Verbose" in sys.argv[1:]):
       print s_wave
@@ -266,20 +269,19 @@ def Rel_Peak_Intensity(fn,theta_max,lammbda="CUA1"):
    # f.close()
    return np.vstack((f_two_thetas_calc.as_numpy_array(),result_data.as_numpy_array()))
 
-def Intensity_Scaling(two_theta, K_alpha_factor, cos_pref_angle_sq):
-   return K_alpha_factor*abs((1+cos_pref_angle_sq*np.cos(math.pi/180*two_theta)**2) \
-         /(1+cos_pref_angle_sq)/np.sin(math.pi/360*two_theta)/np.sin(math.pi/180*two_theta))
+def Intensity_Scaling(two_theta, K_alpha_factor):
+   return K_alpha_factor*abs((1+np.cos(math.pi/180*two_theta)**2) \
+         /np.sin(math.pi/360*two_theta)/np.sin(math.pi/180*two_theta))
 
 def Weighted_Intensities(x,Relative_Intensities_CUA1,Relative_Peak_Intensity_CUA2):
-   cos_pref_angle_sq = x[9]
    K_alpha_1_factor = 1
-   K_alpha_2_factor = x[10]
+   K_alpha_2_factor = x[9]
    # print Relative_Intensities_CUA1
    # print Relative_Peak_Intensity_CUA2
    two_theta = np.concatenate((Relative_Intensities_CUA1[0,:], Relative_Peak_Intensity_CUA2[0,:]))
    Relative_Intensities = np.concatenate((Relative_Intensities_CUA1[1,:], Relative_Peak_Intensity_CUA2[1,:]))
-   factors = np.concatenate((Intensity_Scaling(Relative_Intensities_CUA1[0,:],K_alpha_1_factor,cos_pref_angle_sq)
-         , Intensity_Scaling(Relative_Peak_Intensity_CUA2[0,:],K_alpha_2_factor,cos_pref_angle_sq)))
+   factors = np.concatenate((Intensity_Scaling(Relative_Intensities_CUA1[0,:],K_alpha_1_factor)
+         , Intensity_Scaling(Relative_Peak_Intensity_CUA2[0,:],K_alpha_2_factor)))
    # print "Two-theta: "
    # print two_theta
    # print "Factors: "
@@ -288,7 +290,7 @@ def Weighted_Intensities(x,Relative_Intensities_CUA1,Relative_Peak_Intensity_CUA
    # print Relative_Intensities
    return np.vstack((two_theta,np.multiply(factors,Relative_Intensities)))
 
-def driver1(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=False,use_bkgd_mask=False):
+def Rietveld_Refine(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=False,use_bkgd_mask=False,use_pref_orient=False):
 
 
    # print zip(*Relative_Peak_Intensity)
@@ -371,8 +373,7 @@ def driver1(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak
 
    Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
 
-
-   delta_theta = 0.5
+   delta_theta = 2.0
 
    if use_bkgd_mask == True:
       bkgd_mask = two_theta < 0
@@ -393,13 +394,14 @@ def driver1(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak
    for i in xrange(0,len(labels),1):
       print labels[i] + ": " + str(x[i])
 
-   showplot(fn,two_theta,x,y,Weighted_Int,delta_theta)
+   showplot(plottitle + fn,two_theta,x,y,Weighted_Int,delta_theta)
 
    t0 = time.time()
 
    while True:
       if (minimizer.process(x, f, g, use_fortran_library)):
-         Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
+         if use_pref_orient == True:
+            Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
          f = WSS(two_theta,x,y,Weighted_Int,delta_theta)
          g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,delta_theta,mask)
       elif (minimizer.is_terminated()):
@@ -422,163 +424,7 @@ def driver1(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak
 
    print "\nTime elapsed: " + str(round(totaltime,4)) + " seconds\n"
 
-   showplot(fn,two_theta,x,y,Weighted_Int,delta_theta)
-
-def Rietveld_Refine(x_initial,nbd_total,l_total,u_total,two_theta,y,Relative_Peak_Intensity,refine_flags):
-   
-   is_background_refinement = False
-   if (refine_flags == [False,False,False,False,False,False,True,True,True]):
-      is_background_refinement = True
-   
-   n = 0
-   for flag in refine_flags:
-      if (flag):
-         n += 1
-
-   x = flex.double(n)
-   nbd = flex.int(n)
-   l = flex.double(n)
-   u = flex.double(n)
-   g = flex.double(n)
-
-   index = 0
-   for i, flag in enumerate(refine_flags):
-      if (flag):
-         x[index] = x_initial[i]
-         nbd[index] = nbd_total[i]
-         l[index] = l_total[i]
-         u[index] = u_total[i]
-         index += 1
-
-   if ("--Verbose" in sys.argv[1:]):
-      iprint = 1000
-   else:
-      iprint = -1
-
-   delta_theta = 0.5
-   two_theta_peaks = zip(*Relative_Peak_Intensity)[0]
-   print two_theta_peaks
-
-   delta_theta = set_data_flags(two_theta_total,two_theta_peaks,delta_theta)
-
-   print "l"+str(list(l))
-   print 'u'+str(list(u))
-
-   minimizer = lbfgsb.minimizer(
-   n=n,
-   m=5,
-   l=l,
-   u=u,
-   nbd=nbd,
-   factr=1.0e+8,
-   pgtol=1.0e-5,
-   iprint=iprint)
-
-   f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
-
-   epsilon = 1e-8
-   g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
-
-   labels = ["eta", "two_thetapeak", "U", "V", "W", "Amplitude", "x_bkgd_0", \
-   "x_bkgd_1", "x_bkgd_2"]
-   print "BEFORE:"
-   for i in xrange(0,len(labels),1):
-      print labels[i] + ": " + str(x[i])
-
-   exit()
-
-   showplot(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
-
-   t0 = time.time()
-
-
-   while True:
-      if (minimizer.process(x, f, g, use_fortran_library)):
-         f = WSS(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
-         g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity,delta_theta)
-      elif (minimizer.is_terminated()):
-         break
-
-   t1 = time.time()
-   totaltime = t1-t0
-
-   print "\nAFTER:"
-   for i in xrange(0,len(x),1):
-      print labels[i] + ": " + str(x[i])
-
-   sumobs = 0
-   for i in xrange(0,len(two_theta),1):
-      sumobs = sumobs + y[i]
-
-   print "\nR_wp: " + str(np.sqrt(f/sumobs))
-   print "R_e: " + str(np.sqrt((len(two_theta)-len(x))/sumobs))
-   print "Goodness-of-Fit = " + str(np.sqrt(f/(len(two_theta)-len(x))))
-
-   print "\nTime elapsed: " + str(round(totaltime,4)) + " seconds\n"
-
-   showplot(two_theta,x,y,Relative_Peak_Intensity,delta_theta)
-
-def run():
-   # driver1(use_fortran_library=("--fortran" in sys.argv[1:]))
-   two_theta = []
-   y = []
-
-   with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
-      for line in file.readlines()[1:]:
-         two_thetatmp, ytmp, ztmp = line.split()#, ztmp
-         if float(two_thetatmp) < 80.0:
-            two_theta.append(float(two_thetatmp))
-            y.append(float(ytmp))
-
-   fn = "1000032.cif"
-   Relative_Peak_Intensity = Rel_Peak_Intensity(fn) \
-                              + Rel_Peak_Intensity(fn,"CUA2")
-
-   n=9
-   x = flex.double(n) 
-
-   x[0] = 0.0 #eta
-   x[1] = 0.1 #2-theta_0
-   x[2] = 0.0 #U
-   x[3] = 0.0 #
-   x[4] = 0.001
-   x[5] = 0.001
-   x[6] = 0 #Bkgd_Polynom_0
-   x[7] = 0 #Bkgd_Polynom_1
-   x[8] = 0 #Bkgd_Polynom_2
-
-   nbd = flex.int(n)
-   # x = flex.double(n)
-   l = flex.double(n)
-   u = flex.double(n)
-   g = flex.double(n)
-
-   for i in xrange(0,n,1):
-      nbd[i] = 0
-   # for i in xrange(0,n,1):
-   #   nbd[i] = 2
-   #   l[i] = 1.0e0
-   #   u[i] = 1.0e2
-   # for i in xrange(1,n,2):
-   #   nbd[i] = 2
-   #   l[i] = -1.0e2
-   #   u[i] = 1.0e2
-   nbd[0] = 2
-   l[0] = 0
-   u[0] = 1
-   nbd[4] = 2
-   l[4] = -0.005
-   u[4] = 0.005
-
-   n_runs = 2
-
-   refine_flags = []
-   refine_flags.append([False,False,False,False,False,False,True,True,True])
-   refine_flags.append([True,True,True,True,True,True,False,False,False])
-
-   for r_f in refine_flags:
-      x = Rietveld_Refine(x,nbd,l,u,two_theta,y,Relative_Peak_Intensity, \
-         r_f)
+   showplot(plottitle + fn,two_theta,x,y,Weighted_Int,delta_theta)
 
 class Logger(object):
    def __init__(self):
@@ -596,25 +442,29 @@ if (__name__ == "__main__"):
    y = []
    # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
    # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
-   with open(r"16_03_09_0015_Silver Behenate with Baffle and Anti_Scatter Slit_highrez.xye") as file:
-   # with open(r"Jade-Al2O3-Sim.xye") as file:
-      for line in file.readlines()[4:]:
-         two_thetatmp, ytmp, ztmp = line.split()
-         # two_thetatmp, ytmp = line.split()
-         if float(two_thetatmp) < 15:
-            two_theta.append(float(two_thetatmp))
-            y.append(float(ytmp))
+   # with open(r"16_03_09_0015_Silver Behenate with Baffle and Anti_Scatter Slit_highrez.xye") as file:
+   with open(r"Jade-Al2O3-Sim.xye") as file:
+      for line in file.readlines()[1:]:
+         # two_thetatmp, ytmp, ztmp = line.split()
+         two_thetatmp, ytmp = line.split()
+         # if float(two_thetatmp) < 15:
+         two_theta.append(float(two_thetatmp))
+         y.append(float(ytmp))
 
-   theta_max = two_theta[-1] 
+   two_theta_max = two_theta[-1] 
 
    two_theta = np.array(two_theta)
    y = np.array(y)
 
    t2 = time.time()
-   fn = "1507774.cif" # Silver Behenate
+   plottitle = r"Corundum, $Al_2O_3$ -- "
+   fn = "1000032.cif" # Silver Behenate
+   # plottitle = r"Aspirin -- "
    # fn = "9007634.cif"
-   Relative_Peak_Intensity_CUA1 = Rel_Peak_Intensity(fn,theta_max,"CUA1")
-   Relative_Peak_Intensity_CUA2 = Rel_Peak_Intensity(fn,theta_max,"CUA2")
+   # plottitle = r"Silver Behenate -- "
+   # fn = "1507774.cif" # Silver Behenate
+   Relative_Peak_Intensity_CUA1 = Rel_Peak_Intensity(fn,two_theta_max,"CUA1")
+   Relative_Peak_Intensity_CUA2 = Rel_Peak_Intensity(fn,two_theta_max,"CUA2")
 
    # print Relative_Peak_Intensity_CUA1
    # print Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
@@ -624,7 +474,7 @@ if (__name__ == "__main__"):
    print "CIF Card Read-time: " + str(round(t3-t2,4)) + " seconds\n"
 
 
-     # n: Number of refinement parameters
+   # n: Number of refinement parameters
    n = 12
    x = flex.double(n)
    labels = []#, "x_bkgd_0", \
@@ -664,7 +514,7 @@ if (__name__ == "__main__"):
    x[11] = 0 #eta_2
    labels.append("eta_2")
 
-   # driver1(two_theta,y,x,labels,[
+   # Rietveld_Refine(two_theta,y,x,labels,[
    #    True,   #eta
    #    True,    #2-theta_0
    #    False,   #U
@@ -679,7 +529,7 @@ if (__name__ == "__main__"):
    #    ],Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=("--fortran" in sys.argv[1:])
    #    )
 
-   driver1(two_theta,y,x,labels,[
+   Rietveld_Refine(two_theta,y,x,labels,[
       False,   #eta
       False,    #2-theta_0
       False,   #U
@@ -695,7 +545,7 @@ if (__name__ == "__main__"):
       ],Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=("--fortran" in sys.argv[1:])
       ,use_bkgd_mask = True)
 
-   driver1(two_theta,y,x,labels,[
+   Rietveld_Refine(two_theta,y,x,labels,[
       True,   #eta
       True,    #2-theta_0
       False,   #U
@@ -711,7 +561,7 @@ if (__name__ == "__main__"):
       ],Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=("--fortran" in sys.argv[1:])
       )
 
-   driver1(two_theta,y,x,labels,[
+   Rietveld_Refine(two_theta,y,x,labels,[
       True,   #eta
       True,    #2-theta_0
       True,   #U
