@@ -45,23 +45,33 @@ def PseudoVoigtProfile(eta_0,two_theta0,U,V,W,Amp,eta_1,eta_2,two_theta,two_thet
    tan_thetapeak = np.tan(math.pi/360.0*two_theta_calc_peak)
    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
    two_thetabar_squared = (two_theta-two_theta0-two_theta_calc_peak)**2/omegaUVW_squared
-   eta = eta_0 + eta_1*(two_theta-two_theta0) + eta_2*(two_theta-two_theta0)**2
+   eta = eta_0 #+ eta_1*(two_theta-two_theta0) + eta_2*(two_theta-two_theta0)**2
    # tt_bar_sq = two_thetabar_squared(two_theta-two_theta0,two_theta_calc_peak \
       # ,U,V,W)
+   # print "Two_theta: "
+   # print two_theta
+   # print "Intens"
+   # print I_res_calc
+   # print I_res_calc*Amp*(eta/(1 \
+         # +two_thetabar_squared) +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
    return I_res_calc*Amp*(eta/(1 \
          +two_thetabar_squared) +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
 
 def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
    # print Rel_Peak_Intensity
    two_theta_peaks = Rel_Peak_Intensity[0,:]
-   print two_theta_peaks
+   # print two_theta_peaks
    two_theta_peaks.shape = (Rel_Peak_Intensity.shape[1],1)
    # print two_theta_peaks
    Intensities = Rel_Peak_Intensity[1,:]
-   print Intensities
+   # print Intensities
    Intensities.shape = (Rel_Peak_Intensity.shape[1],1)
    # print Intensities
-   mask = np.abs(two_theta - two_theta_peaks)< delta_theta
+   mask = np.abs(two_theta - two_theta_peaks) < delta_theta
+   # print delta_theta
+   # print two_theta
+   # print two_theta[mask[0]]
+   # print two_theta_peaks[0]       
    result = np.zeros(len(two_theta))
    for i in xrange(0,Rel_Peak_Intensity.shape[1],1):
       result[mask[i]] += PseudoVoigtProfile(
@@ -125,11 +135,12 @@ def WSS(two_theta,x,y,Weighted_Int,delta_theta):
 def WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,delta_theta,mask):
    grad = flex.double(len(x))
    # print str(x.as_numpy_array())
+   Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
    for j in xrange(0,len(x),1):
       if mask[j]:
          x[j] += epsilon
          # print j, x[j]
-         Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
+         # Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
          grad[j] = (WSS(two_theta,x,y,Weighted_Int,delta_theta)-f)/epsilon
          x[j] -= epsilon
          # print x[j], grad[j]
@@ -373,7 +384,7 @@ def Rietveld_Refine(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relat
 
    Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
 
-   delta_theta = 2.0
+   delta_theta = 0.5
 
    if use_bkgd_mask == True:
       bkgd_mask = two_theta < 0
@@ -440,13 +451,13 @@ if (__name__ == "__main__"):
 
    two_theta = []
    y = []
-   # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
+   with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
    # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
    # with open(r"16_03_09_0015_Silver Behenate with Baffle and Anti_Scatter Slit_highrez.xye") as file:
-   with open(r"Jade-Al2O3-Sim.xye") as file:
+   # with open(r"Jade-Al2O3-Sim.xye") as file:
       for line in file.readlines()[1:]:
-         # two_thetatmp, ytmp, ztmp = line.split()
-         two_thetatmp, ytmp = line.split()
+         two_thetatmp, ytmp, ztmp = line.split()
+         # two_thetatmp, ytmp = line.split()
          # if float(two_thetatmp) < 15:
          two_theta.append(float(two_thetatmp))
          y.append(float(ytmp))
@@ -534,7 +545,7 @@ if (__name__ == "__main__"):
       False,    #2-theta_0
       False,   #U
       False,   #V
-      True,   #W
+      False,   #W
       False,    #Amplitude
       True,   #Background_Polynomial_0
       True,   #Background_Polynomial_1
@@ -546,7 +557,7 @@ if (__name__ == "__main__"):
       ,use_bkgd_mask = True)
 
    Rietveld_Refine(two_theta,y,x,labels,[
-      True,   #eta
+      False,   #eta
       True,    #2-theta_0
       False,   #U
       False,   #V
@@ -571,9 +582,9 @@ if (__name__ == "__main__"):
       False,   #Background_Polynomial_0
       False,   #Background_Polynomial_1
       False,   #Background_Polynomial_2
-      True,    #K_alpha2_factor
-      True,   #eta_1
-      True    #eta_2
+      False,    #K_alpha2_factor
+      False,   #eta_1
+      False    #eta_2
       ],Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=("--fortran" in sys.argv[1:])
       )
    # run()
