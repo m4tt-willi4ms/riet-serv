@@ -21,41 +21,26 @@ import matplotlib.pyplot as plt
 from scitbx import lbfgsb
 import jsonpickle
 from libtbx import easy_pickle
+# from RietveldPhase import RietveldProfile
 
-# def two_thetabar_squared(two_theta,two_thetapeak,U,V,W):
-#    # tan_theta_mid = math.tan(math.pi/360*two_theta_mid)
-#    tan_thetapeak = np.tan(math.pi/360.0*two_thetapeak)
-#    # omegaUVW_squared = abs(U*(tan_thetapeak-tan_theta_mid)**2 \
-#    #    +V*(tan_thetapeak-tan_theta_mid)+W)
-#    #tantwo_thetapeak = math.tan(math.pi/360*two_thetapeak)
-#    # if hasattr(two_theta, "__len__"):
-#    #   # omegaUVW_squared = U*flex.tan(math.pi/360.0*(two_theta-two_thetapeak))**2+V*flex.tan(math.pi/360*(two_theta-two_thetapeak))+W
-#    #   tantwo_theta = flex.tan(math.pi/360.0*(two_theta))
-#    # else:
-#    #   # omegaUVW_squared = U*math.tan(math.pi/360.0*(two_theta-two_thetapeak))**2+V*math.tan(math.pi/360*(two_theta-two_thetapeak))+W
-#    #   tantwo_theta = math.tan(math.pi/360.0*(two_theta))
-#    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
-#    return (two_theta-two_thetapeak)**2/omegaUVW_squared
+def PseudoVoigtProfile(eta_0,two_theta0,U,V,W,Amp,eta_1,eta_2,two_theta, \
+      two_theta_calc_peak,I_res_calc):
+   r"""
+      Computes the *Pseudo-Voigt* profile using the function in eq. :eq:`PVDef`
+      
+      .. math:: PV(2\theta) = \frac{\eta}{1+\overline{\Delta\theta}^2}
+         +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2} \,,{\rm where}\quad
+         \overline{\Delta\theta}^2 = \frac{(2\theta-2\theta_0)^2}{\omega^2}
+         :label: PVDef
 
-def PseudoVoigtProfile(eta_0,two_theta0,U,V,W,Amp,eta_1,eta_2,two_theta,two_theta_calc_peak,I_res_calc):
-   """
-         Computes the Pseudo-Voigt profile *test*
-         using the function $y = mx +b$
    """
    tan_thetapeak = np.tan(math.pi/360.0*two_theta_calc_peak)
    omegaUVW_squared = abs(U*tan_thetapeak**2+V*tan_thetapeak+W)
-   two_thetabar_squared = (two_theta-two_theta0-two_theta_calc_peak)**2/omegaUVW_squared
+   two_thetabar_squared = (two_theta-two_theta0-two_theta_calc_peak)**2 \
+      /omegaUVW_squared
    eta = eta_0 #+ eta_1*(two_theta-two_theta0) + eta_2*(two_theta-two_theta0)**2
-   # tt_bar_sq = two_thetabar_squared(two_theta-two_theta0,two_theta_calc_peak \
-      # ,U,V,W)
-   # print "Two_theta: "
-   # print two_theta
-   # print "Intens"
-   # print I_res_calc
-   # print I_res_calc*Amp*(eta/(1 \
-         # +two_thetabar_squared) +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
    return I_res_calc*Amp*(eta/(1 \
-         +two_thetabar_squared) +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
+      +two_thetabar_squared) +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
 
 def Profile_Calc(x,two_theta,Rel_Peak_Intensity,delta_theta):
    # print Rel_Peak_Intensity
@@ -108,7 +93,7 @@ def showplot(plottitle,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
    #       color = 'blue'
    #    else: color = 'green'
    #    plt.scatter(two_theta[i],y[i], color=color,s=1)
-   pltmask = np.logical_and(two_theta >25, two_theta < 26.25)
+   pltmask = np.logical_and(two_theta >Rel_Peak_Intensity[0,0]-1, two_theta < Rel_Peak_Intensity[0,0]+1)
    plt.scatter(two_theta[pltmask],y[pltmask],label='Data',s=1, color='red')
    # plt.title(r"Profile: $Al_2 O_3$")
    # plt.axis([20,60,0,1500])
@@ -128,9 +113,9 @@ def showplot(plottitle,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
 
    plt.show()#block=False)
 
-def WSS(two_theta,x,y,Weighted_Int,delta_theta):
-   y_calc = Profile_Calc(x,two_theta,Weighted_Int,delta_theta)
-   return np.sum(1/y*(y-y_calc)**2)
+def WSS(two_theta,x,I,Weighted_Int,delta_theta):
+   I_calc = Profile_Calc(x,two_theta,Weighted_Int,delta_theta)
+   return np.sum(1/I*(I-I_calc)**2)
 
 def WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,delta_theta,mask):
    grad = flex.double(len(x))
@@ -155,7 +140,13 @@ def Background_Polynomial(two_theta,x_bkgd):
    # print str(np.dot(x_bkgd,np.power(two_theta,powers)))
    return np.dot(x_bkgd,np.power(two_theta,powers))
 
+
 def Rel_Peak_Intensity(fn,two_theta_max,lammbda="CUA1"):
+   """
+      Returns squared structure factors, weighted by the multiplicity of each
+      reflection.
+
+   """
    # print str(fn) + ': '
    with open(fn, 'r') as file:
       tmp_as_cif = file.read()
@@ -301,7 +292,7 @@ def Weighted_Intensities(x,Relative_Intensities_CUA1,Relative_Peak_Intensity_CUA
    # print Relative_Intensities
    return np.vstack((two_theta,np.multiply(factors,Relative_Intensities)))
 
-def Rietveld_Refine(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=False,use_bkgd_mask=False,use_pref_orient=False):
+def Rietveld_Refine(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,use_fortran_library=False,use_bkgd_mask=False,use_pref_orient=False,showProgressPlot=True):
 
 
    # print zip(*Relative_Peak_Intensity)
@@ -409,17 +400,44 @@ def Rietveld_Refine(two_theta,y,x,labels,mask,Relative_Peak_Intensity_CUA1,Relat
 
    t0 = time.time()
 
+   if showProgressPlot:
+      iss=[]
+      fs = []
+      i=0
+      fig = plt.figure(figsize=(5, 4))
+      ax = fig.add_subplot(111)
+      plt.ylabel(r"$f$")
+      plt.xlabel("Number of runs")
+      plt.title("Progress...")
+      progressplot, = ax.plot(iss,fs)
+      plt.ion()
+
    while True:
       if (minimizer.process(x, f, g, use_fortran_library)):
          if use_pref_orient == True:
             Weighted_Int = Weighted_Intensities(x,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2)
          f = WSS(two_theta,x,y,Weighted_Int,delta_theta)
          g = WSS_grad(two_theta,x,y,f,epsilon,Relative_Peak_Intensity_CUA1,Relative_Peak_Intensity_CUA2,delta_theta,mask)
+         if showProgressPlot:
+            progressplot.set_xdata(np.append(progressplot.get_xdata(),i))
+            progressplot.set_ydata(np.append(progressplot.get_ydata(),minimizer.f()))    
+            ax.set_ylim(top=minimizer.f()*4)
+            ax.set_xlim(right=i)
+            plt.draw()
+            plt.pause(0.05)
+            i += 1
       elif (minimizer.is_terminated()):
          break
 
+   plt.ioff()
+   plt.close()
+   # while True:
+   #    plt.show()
+
    t1 = time.time()
    totaltime = t1-t0
+
+   print list(minimizer.f_list())
 
    print "\nAFTER:"
    for i in xrange(0,len(x),1):
