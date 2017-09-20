@@ -206,13 +206,23 @@ class RietveldPhases:
    def PseudoVoigtProfile(self, two_theta):
       r"""
          Computes the *Pseudo-Voigt* profile using the function 
-         in eq. :eq:`PVDefn`
+         in eq. :eq:`PVDefn`:
          
          .. math:: PV(2\theta) = \frac{\eta}{1+\overline{\Delta\theta}^2}
-            +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2} \quad{\rm where}
+            +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2}\,, \quad{\rm where}
             \quad
-            \overline{\Delta\theta}^2 = \frac{(2\theta-2\theta_0)^2}{\omega^2}
+            \overline{\Delta\theta}^2 
+            := \frac{(2\theta-2\theta_0-2\theta_{\rm peak})^2}{\omega^2}
             :label: PVDefn
+
+         and where
+
+         .. math:: \omega := \left| U\,\tan^2\theta_{\rm peak}
+            +V\,\tan\theta_{\rm peak}+W\right|
+
+         is the Cagliotti equation, describing the variation of peak width as a
+         function of the Bragg angle. (In eq. :eq:`PVDefn`, :math:`2\theta_0`
+         describes a refinable offset.)
 
       """
       tan_thetapeak = np.tan(math.pi/360.0*two_theta_calc_peak)
