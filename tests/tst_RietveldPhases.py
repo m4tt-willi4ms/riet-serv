@@ -21,6 +21,21 @@ eta:           2
 Bkgd:          3
 """
 
+tst_two_theta = []
+tst_y = []
+with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
+# with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
+# with open(r"16_03_09_0015_Silver Behenate with Baffle and Anti_Scatter Slit_highrez.xye") as file:
+# with open(r"Jade-Al2O3-Sim.xye") as file:
+   for line in file.readlines():
+      two_thetatmp, ytmp, ztmp = line.split()
+      # two_thetatmp, ytmp = line.split()
+      # if float(two_thetatmp) < 15:
+      tst_two_theta.append(float(two_thetatmp))
+      tst_y.append(float(ytmp))
+tst_two_theta = np.array(tst_two_theta)
+tst_y = np.array(tst_y)
+
 def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
    cifs = ["1000032.cif","1507774.cif"]
@@ -64,6 +79,19 @@ def exercise_RietveldPhases():
     1.00019992e+00   1.00015760e+00]
  [  2.21750091e+04   1.55537642e+04   1.93755054e+04 ...,   2.75225955e+01
     2.64709614e+02   1.93820027e+02]]"""
+   assert str(tst_two_theta) == \
+   """[  20.01     20.0299   20.0499 ...,  139.9575  139.9774  139.9974]"""
+   assert str(tst_y) == \
+   """[ 41.8571  40.      38.125  ...,   9.15     8.95     9.1833]"""
+
+   # Testing Background_Polynomial
+   RietveldPhases.Bkgd = np.array([1,2,3])
+   assert str(RietveldPhases.Background_Polynomial(tst_two_theta)[0]) == \
+   "1242.2203"
+   assert str(RietveldPhases.Background_Polynomial(tst_two_theta)[-1]) == \
+   "59078.8108203"
+   Rt[0].Compile_Weighted_Peak_Intensities()
+
 
 def run():
    exercise_RietveldPhases()

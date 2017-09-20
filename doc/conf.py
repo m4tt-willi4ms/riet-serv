@@ -136,7 +136,7 @@ latex_elements = {
 
     # The font size ('10pt', '11pt' or '12pt').
     #
-    # 'pointsize': '10pt',
+    'pointsize': '11pt',
 
     # Additional stuff for the LaTeX preamble.
     #
@@ -151,9 +151,11 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'PROTORietveldRefinement.tex', u'PROTO Rietveld Refinement Documentation',
-     u'M. Williams', 'manual'),
+    (master_doc, 'PROTORietveldRefinement.tex', u'Rietveld Refinement Documentation',
+     u'M.~Williams', 'manual'),
 ]
+
+latex_logo = 'ProtoLogo.png'
 
 
 # -- Options for manual page output ---------------------------------------

@@ -30,5 +30,14 @@ As can be seen, the module has become quite unreadable; improvements to be made
 in the upcoming RietveldPhase project.
 
 .. automodule:: FasterProfileGen
-.. autofunction:: PseudoVoigtProfile
+   :members:
 
+Rietveld Phases Module
+======================
+
+This module is built to replace FasterProfileGen, in a way that is both more 
+versatile and more accommodating of multi-phase powder diffraction profiles.
+
+.. automodule:: RietveldPhases
+.. autoclass:: RietveldPhases
+   :members:
