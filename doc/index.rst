@@ -21,16 +21,16 @@ PROTO Rietveld Refinement
 .. * :ref:`modindex`
 .. * :ref:`search`
 
-FasterProfileGen
-=================
+.. FasterProfileGen
+.. =================
 
-This module is a temporary module, used to build up the essential codebase 
-before transitioning to a more organized structure.
-As can be seen, the module has become quite unreadable; improvements to be made
-in the upcoming RietveldPhase project.
+.. This module is a temporary module, used to build up the essential codebase 
+.. before transitioning to a more organized structure.
+.. As can be seen, the module has become quite unreadable; improvements to be made
+.. in the upcoming RietveldPhase project.
 
-.. automodule:: FasterProfileGen
-   :members:
+.. .. automodule:: FasterProfileGen
+..    :members:
 
 Rietveld Phases Module
 ======================

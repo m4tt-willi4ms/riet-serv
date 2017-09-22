@@ -38,7 +38,7 @@ class RietveldPhases:
    #    self.K_alpha_2_factor = K_alpha_2_factor
 
    @classmethod
-   def fromfile(cls,filename):
+   def params_from_file(cls,filename):
       """
          Reads in a set of global refinement parameters from a file
          
@@ -46,17 +46,15 @@ class RietveldPhases:
 
       """
       with open(filename) as file:
-         cls.fromstring(file.read())
+         cls.params_from_string(file.read())
 
    @classmethod
-   def fromstring(cls,input_string):
+   def params_from_string(cls,input_string):
       """
          Reads in a set of global refinement parameters from a string
       
          :param str input_string: a string containing input parameters
       """
-      # print input_string
-      # print input_string.splitlines()[0].split()
       for line in input_string.splitlines():
          if line.split()[0][-1] != ':':
             if line.split()[0] == "U":
@@ -76,25 +74,58 @@ class RietveldPhases:
                cls.Bkgd = np.zeros(int(line.split()[1]))
             if line.split()[0] == "eta:":
                cls.eta = np.zeros(int(line.split()[1]))
-      # for line in inp
-      # return input_string.splitlines()[0]
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
+      r""" Returns a numpy array populated by the values of a background 
+      polynomial, :math:`P(2\theta)`, with input parameters :math:`c_i` stored
+      in the class variable ``RietveldPhases.Bkgd``:
+
+      .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
+
+      where *N* is the length of the numpy array ``RietveldPhases.Bkgd``.
+
+      :param np.array two_theta: a list of :math:`(2\theta)` values
+      :return: the values of the background polynomial at points in 
+         ``two_theta``
+      :rtype: np.array
+
+      """
       dim = len(cls.Bkgd)
       powers = np.array(range(dim))
       powers.shape = (dim,1)
-      # print str(two_theta)
-      # print str(np.dot(x_bkgd,np.power(two_theta,powers)))
       return np.dot(cls.Bkgd,np.power(two_theta,powers))
+
+   @classmethod
+   def eta_Polynomial(cls, two_theta):
+      r""" Returns a numpy array populated by the values of the eta 
+      polynomial, :math:`\eta(2\theta)`, with input parameters :math:`\eta_i` 
+      stored in the class variable ``RietveldPhases.eta``:
+
+      .. math:: P(2\theta) = \sum_{i=0}^{M} \eta_i (2\theta)^i
+
+      where *M* is the length of the numpy array ``RietveldPhases.eta``.
+
+      :param np.array two_theta: a list of :math:`(2\theta)` values
+      :return: the values of the eta polynomial at points in 
+         ``two_theta``
+      :rtype: np.array
+
+      """
+      dim = len(cls.eta)
+      powers = np.array(range(dim))
+      powers.shape = (dim,1)
+      return np.dot(cls.eta,np.power(two_theta,powers))
 
    def __init__(self,fn_cif,common_params_fn_or_string=""):
       if common_params_fn_or_string != "":
          if common_params_fn_or_string[-4:] == ".txt":
-            RietveldPhases.fromfile(common_params_fn_or_string)
+            RietveldPhases.params_from_file(common_params_fn_or_string)
          else:
-            RietveldPhases.fromstring(common_params_fn_or_string)
+            RietveldPhases.params_from_string(common_params_fn_or_string)
       self.load_cif(fn_cif)
+      self.Compute_Relative_Intensities()
+      self.Compile_Weighted_Peak_Intensities()
 
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
@@ -172,15 +203,17 @@ class RietveldPhases:
          # read wavelength
          lambda_i = wavelengths.characteristic(lambdas[i]).as_angstrom()
          # Compute two_theta for each d-spacing
-         two_thetas[i] = 180/math.pi*np.arcsin(lambda_i/2/d_spacings)
+         two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/d_spacings)
          # Compute the corresponding LP intensity weights for each peak
          factors[i] = self.LP_Intensity_Scaling(two_thetas[i], \
             K_alpha_factors[i])
       
       # Assemble into a single array
       self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
+      self.two_theta_peaks.shape = (self.two_theta_peaks.shape[0],1)
       self.weighted_intensities = np.concatenate( \
          (factors[0]*relative_intensities,factors[1]*relative_intensities))
+      self.weighted_intensities.shape = (self.weighted_intensities.shape[0],1)
 
    def LP_Intensity_Scaling(self,two_theta_peaks,K_alpha_factor):
       r"""
@@ -194,7 +227,8 @@ class RietveldPhases:
          where :math:`K_{\alpha} \in \{K_{\alpha 1},K_{\alpha 2}\}`, as 
          appropriate.
 
-         :param np.array two_theta_peaks: list of :math:`2\theta` peak locations
+         :param two_theta_peaks: list of :math:`2\theta` peak locations
+         :type two_theta_peaks: np.array
          :param float K_alpha_factor: the :math:`K_\alpha` factor (either
             1 or 0.48, by default)
 
@@ -221,18 +255,18 @@ class RietveldPhases:
             +V\,\tan\theta_{\rm peak}+W\right|
 
          is the Cagliotti equation, describing the variation of peak width as a
-         function of the Bragg angle. (In eq. :eq:`PVDefn`, :math:`2\theta_0`
+         function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. :eq:`PVDefn`, :math:`2\theta_0`
          describes a refinable offset.)
 
       """
-      tan_thetapeak = np.tan(math.pi/360.0*two_theta_calc_peak)
+      tan_thetapeak = np.tan(math.pi/360.0*self.two_theta_peaks)
       omegaUVW_squared = abs(self.U*tan_thetapeak**2+self.V*tan_thetapeak \
          +self.W)
-      two_thetabar_squared = (two_theta-two_theta0-two_theta_calc_peak)**2 \
-         /omegaUVW_squared
-      eta = eta_0
-      return I_res_calc*Amp*(eta/(1 +two_thetabar_squared) \
-         +(1-eta)*np.exp(-np.log(2)*two_thetabar_squared))
+      two_thetabar_squared = (two_theta-self.two_theta_0 \
+         -self.two_theta_peaks)**2/omegaUVW_squared
+      return 10*self.Amplitude*self.weighted_intensities*(self.eta_Polynomial(two_theta) \
+         /(1 +two_thetabar_squared) +(1-self.eta_Polynomial(two_theta)) \
+         *np.exp(-np.log(2)*two_thetabar_squared))
 
    def Profile_Calc(self, two_theta):
       # print Rel_Peak_Intensity
