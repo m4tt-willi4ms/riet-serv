@@ -21,4 +21,4 @@ class RietveldRefinery:
       a file/string.
    """
 
-   def    
+   def TestFunch:
