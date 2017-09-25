@@ -5,6 +5,7 @@ from scitbx import lbfgsb
 # from libtbx.test_utils import approx_equal, eps_eq, Exception_expected
 # import sys
 import numpy as np
+import time
 import matplotlib.pyplot as plt
 from cctbx.eltbx import wavelengths
 from random import randint
@@ -146,29 +147,34 @@ def exercise_RietveldPhases():
    #Testing PseudoVoigtProfile
    if display_plots:
       #Select a random peak:
-      rnd_index = 23#randint(0,len(Rt[0].two_theta_peaks))
+      rnd_index = randint(0,len(Rt[0].two_theta_peaks)-1)
       tst_two_theta_peak = Rt[0].two_theta_peaks[rnd_index]
       tst_weighted_intensity = Rt[0].weighted_intensities[rnd_index]
       # print rnd_index, tst_two_theta_peak, tst_weighted_intensity
-      delta_theta = 1.0
+      delta_theta = 0.5
       # mask = np.ones(len(tst_two_theta),dtype=bool)
       mask = np.abs(tst_two_theta-tst_two_theta_peak) < delta_theta
       showPVProfilePlot("Test",Rt[0],rnd_index,tst_two_theta[mask],tst_y[mask],np.zeros(1))
 
 def showPVProfilePlot(plottitle,Rt,index,two_theta,y,Peak_Intensity, delta_theta=0.5):
-   plt.figure(figsize=(12, 8))
+   plt.ion()
+   fig = plt.figure(figsize=(12, 8))
    # plt.subplot(3,1,1)
    plt.scatter(two_theta,y,label='Data',s=1, color='red')
    plt.title(plottitle)
 
    plt.plot(two_theta,np.sum(Rt.PseudoVoigtProfile(two_theta),axis=0), \
-      label=r'$I_{\rm calc}$')
+      label=r'Total $I_{\rm calc}$')
    plt.plot(two_theta,Rt.PseudoVoigtProfile(two_theta)[index], \
       label=r'$I_{\rm calc}$')
    plt.legend(bbox_to_anchor=(.8,.7))
    plt.ylabel(r"$I$")
 
+   # fig, ax = plt.subplots()
    plt.show()
+   fig.canvas.flush_events()
+   time.sleep(0.5)
+   plt.close('all')
 
 # def showplot(plottitle,two_theta,x,y,Rel_Peak_Intensity,delta_theta):
 #    plt.figure(figsize=(12, 8))
