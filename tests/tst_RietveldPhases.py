@@ -16,15 +16,26 @@ import sys, os
 sys.path.append(os.path.abspath(".."))
 
 from RietveldPhases import RietveldPhases
+from RietveldRefinery import RietveldRefinery
 
-input_string = """\
-two_theta_0       0.0      -2.0  2.0
+input_strings = ["""\
 U              0.0   0.0   0.0
 V              0.0   0.0   0.0
 W              0.0006   0.0   0.0
 Amplitude         0.001 0.0      0.0
 eta:           2
+""",
+"""\
+U              0.2   0.0   0.0
+V              0.3   0.0   0.0
+W              0.0008   0.0   0.0
+Amplitude         0.05 0.0      0.0
+eta:           4
+"""]
+
+global_input_string = """\
 Bkgd:          3
+two_theta_0       0.0      -2.0  2.0
 """
 
 tst_two_theta = []
@@ -49,15 +60,16 @@ def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
    cifs = ["1000032.cif","1507774.cif"]
    Rt = []
-   RietveldPhases.params_from_string(input_string)
-   for cif in cifs:
-      Rt.append(RietveldPhases(cif))
+   RietveldPhases.global_params_from_string(global_input_string)
+   for cif,input_string in zip(cifs,input_strings):
+      Rt.append(RietveldPhases(cif,input_string))
 
    #Testing Read-in from input_string
-   assert RietveldPhases.U == 0.0
-   assert RietveldPhases.V == 0.0
-   assert RietveldPhases.W == 0.0006
-   assert RietveldPhases.Amplitude == 0.001
+   assert Rt[0].U == 0.0
+   assert Rt[1].U == 0.2
+   assert Rt[0].V == 0.0
+   assert Rt[0].W == 0.0006
+   assert Rt[0].Amplitude == 0.001
    assert RietveldPhases.two_theta_0 == 0.0
    assert len(RietveldPhases.Bkgd) == 3
    assert np.array_equal(RietveldPhases.Bkgd, np.array([0.,0.,0.]))
@@ -106,7 +118,7 @@ def exercise_RietveldPhases():
       """[ 1.  1.  1. ...,  2.  2.  2.]"""
 
    # Testing Background_Polynomial
-   RietveldPhases.Bkgd = np.array([1,2,3])
+   RietveldPhases.Bkgd = np.array([1.0,2.0,3.0])
    tst_bkgd_two_theta = np.array([0,1,2.3,100.5])
    assert np.all(np.isclose(RietveldPhases.Background_Polynomial( \
       tst_bkgd_two_theta) , np.array([  1,6,21.47,   3.05027500e+04])))
@@ -154,7 +166,12 @@ def exercise_RietveldPhases():
       delta_theta = 0.5
       # mask = np.ones(len(tst_two_theta),dtype=bool)
       mask = np.abs(tst_two_theta-tst_two_theta_peak) < delta_theta
-      showPVProfilePlot("Test",Rt[0],rnd_index,tst_two_theta[mask],tst_y[mask],np.zeros(1))
+      showPVProfilePlot("Test",Rt[0],rnd_index,tst_two_theta[mask],tst_y[mask] \
+         ,np.zeros(1))
+
+   #Testing Refinery
+   RR = RietveldRefinery(Rt)
+
 
 def showPVProfilePlot(plottitle,Rt,index,two_theta,y,Peak_Intensity, delta_theta=0.5):
    plt.ion()

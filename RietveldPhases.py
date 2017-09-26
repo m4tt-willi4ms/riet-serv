@@ -15,19 +15,29 @@ import jsonpickle
 from libtbx import easy_pickle
 
 class RietveldPhases:
-   """
+   r"""
       Used to group together methods for calculating powder profiles
       for Rietveld phases.  
+
+      :cvar float two_theta_0: :math:`2\theta_0` is a refinable offset, used 
+         to adjust for any miscalibration of detector motor positions when
+         collecting data
+      :cvar np.array Bkgd: This array contains the coefficients of a polynomial
+         used to model the profile background
+      :cvar float K_alpha_2_factor: The value by which the :math:`K_{\alpha 2}`
+         peaks are rescaled relative to the primary (:math:`K_{\alpha 1}`) peaks
+         (not refinable at present)
+      :cvar float delta_theta: :math:`\delta\theta` describes the window over
+         which a given peak profile is evaluated. (In practice it's inefficient 
+         to evaluate profile tails many standard deviations away from the peak, 
+         so some limit is set hard-coded here.)
    """
-   U = 0
-   V = 0
-   W = 0
-   Amplitude = 0
-   two_theta_0 = 0
-   Bkgd = np.zeros(1)
-   eta = np.zeros(1)
-   K_alpha_2_factor = 0.48
-   delta_theta = 0.5
+
+   two_theta_0 = 0 #:
+   Bkgd = np.zeros(2) #: Initialized to a two-dimensional zero array
+
+   K_alpha_2_factor = 0.48 #: Default value
+   delta_theta = 0.5 #: Default value (in degrees)
 
    # def __init__(self,U,V,W,eta,theta_0,Amplitude,K_alpha_2_factor):
    #    self.U = U
@@ -37,8 +47,7 @@ class RietveldPhases:
    #    self.Amplitude = Amplitude
    #    self.K_alpha_2_factor = K_alpha_2_factor
 
-   @classmethod
-   def params_from_file(cls,filename):
+   def params_from_file(self,filename):
       """
          Reads in a set of global refinement parameters from a file
          
@@ -46,10 +55,23 @@ class RietveldPhases:
 
       """
       with open(filename) as file:
-         cls.params_from_string(file.read())
+         self.params_from_string(file.read())
 
    @classmethod
-   def params_from_string(cls,input_string):
+   def global_params_from_string(cls,input_string):
+      for line in input_string.splitlines():
+         if line.split()[0][-1] != ':':
+            if line.split()[0] == "two_theta_0":
+               cls.two_theta_0 = float(line.split()[1])
+               cls.two_theta_0_lower = float(line.split()[2])
+               cls.two_theta_0_upper = float(line.split()[3]) 
+            # if line.split()[0] == "K_alpha_2_factor":
+            #    cls.K_alpha_2_factor = float(line.split()[1])
+         else:
+            if line.split()[0] == "Bkgd:":
+               cls.Bkgd = np.zeros(int(line.split()[1]))
+
+   def params_from_string(self,input_string):
       """
          Reads in a set of global refinement parameters from a string
       
@@ -58,22 +80,27 @@ class RietveldPhases:
       for line in input_string.splitlines():
          if line.split()[0][-1] != ':':
             if line.split()[0] == "U":
-               cls.U = float(line.split()[1])
+               self.U = float(line.split()[1])
+               self.U_lower = float(line.split()[2])
+               self.U_upper = float(line.split()[3])
             if line.split()[0] == "V":
-               cls.V = float(line.split()[1])
+               self.V = float(line.split()[1])
+               self.V_lower = float(line.split()[2])
+               self.V_upper = float(line.split()[3])               
             if line.split()[0] == "W":
-               cls.W = float(line.split()[1])
+               self.W = float(line.split()[1])
+               self.W_lower = float(line.split()[2])
+               self.W_upper = float(line.split()[3])               
             if line.split()[0] == "Amplitude":
-               cls.Amplitude = float(line.split()[1])
-            if line.split()[0] == "two_theta_0":
-               cls.two_theta_0 = float(line.split()[1])
+               self.Amplitude = float(line.split()[1])
+               self.Amplitude_lower = float(line.split()[2])
+               self.Amplitude_upper = float(line.split()[3])               
             # if line.split()[0] == "K_alpha_2_factor":
             #    cls.K_alpha_2_factor = float(line.split()[1])
          else:
-            if line.split()[0] == "Bkgd:":
-               cls.Bkgd = np.zeros(int(line.split()[1]))
             if line.split()[0] == "eta:":
-               cls.eta = np.zeros(int(line.split()[1]))
+               assert int(line.split()[1]) > 0
+               self.eta = np.zeros(int(line.split()[1]))
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
@@ -96,8 +123,7 @@ class RietveldPhases:
       powers.shape = (dim,1)
       return np.dot(cls.Bkgd,np.power(two_theta,powers))
 
-   @classmethod
-   def eta_Polynomial(cls, two_theta):
+   def eta_Polynomial(self, two_theta):
       r""" Returns a numpy array populated by the values of the eta 
       polynomial, :math:`\eta(2\theta)`, with input parameters :math:`\eta_i` 
       stored in the class variable ``RietveldPhases.eta``:
@@ -112,17 +138,17 @@ class RietveldPhases:
       :rtype: np.array
 
       """
-      dim = len(cls.eta)
+      dim = len(self.eta)
       powers = np.array(range(dim))
       powers.shape = (dim,1)
-      return np.dot(cls.eta,np.power(two_theta,powers))
+      return np.dot(self.eta,np.power(two_theta,powers))
 
    def __init__(self,fn_cif,common_params_fn_or_string=""):
       if common_params_fn_or_string != "":
          if common_params_fn_or_string[-4:] == ".txt":
-            RietveldPhases.params_from_file(common_params_fn_or_string)
+            self.params_from_file(common_params_fn_or_string)
          else:
-            RietveldPhases.params_from_string(common_params_fn_or_string)
+            self.params_from_string(common_params_fn_or_string)
       self.load_cif(fn_cif)
       self.Compute_Relative_Intensities()
       self.Compile_Weighted_Peak_Intensities()

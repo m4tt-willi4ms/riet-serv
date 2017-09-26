@@ -41,3 +41,12 @@ versatile and more accommodating of multi-phase powder diffraction profiles.
 .. automodule:: RietveldPhases
 .. autoclass:: RietveldPhases
    :members:
+
+Rietveld Refinery Module
+========================
+
+
+
+.. automodule:: RietveldRefinery
+.. autoclass:: RietveldRefinery
+   :members:
