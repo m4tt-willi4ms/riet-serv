@@ -14,6 +14,11 @@ from scitbx import lbfgsb
 import jsonpickle
 from libtbx import easy_pickle
 
+import sys, os
+sys.path.append(os.path.abspath(".."))
+
+from RietveldPhases import RietveldPhases
+
 class RietveldRefinery:
    """
       This class is used to assemble and organize the inputs required to run a
@@ -33,9 +38,9 @@ class RietveldRefinery:
       self.labels = []
 
       #Copy global variables into x first
-      self.x.append(Phase_list[0].two_theta_0)
+      self.x.append(RietveldPhases.two_theta_0)
       self.labels.append("two_theta_0")
-      for i,b in np.ndenumerate(Phase_list[1].Bkgd):
+      for i,b in np.ndenumerate(RietveldPhases.Bkgd):
          self.x.append(b)
          self.labels.append("Bkgd %d" % i[0])
          # print "Bkgd %d: %f" % (i[0],b)

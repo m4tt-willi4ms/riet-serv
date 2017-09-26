@@ -163,7 +163,7 @@ def exercise_RietveldPhases():
       tst_two_theta_peak = Rt[0].two_theta_peaks[rnd_index]
       tst_weighted_intensity = Rt[0].weighted_intensities[rnd_index]
       # print rnd_index, tst_two_theta_peak, tst_weighted_intensity
-      delta_theta = 0.5
+      delta_theta = 5
       # mask = np.ones(len(tst_two_theta),dtype=bool)
       mask = np.abs(tst_two_theta-tst_two_theta_peak) < delta_theta
       showPVProfilePlot("Test",Rt[0],rnd_index,tst_two_theta[mask],tst_y[mask] \
@@ -190,7 +190,7 @@ def showPVProfilePlot(plottitle,Rt,index,two_theta,y,Peak_Intensity, delta_theta
    # fig, ax = plt.subplots()
    plt.show()
    fig.canvas.flush_events()
-   time.sleep(0.5)
+   time.sleep(1)
    plt.close('all')
 
 # def showplot(plottitle,two_theta,x,y,Rel_Peak_Intensity,delta_theta):

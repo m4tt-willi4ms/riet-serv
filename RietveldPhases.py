@@ -36,6 +36,10 @@ class RietveldPhases:
    two_theta_0 = 0 #:
    Bkgd = np.zeros(2) #: Initialized to a two-dimensional zero array
 
+   x_global = np.concatenate((np.array([two_theta_0]),Bkgd))
+   l_global = np.zeros(3)
+   u_global = np.zeros(3)
+
    K_alpha_2_factor = 0.48 #: Default value
    delta_theta = 0.5 #: Default value (in degrees)
 
@@ -80,27 +84,45 @@ class RietveldPhases:
       for line in input_string.splitlines():
          if line.split()[0][-1] != ':':
             if line.split()[0] == "U":
-               self.U = float(line.split()[1])
-               self.U_lower = float(line.split()[2])
-               self.U_upper = float(line.split()[3])
+               self.x = np.append(self.x,np.recarray([( \
+                  line.split()[0], \
+                  float(line.split()[1]), \
+                  float(line.split()[2]), \
+                  float(line.split()[3]) \
+                  )],dtype=self.custom_dtype))
             if line.split()[0] == "V":
-               self.V = float(line.split()[1])
-               self.V_lower = float(line.split()[2])
-               self.V_upper = float(line.split()[3])               
+               self.x = np.append(self.x,np.recarray([( \
+                  line.split()[0], \
+                  float(line.split()[1]), \
+                  float(line.split()[2]), \
+                  float(line.split()[3]) \
+                  )],dtype=self.custom_dtype))
             if line.split()[0] == "W":
-               self.W = float(line.split()[1])
-               self.W_lower = float(line.split()[2])
-               self.W_upper = float(line.split()[3])               
+               self.x = np.append(self.x,np.recarray([( \
+                  line.split()[0], \
+                  float(line.split()[1]), \
+                  float(line.split()[2]), \
+                  float(line.split()[3]) \
+                  )],dtype=self.custom_dtype))
             if line.split()[0] == "Amplitude":
-               self.Amplitude = float(line.split()[1])
-               self.Amplitude_lower = float(line.split()[2])
-               self.Amplitude_upper = float(line.split()[3])               
+               self.x = np.append(self.x,np.recarray([( \
+                  line.split()[0], \
+                  float(line.split()[1]), \
+                  float(line.split()[2]), \
+                  float(line.split()[3]) \
+                  )],dtype=self.custom_dtype))
             # if line.split()[0] == "K_alpha_2_factor":
             #    cls.K_alpha_2_factor = float(line.split()[1])
          else:
             if line.split()[0] == "eta:":
                assert int(line.split()[1]) > 0
                self.eta = np.zeros(int(line.split()[1]))
+      
+      print self.x.l_limits
+
+   # def __set__(self,name,val):
+   #    instance.x[0] = val
+      # print x
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
@@ -144,14 +166,28 @@ class RietveldPhases:
       return np.dot(self.eta,np.power(two_theta,powers))
 
    def __init__(self,fn_cif,common_params_fn_or_string=""):
+
+      #: specify custom d-type for the numpy array which will contain the 
+      #: parameters used in refinement for this phase
+      self.custom_dtype = np.dtype([ \
+         ('labels','S12'), \
+         ('l_limits','f4'), \
+         ('u_limits','f4'), \
+         ('values','f4')])
+      self.x = np.rec.array((0,),dtype=self.custom_dtype)
+      y = np.rec.array([("V",0.0,0.0,0.0)],dtype=self.custom_dtype)
+      np.append(self.x,)
+      print self.x
+
+      self.load_cif(fn_cif)
+      
       if common_params_fn_or_string != "":
          if common_params_fn_or_string[-4:] == ".txt":
             self.params_from_file(common_params_fn_or_string)
          else:
             self.params_from_string(common_params_fn_or_string)
-      self.load_cif(fn_cif)
-      self.Compute_Relative_Intensities()
-      self.Compile_Weighted_Peak_Intensities()
+         self.Compute_Relative_Intensities()
+         self.Compile_Weighted_Peak_Intensities()
 
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
@@ -246,8 +282,9 @@ class RietveldPhases:
          Computes the intensity scaling factors for a set of peaks at locations 
          listed in ``two_theta_peaks``, via the equation in :eq:`LPDefn`:
 
-         .. math:: LP(2\theta) = K_{\alpha}\,\frac{1+\cos^2(2\theta)}
-            {\sin\theta\,\sin(2\theta)}
+         .. math:: LP(2\theta_{\rm peak}) = K_{\alpha}\,\frac{1+
+            \cos^2(2\theta_{\rm peak})}{\sin\theta_{\rm peak}\,
+            \sin(2\theta_{\rm peak})}
             :label: LPDefn
 
          where :math:`K_{\alpha} \in \{K_{\alpha 1},K_{\alpha 2}\}`, as 
@@ -308,7 +345,7 @@ class RietveldPhases:
       # print delta_theta
       # print two_theta
       # print two_theta[mask[0]]
-      # print two_theta_peaks[0]       
+      # print two_theta_peaks[0]
       result = np.zeros(len(two_theta))
       for i in xrange(0,Rel_Peak_Intensity.shape[1],1):
          result[mask[i]] += PseudoVoigtProfile(
