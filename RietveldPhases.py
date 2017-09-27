@@ -36,9 +36,16 @@ class RietveldPhases:
    two_theta_0 = 0 #:
    Bkgd = np.zeros(2) #: Initialized to a two-dimensional zero array
 
-   x_global = np.concatenate((np.array([two_theta_0]),Bkgd))
-   l_global = np.zeros(3)
-   u_global = np.zeros(3)
+   #: specify custom d-type for the numpy array which will contain the 
+   #: parameters used in refinement for this phase
+   custom_dtype = np.dtype([ \
+      ('labels','S12'), \
+      ('values','f4'), \
+      ('l_limits','f4'), \
+      ('u_limits','f4') \
+      ])
+
+   x_global = np.empty(0,dtype=custom_dtype)
 
    K_alpha_2_factor = 0.48 #: Default value
    delta_theta = 0.5 #: Default value (in degrees)
@@ -51,6 +58,43 @@ class RietveldPhases:
    #    self.Amplitude = Amplitude
    #    self.K_alpha_2_factor = K_alpha_2_factor
 
+   @classmethod
+   def read_param_line(cls,line):
+      return np.array([( \
+                  line.split()[0], \
+                  float(line.split()[1]), \
+                  float(line.split()[2]), \
+                  float(line.split()[3]) \
+                  )],dtype=cls.custom_dtype)
+
+   @classmethod
+   def global_params_from_file(cls,filename):
+      """
+         Reads in a set of global refinement parameters from a file
+         
+         :param str filename: the name of the file from which to read parameters
+      """
+      with open(filename) as file:
+         cls.global_params_from_string(file.read())
+
+   @classmethod
+   def global_params_from_string(cls,input_string):
+      for line in input_string.splitlines():
+         if line.split()[0][-1] != ':':
+            if line.split()[0] == "two_theta_0":
+               cls.two_theta_0_index = cls.x_global['values'].shape[0]
+               cls.x_global = np.append(cls.x_global,cls.read_param_line(line))
+            # if line.split()[0] == "K_alpha_2_factor":
+            #    cls.K_alpha_2_factor = float(line.split()[1])
+         else:
+            if line.split()[0] == "Bkgd:":
+               cls.Bkgd_rank = int(line.split()[1])
+               cls.Bkgd_0_index = cls.x_global.shape[0]
+               for p in xrange(0,cls.Bkgd_rank):
+                  cls.x_global = np.append(cls.x_global, \
+                     cls.read_param_line("Bkgd_" + str(p) +" 0.0 0.0 0.0"))
+               # cls.Bkgd = np.zeros(int(line.split()[1]))
+
    def params_from_file(self,filename):
       """
          Reads in a set of global refinement parameters from a file
@@ -61,68 +105,32 @@ class RietveldPhases:
       with open(filename) as file:
          self.params_from_string(file.read())
 
-   @classmethod
-   def global_params_from_string(cls,input_string):
-      for line in input_string.splitlines():
-         if line.split()[0][-1] != ':':
-            if line.split()[0] == "two_theta_0":
-               cls.two_theta_0 = float(line.split()[1])
-               cls.two_theta_0_lower = float(line.split()[2])
-               cls.two_theta_0_upper = float(line.split()[3]) 
-            # if line.split()[0] == "K_alpha_2_factor":
-            #    cls.K_alpha_2_factor = float(line.split()[1])
-         else:
-            if line.split()[0] == "Bkgd:":
-               cls.Bkgd = np.zeros(int(line.split()[1]))
-
    def params_from_string(self,input_string):
       """
          Reads in a set of global refinement parameters from a string
       
          :param str input_string: a string containing input parameters
       """
-      for line in input_string.splitlines():
+      for l,line in enumerate(input_string.splitlines()):
          if line.split()[0][-1] != ':':
             if line.split()[0] == "U":
-               self.x = np.append(self.x,np.recarray([( \
-                  line.split()[0], \
-                  float(line.split()[1]), \
-                  float(line.split()[2]), \
-                  float(line.split()[3]) \
-                  )],dtype=self.custom_dtype))
+               self.U_index = self.x['values'].shape[0]
+               self.x = np.append(self.x,self.read_param_line(line))
             if line.split()[0] == "V":
-               self.x = np.append(self.x,np.recarray([( \
-                  line.split()[0], \
-                  float(line.split()[1]), \
-                  float(line.split()[2]), \
-                  float(line.split()[3]) \
-                  )],dtype=self.custom_dtype))
+               self.V_index = self.x['values'].shape[0]
+               self.x = np.append(self.x,self.read_param_line(line))
             if line.split()[0] == "W":
-               self.x = np.append(self.x,np.recarray([( \
-                  line.split()[0], \
-                  float(line.split()[1]), \
-                  float(line.split()[2]), \
-                  float(line.split()[3]) \
-                  )],dtype=self.custom_dtype))
+               self.W_index = self.x['values'].shape[0]
+               self.x = np.append(self.x,self.read_param_line(line))
             if line.split()[0] == "Amplitude":
-               self.x = np.append(self.x,np.recarray([( \
-                  line.split()[0], \
-                  float(line.split()[1]), \
-                  float(line.split()[2]), \
-                  float(line.split()[3]) \
-                  )],dtype=self.custom_dtype))
+               self.Amplitude_index = self.x['values'].shape[0]
+               self.x = np.append(self.x,self.read_param_line(line))
             # if line.split()[0] == "K_alpha_2_factor":
             #    cls.K_alpha_2_factor = float(line.split()[1])
          else:
             if line.split()[0] == "eta:":
                assert int(line.split()[1]) > 0
                self.eta = np.zeros(int(line.split()[1]))
-      
-      print self.x.l_limits
-
-   # def __set__(self,name,val):
-   #    instance.x[0] = val
-      # print x
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
@@ -134,7 +142,8 @@ class RietveldPhases:
 
       where *N* is the length of the numpy array ``RietveldPhases.Bkgd``.
 
-      :param np.array two_theta: a list of :math:`(2\theta)` values
+      :param np.array two_theta: a list of :math:`2\theta` values at which to 
+         evaluate :math:`P(2\theta)`
       :return: the values of the background polynomial at points in 
          ``two_theta``
       :rtype: np.array
@@ -167,17 +176,7 @@ class RietveldPhases:
 
    def __init__(self,fn_cif,common_params_fn_or_string=""):
 
-      #: specify custom d-type for the numpy array which will contain the 
-      #: parameters used in refinement for this phase
-      self.custom_dtype = np.dtype([ \
-         ('labels','S12'), \
-         ('l_limits','f4'), \
-         ('u_limits','f4'), \
-         ('values','f4')])
-      self.x = np.rec.array((0,),dtype=self.custom_dtype)
-      y = np.rec.array([("V",0.0,0.0,0.0)],dtype=self.custom_dtype)
-      np.append(self.x,)
-      print self.x
+      self.x = np.empty(0,dtype=self.custom_dtype)
 
       self.load_cif(fn_cif)
       
@@ -318,16 +317,18 @@ class RietveldPhases:
             +V\,\tan\theta_{\rm peak}+W\right|
 
          is the Cagliotti equation, describing the variation of peak width as a
-         function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. :eq:`PVDefn`, :math:`2\theta_0`
-         describes a refinable offset.)
+         function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
+         :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
 
       """
       tan_thetapeak = np.tan(math.pi/360.0*self.two_theta_peaks)
-      omegaUVW_squared = abs(self.U*tan_thetapeak**2+self.V*tan_thetapeak \
-         +self.W)
+      omegaUVW_squared = abs(self.x['values'][self.U_index]*tan_thetapeak**2 \
+         +self.x['values'][self.V_index]*tan_thetapeak \
+         +self.x['values'][self.W_index])
       two_thetabar_squared = (two_theta-self.two_theta_0 \
          -self.two_theta_peaks)**2/omegaUVW_squared
-      return 10*self.Amplitude*self.weighted_intensities*(self.eta_Polynomial(two_theta) \
+      return 10*self.x['values'][self.Amplitude_index] \
+         *self.weighted_intensities*(self.eta_Polynomial(two_theta) \
          /(1 +two_thetabar_squared) +(1-self.eta_Polynomial(two_theta)) \
          *np.exp(-np.log(2)*two_thetabar_squared))
 

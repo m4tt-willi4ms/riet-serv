@@ -65,14 +65,17 @@ def exercise_RietveldPhases():
       Rt.append(RietveldPhases(cif,input_string))
 
    #Testing Read-in from input_string
-   assert Rt[0].U == 0.0
-   assert Rt[1].U == 0.2
-   assert Rt[0].V == 0.0
-   assert Rt[0].W == 0.0006
-   assert Rt[0].Amplitude == 0.001
+   assert np.isclose(Rt[0].x['values'][Rt[0].U_index], 0.0)
+   assert Rt[0].x['labels'][Rt[0].U_index] == 'U'
+   assert np.isclose(Rt[1].x['values'][Rt[1].U_index], 0.2)
+   assert Rt[1].x['labels'][Rt[1].U_index] == 'U'
+   assert np.isclose(Rt[0].x['values'][Rt[0].V_index], 0.0)
+   assert Rt[0].x['labels'][Rt[0].V_index] == 'V'
+   assert np.isclose(Rt[0].x['values'][Rt[0].W_index],  0.0006)
+   assert np.isclose(Rt[0].x['values'][Rt[0].Amplitude_index],  0.001)
    assert RietveldPhases.two_theta_0 == 0.0
-   assert len(RietveldPhases.Bkgd) == 3
-   assert np.array_equal(RietveldPhases.Bkgd, np.array([0.,0.,0.]))
+   # assert len(RietveldPhases.Bkgd) == 3
+   # assert np.array_equal(RietveldPhases.Bkgd, np.array([0.,0.,0.]))
 
    # Testing iotbx output from .cif card
    np.set_printoptions(threshold=None)
@@ -171,6 +174,9 @@ def exercise_RietveldPhases():
 
    #Testing Refinery
    RR = RietveldRefinery(Rt)
+   print "here"
+   print RietveldPhases.x_global
+   print Rt[0].x
 
 
 def showPVProfilePlot(plottitle,Rt,index,two_theta,y,Peak_Intensity, delta_theta=0.5):
@@ -184,6 +190,7 @@ def showPVProfilePlot(plottitle,Rt,index,two_theta,y,Peak_Intensity, delta_theta
       label=r'Total $I_{\rm calc}$')
    plt.plot(two_theta,Rt.PseudoVoigtProfile(two_theta)[index], \
       label=r'$I_{\rm calc}$')
+
    plt.legend(bbox_to_anchor=(.8,.7))
    plt.ylabel(r"$I$")
 
