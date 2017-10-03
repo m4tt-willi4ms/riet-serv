@@ -35,6 +35,8 @@ class RietveldRefinery:
       self.two_theta = two_theta
       self.y = y
 
+      self.mask = np.ones(len(self.x),dtype=bool)
+
    def TotalProfile(self,delta_theta=0.5):
       # np.set_printoptions(threshold=None)
       # print RietveldPhases.Background_Polynomial(self.two_theta)
@@ -54,16 +56,55 @@ class RietveldRefinery:
       return (self.y - self.TotalProfile())**2/self.y
 
    def Weighted_Sum_of_Squares(self,x):
-      self.x['values'] = x
+      # print self.mask
+      self.x['values'][self.mask] = x
       return np.sum(self.Weighted_Squared_Errors())
 
    def minimize(self):
-      print self.x['labels']
-      print minimizer(self.Weighted_Sum_of_Squares,self.x['values'],
+      print minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
          approx_grad = True, \
-         factr = 1e10, \
-         bounds = zip(self.x['l_limits'],self.x['u_limits']))
-      
+         factr = 1e6,
+         iprint = 1000,
+         m=5,
+         pgtol = 1e-5,
+         epsilon=1e-8)#, \
+         # bounds = zip(self.x['l_limits'],self.x['u_limits']))
+
+   def minimize_Amplitude_and_Offset(self,display_plots = True):
+      if display_plots:
+         self.show_multiplot("Sum of Phases", \
+         two_theta_roi=30, \
+         delta_theta=10, \
+         autohide=False)
+
+      self.mask = np.logical_or( \
+         np.char.startswith(self.x['labels'],"Amplitude"),
+         np.char.startswith(self.x['labels'],"two_theta_0"))
+      self.minimize()
+
+      if display_plots:
+         self.show_multiplot("Sum of Phases", \
+         two_theta_roi=30, \
+         delta_theta=10, \
+         autohide=False)
+
+   def display(self,fn):
+      self.show_multiplot("Sum of Phases", \
+      two_theta_roi=30, \
+      delta_theta=10, \
+      autohide=False)
+      print fn.__name__
+
+      fn(self)
+
+      self.show_multiplot("Sum of Phases", \
+      two_theta_roi=30, \
+      delta_theta=10, \
+      autohide=False)
+
+   def minimize_All(self,display_plots = True):
+      self.mask = np.ones(len(self.x),dtype=bool)
+      return self.minimize()
 
    def show_plot(self,plottitle,scale_factor=1,autohide=True):
       if autohide:
@@ -86,7 +127,7 @@ class RietveldRefinery:
          time.sleep(1)
          plt.close('all')
 
-   def show_multiplot(self,plottitle,two_theta_roi, \
+   def show_multiplot(self,plottitle,two_theta_roi=45, \
          delta_theta=0.5,autohide=True):
       # print self.x['values'][self.x['labels'] == 'Amplitude']
       # self.x['values'][self.x['labels'] == 'Amplitude'] \

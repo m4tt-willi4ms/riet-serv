@@ -1,0 +1,60 @@
+data_cif_C3A - orthorhombic
+_audit_creation_date              'Tuesday, February 23, 2016, 4:39 PM'
+_audit_creation_method            'MDI-Jade (2010)'
+
+_chemical_name_common
+;
+C3A - orthorhombic
+;
+_chemical_formula_sum             Ca8.5NaAl6O18
+
+_publ_section_references
+;
+Acta Cryst B 31 (1975) 1169, Nishi, F., Takeuchi, Y.
+;
+_publ_section_comment
+;
+See also PDF 26-0958, 32-0148, 33-0251. [C3A - orthorhombic.csf]
+;
+
+_symmetry_cell_setting            Orthorhombic
+_symmetry_space_group_name_H-M    Pbca
+_symmetry_Int_Tables_number       61
+
+_cell_length_a                    10.875
+_cell_length_b                    10.859
+_cell_length_c                    15.105
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 90.0
+_cell_volume                      1783.77
+_cell_formula_units_Z             4.0
+
+loop_
+ _atom_site_label
+ _atom_site_type_symbol
+ _atom_site_symmetry_multiplicity
+ _atom_site_occupancy
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_B_iso_or_equiv
+ _atom_site_thermal_displace_type
+ Ca1  Ca+2 8   0.25  0.003    0.002    0.518    1.0      Biso
+ Ca2  Ca+2 8   1.0   -0.004   0.018    0.239    0.7      Biso
+ Ca3  Ca+2 8   1.0   0.009    0.267    0.133    0.7      Biso
+ Ca4  Ca+2 8   1.0   0.257    0.271    0.253    1.1      Biso
+ Ca5  Ca+2 8   1.0   0.263    0.246    0.498    1.0      Biso
+ Na1  Na+1 4   1.0   0.0      0.0      0.0      2.9      Biso
+ Al1  Al+3 8   1.0   -0.005   -0.214   0.116    0.4      Biso
+ Al2  Al+3 8   1.0   0.238    -0.003   0.113    0.6      Biso
+ Al3  Al+3 8   1.0   0.242    0.005    -0.109   1.6      Biso
+ O1   O-2  8   1.0   -0.144   -0.134   0.109    1.6      Biso
+ O2   O-2  8   1.0   0.111    -0.101   0.126    1.8      Biso
+ O3   O-2  8   1.0   0.287    -0.022   0.002    0.9      Biso
+ O4   O-2  8   1.0   -0.007   -0.286   0.218    1.7      Biso
+ O5   O-2  8   1.0   0.02     -0.293   0.017    1.3      Biso
+ O6   O-2  8   1.0   0.355    -0.072   0.174    1.1      Biso
+ O7   O-2  8   1.0   0.189    0.148    0.132    1.3      Biso
+ O8   O-2  8   1.0   0.162    -0.128   -0.142   1.0      Biso
+ O9   O-2  8   1.0   0.372    0.066    -0.16    0.9      Biso

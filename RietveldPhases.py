@@ -80,18 +80,19 @@ class RietveldPhases:
             #    cls.K_alpha_2_factor = float(line.split()[1])
          else:
             if line.split()[0] == "Bkgd:":
+               assert int(line.split()[1]) > 0
                cls.Bkgd_rank = int(line.split()[1])
                cls.Bkgd_0_index = cls.x.shape[0]
                for p in xrange(0,cls.Bkgd_rank):
                   cls.x = np.append(cls.x, \
-                     cls.read_param_line("Bkgd_" + str(p) +" 0.0 0.0 0.0"))
+                     cls.read_param_line("Bkgd_" + str(p) +" 0.0 -inf inf"))
                # cls.Bkgd = np.zeros(int(line.split()[1]))
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
       r""" Returns a numpy array populated by the values of a background 
       polynomial, :math:`P(2\theta)`, with input parameters :math:`c_i` stored
-      in the class variable ``RietveldPhases.Bkgd``:
+      in the class variable ``RietveldPhases.x`` with label ``Bkgd_i``:
 
       .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
 
@@ -163,8 +164,17 @@ class RietveldPhases:
          else:
             if line.split()[0] == "eta:":
                assert int(line.split()[1]) > 0
-               self.eta = np.zeros(int(line.split()[1]))
-
+               self.eta_rank = int(line.split()[1])
+               self.eta_0_index = self.x.shape[0]
+               for p in xrange(0,self.eta_rank):
+                  if p == 0:
+                     RietveldPhases.x = np.append(RietveldPhases.x, \
+                        RietveldPhases.read_param_line( \
+                           "eta_" + str(p) +" 0.5 0.0 1.0"))
+                  else:
+                     RietveldPhases.x = np.append(RietveldPhases.x, \
+                        RietveldPhases.read_param_line( \
+                           "eta_" + str(p) +" 0.0 0.0 "+ str(0.001*p)))
 
    def eta_Polynomial(self, two_theta):
       r""" Returns a numpy array populated by the values of the eta 
@@ -181,10 +191,13 @@ class RietveldPhases:
       :rtype: np.array
 
       """
-      dim = len(self.eta)
+      mask = np.isin(np.array(range(0,len(RietveldPhases.x))), \
+         np.array(range(self.eta_0_index,self.eta_0_index+self.eta_rank)))
+      eta = RietveldPhases.x['values'][mask]
+      dim = len(eta)
       powers = np.array(range(dim))
       powers.shape = (dim,1)
-      return np.dot(self.eta,np.power(two_theta,powers))
+      return np.dot(eta,np.power(two_theta,powers))
 
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx

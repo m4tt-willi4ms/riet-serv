@@ -19,18 +19,18 @@ from RietveldPhases import RietveldPhases
 from RietveldRefinery import RietveldRefinery
 
 input_strings = ["""\
-U              0.0   0.0   0.0
-V              0.0   0.0   0.0
-W              0.0006   0.0   0.0
-Amplitude         0.001 0.0      0.0
+U              0.0   -0.1   0.1
+V              0.0   -0.1   0.1
+W              0.0006   -0.1   0.1
+Amplitude         0.001 -inf      inf
 eta:           2
 """,
 """\
-U              0.2   0.0   0.0
-V              0.3   0.0   0.0
-W              0.0008   0.0   0.0
-Amplitude         0.05 0.0      0.0
-eta:           4
+U              0.2   -0.1   0.1
+V              0.3   -0.1   0.1
+W              0.0008   -0.1   0.1
+Amplitude         0.001 -inf      inf
+eta:           2
 """]
 
 global_input_string = """\
@@ -138,12 +138,20 @@ def exercise_RietveldPhases():
       """[ 1.  1.  1. ...,  2.  2.  2.]"""
 
    # Testing Background_Polynomial
-   # RietveldPhases.x['values'] \
-   #    [np.char.startswith(RietveldPhases.x['labels'],"Bkgd")]  \
-   #    = np.array([1.0,2.0,3.0])
-   # tst_bkgd_two_theta = np.array([0,1,2.3,100.5])
-   # assert np.all(np.isclose(RietveldPhases.Background_Polynomial( \
-   #    tst_bkgd_two_theta) , np.array([  1,6,21.47,   3.05027500e+04])))
+   RietveldPhases.x['values'] \
+      [np.char.startswith(RietveldPhases.x['labels'],"Bkgd")]  \
+      = np.array([1.0,2.0,3.0])
+   tst_bkgd_two_theta = np.array([0,1,2.3,100.5])
+   assert np.all(np.isclose(RietveldPhases.Background_Polynomial( \
+      tst_bkgd_two_theta) , np.array([  1,6,21.47,   3.05027500e+04])))
+
+   # Testing Eta_Polynomial
+   Rt0_eta_mask = np.isin(np.array(range(0,len(RietveldPhases.x))), \
+      np.array(range(Rt[0].eta_0_index,Rt[0].eta_0_index+Rt[0].eta_rank)))
+   RietveldPhases.x['values'][Rt0_eta_mask] = np.array([0.5,0.005])
+   tst_eta_two_theta = np.array([0,1,2.3,100.5])
+   assert np.all(np.isclose(Rt[0].eta_Polynomial( \
+      tst_bkgd_two_theta) , np.array([ 0.5, 0.505, 0.5115, 1.00249999])))
 
    # Testing LP_Intensity_Scaling
    assert np.isclose(Rt[0].LP_Intensity_Scaling(20.0,0.45),14.2674396526)
@@ -199,13 +207,22 @@ def exercise_RietveldPhases():
 
    #Testing Refinery
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y)
-   Total_Profile = RR.TotalProfile()
    if display_plots:
-      RR.show_multiplot("Sum of Phases", 30, delta_theta=10, autohide=False)
+      RR.show_multiplot("Sum of Phases", \
+         two_theta_roi=30, \
+         delta_theta=10, \
+         autohide=False)
+   t0 = time.time()
    RR.minimize()
+   t1 = time.time()
+   print "Time elapse: " + str(t1-t0)
    if display_plots:
+      print RietveldPhases.x['labels']
       print RietveldPhases.x['values']
-      RR.show_multiplot("Sum of Phases", 30, delta_theta=10, autohide=False)
+      RR.show_multiplot("Sum of Phases", \
+         two_theta_roi=30, \
+         delta_theta=10, \
+         autohide=False)
 
 def run():
    exercise_RietveldPhases()
