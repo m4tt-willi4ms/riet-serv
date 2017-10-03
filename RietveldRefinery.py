@@ -15,10 +15,8 @@ import jsonpickle
 from libtbx import easy_pickle
 from scipy.optimize import minimize
 
-import sys, os
-sys.path.append(os.path.abspath(".."))
-
 from RietveldPhases import RietveldPhases
+from scipy.optimize import fmin_l_bfgs_b as minimizer
 
 class RietveldRefinery:
    """
@@ -27,56 +25,115 @@ class RietveldRefinery:
       a file/string.
    """
 
-   def __init__(self,Phase_list):
+   def __init__(self,Phase_list,two_theta,y):
       """
          Given some list of phases, an instance of the refinery is initialized
          to readily run a refinement process.
       """
-      self.x = RietveldPhases.x_global
-      self.d = len(Phase_list)
-      self.x['l_limits'][1] = -4.0
-      print tuple(self.x)
-      print len(tuple(self.x))
-      print len(tuple(tuple(Phase_list[i].x) for i in xrange(0,len(Phase_list))))
-      print tuple(Phase_list[i].x for i in xrange(0,len(Phase_list)))
-      print np.concatenate(tuple(self.x)+tuple(Phase_list[i].x for i in \
-         xrange(0,self.d)))
+      self.x = RietveldPhases.x
+      self.Phase_list = Phase_list
+      self.two_theta = two_theta
+      self.y = y
 
-      self.x = np.concatenate((self.x,Phase_list[0].x))
-      self.x['l_limits'][5] = -6.0
-      print self.x['values']
-      # print len(Phase_list)
-      # # print self.x.all()
-      # for i in xrange(0,len(Phase_list)):
-      #    self.x = np.append(self.x,Phase_list[i].x)
-      # print self.x
-      # # print np.append(RietveldPhases.x_global,Phase_list[0].x)
-      # self.x['l_limits'][0] = -3.0
-      # print self.x
+   def TotalProfile(self,delta_theta=0.5):
+      # np.set_printoptions(threshold=None)
+      # print RietveldPhases.Background_Polynomial(self.two_theta)
+      # for i in xrange(0,len(self.Phase_list)):
+         # print i 
+         # t0 = time.time()
+         # print self.Phase_list[i].Phase_Profile(self.two_theta)
+         # t1 = time.time()
+         # print t1-t0
+      # print np.sum(self.Phase_list[i].Phase_Profile(self.two_theta) \
+      #    for i in xrange(0,len(self.Phase_list)))
+      return RietveldPhases.Background_Polynomial(self.two_theta) \
+         + np.sum(self.Phase_list[i].Phase_Profile(self.two_theta)  \
+            for i in xrange(0,len(self.Phase_list)))
 
-      # print tuple(Phase_list)
-      # tmp = ()
+   def Weighted_Squared_Errors(self):
+      return (self.y - self.TotalProfile())**2/self.y
 
-      # print RietveldPhases.x_global
-      # print np.concatenate((RietveldPhases.x_global,Phase_list[0].x))
-      # print Phase_list[0].x
-      # tmp += (Phase_list[0].x)
-      # print tmp  
-      # print (RietveldPhases.x_global)+tuple(Phase_list)
-      # x = np.concatenate((RietveldPhases.x_global)+tuple(Phase_list))
-      # print x
-      # #Copy global variables into x first
-      # self.x.append(RietveldPhases.two_theta_0)
-      # self.labels.append("two_theta_0")
-      # for i,b in np.ndenumerate(RietveldPhases.Bkgd):
-      #    self.x.append(b)
-      #    self.labels.append("Bkgd %d" % i[0])
-      #    # print "Bkgd %d: %f" % (i[0],b)
+   def Weighted_Sum_of_Squares(self,x):
+      self.x['values'] = x
+      return np.sum(self.Weighted_Squared_Errors())
 
-      # for i, Rp in enumerate(Phase_list,start=1):
-      #    self.x.append(Rp.U)
-      #    self.l.append(Rp.U_lower)
-      #    self.u.append(Rp.U_upper)
-      #    self.labels.append("U Phase {0}".format(str(i)))
+   def minimize(self):
+      print self.x['labels']
+      print minimizer(self.Weighted_Sum_of_Squares,self.x['values'],
+         approx_grad = True, \
+         factr = 1e10, \
+         bounds = zip(self.x['l_limits'],self.x['u_limits']))
+      
 
-      #    # print self.labels[i-1], str(self.x[i-1])
+   def show_plot(self,plottitle,scale_factor=1,autohide=True):
+      if autohide:
+         plt.ion()
+      fig = plt.figure(figsize=(12, 8))
+      # plt.subplot(3,1,1)
+      plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
+      plt.title(plottitle)
+
+      plt.plot(self.two_theta,scale_factor*self.TotalProfile(), \
+         label=r'$I_{\rm calc}$')
+
+      plt.legend(bbox_to_anchor=(.8,.7))
+      plt.ylabel(r"$I$")
+
+      # fig, ax = plt.subplots()
+      plt.show()
+      if autohide:
+         fig.canvas.flush_events()
+         time.sleep(1)
+         plt.close('all')
+
+   def show_multiplot(self,plottitle,two_theta_roi, \
+         delta_theta=0.5,autohide=True):
+      # print self.x['values'][self.x['labels'] == 'Amplitude']
+      # self.x['values'][self.x['labels'] == 'Amplitude'] \
+         # = np.array([0.001,1e-9])
+      # print self.x['values'][self.x['labels'] == 'Amplitude']
+      if autohide:
+         plt.ion()
+      plt.figure(figsize=(12, 8))
+      plt.subplot(3,1,1)
+      # for i in xrange(0,len(two_theta)):
+      #    if delta_theta[i]:
+      #       color = 'blue'
+      #    else: color = 'green'
+      #    plt.scatter(two_theta[i],y[i], color=color,s=1)
+      plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
+      plt.title(plottitle)
+      # plt.axis([20,60,0,1500])
+
+      plt.plot(self.two_theta,self.TotalProfile(), label=r'$I_{\rm calc}$')
+      plt.legend(bbox_to_anchor=(.8,.7))
+      plt.ylabel(r"$I$")
+
+      plt.subplot(3,1,2)
+      # for i in xrange(0,len(two_theta)):
+      #    if delta_theta[i]:
+      #       color = 'blue'
+      #    else: color = 'green'
+      #    plt.scatter(two_theta[i],y[i], color=color,s=1)
+      pltmask = np.abs(self.two_theta - two_theta_roi) \
+         < delta_theta
+      plt.scatter(self.two_theta[pltmask],self.y[pltmask],label='Data',s=1, \
+         color='red')
+      # plt.title(r"Profile: $Al_2 O_3$")
+      # plt.axis([20,60,0,1500])
+
+      plt.plot(self.two_theta[pltmask],self.TotalProfile()[pltmask], \
+         label=r'$I_{\rm calc}$')
+      plt.legend(bbox_to_anchor=(.8,.7))
+      plt.ylabel(r"$I$")
+
+      plt.subplot(3,1,3)
+      plt.scatter(self.two_theta,self.Weighted_Squared_Errors())
+      plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
+      plt.xlabel(r'$2\,\theta$')
+
+      plt.show()#block=False)
+      if autohide:
+         fig.canvas.flush_events()
+         time.sleep(1)
+         plt.close('all')
