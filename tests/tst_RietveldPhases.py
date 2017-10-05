@@ -22,20 +22,29 @@ input_strings = ["""\
 U              0.0   -0.1   0.1
 V              0.0   -0.1   0.1
 W              0.0006   -0.1   0.1
-Amplitude         0.001 -inf      inf
+Amplitude         0.001 0      inf
 eta:           2
 """,
 """\
 U              0.2   -0.1   0.1
 V              0.3   -0.1   0.1
 W              0.0008   -0.1   0.1
-Amplitude         0.001 -inf      inf
+Amplitude         0.001 0      inf
 eta:           2
 """]
 
 global_input_string = """\
 Bkgd:          3
 two_theta_0       0.001      -2.0  2.0
+"""
+
+minimizer_input_string = """\
+approx_grad True
+factr       1e10
+iprint      10
+m           5
+pgtol       1e-5
+epsilon     1e-8
 """
 
 tst_two_theta = []
@@ -206,16 +215,14 @@ def exercise_RietveldPhases():
                tst_y[mask], autohide=False)
 
    #Testing Refinery
-   RR = RietveldRefinery(Rt,tst_two_theta,tst_y)
+   RR = RietveldRefinery(Rt,tst_two_theta,tst_y, \
+      input_string=minimizer_input_string)
    if display_plots:
       RR.show_multiplot("Sum of Phases", \
          two_theta_roi=30, \
          delta_theta=10, \
          autohide=False)
-   t0 = time.time()
    RR.minimize()
-   t1 = time.time()
-   print "Time elapse: " + str(t1-t0)
    if display_plots:
       print RietveldPhases.x['labels']
       print RietveldPhases.x['values']

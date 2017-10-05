@@ -13,7 +13,7 @@ from libtbx import test_utils
 import libtbx.load_env
 
 import sys, os
-sys.path.append(os.path.abspath(".."))
+sys.path.append(os.path.abspath("../.."))
 
 from RietveldPhases import RietveldPhases
 from RietveldRefinery import RietveldRefinery
@@ -30,7 +30,7 @@ U              0.2   -0.1   0.1
 V              0.3   -0.1   0.1
 W              0.0008   -0.1   0.1
 Amplitude         0.000001 0      inf
-eta:           4
+eta:           1
 """,
 """\
 U              0.0   -0.1   0.1
@@ -77,7 +77,16 @@ eta:           1
 
 global_input_string = """\
 Bkgd:          3
-two_theta_0       0.      -2.0  2.0
+two_theta_0       0.      -0.5  0.5
+"""
+
+minimizer_input_string = """\
+approx_grad True
+factr       1e8
+iprint      1000
+m           5
+pgtol       1e-5
+epsilon     1e-8
 """
 
 tst_two_theta = []
@@ -99,16 +108,16 @@ with open(r"cement_15_03_11_0028.xye") as file:
 tst_two_theta = np.array(tst_two_theta)
 tst_y = np.array(tst_y)
 
-def exercise_Rietveld_Refinery_SinglePhase():
+def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string)
-   cifs = ["CSD#1001Alite.cif", \
-      "CSD#1002Belite.cif", \
-      "CSD#1003Ferrite.cif", \
-      "CSD#1004FreeLime.cif", \
-      "CSD#1005AluminateCubic.cif", \
-      "CSD#1006AluminateOrtho.cif", \
-      "CSD#1007Periclase.cif", \
-      "CSD#1008Arcanite.cif"]
+   cifs = ["1540705-Alite.cif", \
+      "9012789-Belite.cif", \
+      "1200009-Ferrite.cif", \
+      "1011094-FreeLime.cif", \
+      "1000039-AluminateCubic.cif", \
+      "9014308-AluminateOrtho.cif", \
+      "1000053-Periclase.cif", \
+      "9007569-Arcanite.cif"]
    Rt = []
    for cif, input_string in zip(cifs,input_strings):
       Rt.append(RietveldPhases(cif,input_string))
@@ -123,23 +132,19 @@ def exercise_Rietveld_Refinery_SinglePhase():
       RV.Compute_Relative_Intensities(d_min=d_min)
       RV.Compile_Weighted_Peak_Intensities()
 
-   RR = RietveldRefinery(Rt,tst_two_theta,tst_y)
-   t0 = time.time()
-   RR.minimize_Amplitude_and_Offset(display_plots = display_plots)
-   t1 = time.time()
-   print "Time elapsed: " + str(t1-t0)
+   #First fit the background
+   RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string, \
+      use_bkgd_mask=True)
+   RR.display(RR.minimize_Bkgd)
 
-   t0 = time.time()
+   #Now use the full dataset
+   RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
+   RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    RR.display(RR.minimize_All)
-   t1 = time.time()
-   print "Time elapsed: " + str(t1-t0)
-
-def exercise_Rietveld_Refinery_Multiphase():
-   pass
 
 def run():
-   exercise_Rietveld_Refinery_SinglePhase()
-   exercise_Rietveld_Refinery_Multiphase()
+   exercise_Rietveld_Refinery_Cement()
    print "OK"
 
 if (__name__ == "__main__"):

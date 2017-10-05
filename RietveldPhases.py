@@ -86,7 +86,6 @@ class RietveldPhases:
                for p in xrange(0,cls.Bkgd_rank):
                   cls.x = np.append(cls.x, \
                      cls.read_param_line("Bkgd_" + str(p) +" 0.0 -inf inf"))
-               # cls.Bkgd = np.zeros(int(line.split()[1]))
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
@@ -176,29 +175,6 @@ class RietveldPhases:
                         RietveldPhases.read_param_line( \
                            "eta_" + str(p) +" 0.0 0.0 "+ str(0.001*p)))
 
-   def eta_Polynomial(self, two_theta):
-      r""" Returns a numpy array populated by the values of the eta 
-      polynomial, :math:`\eta(2\theta)`, with input parameters :math:`\eta_i` 
-      stored in the class variable ``RietveldPhases.eta``:
-
-      .. math:: P(2\theta) = \sum_{i=0}^{M} \eta_i (2\theta)^i
-
-      where *M* is the length of the numpy array ``RietveldPhases.eta``.
-
-      :param np.array two_theta: a list of :math:`(2\theta)` values
-      :return: the values of the eta polynomial at points in 
-         ``two_theta``
-      :rtype: np.array
-
-      """
-      mask = np.isin(np.array(range(0,len(RietveldPhases.x))), \
-         np.array(range(self.eta_0_index,self.eta_0_index+self.eta_rank)))
-      eta = RietveldPhases.x['values'][mask]
-      dim = len(eta)
-      powers = np.array(range(dim))
-      powers.shape = (dim,1)
-      return np.dot(eta,np.power(two_theta,powers))
-
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
       
@@ -216,8 +192,16 @@ class RietveldPhases:
       with open(fn, 'r') as file:
          as_cif = file.read()
       self.structure = iotbx.cif.reader(
-       input_string=as_cif).build_crystal_structures()[fn[0:-4]]
+       input_string=as_cif).build_crystal_structures()[fn[0:7]]
       self.unit_cell = self.structure.unit_cell()
+
+      for scatterer in self.structure.scatterers():
+         if (scatterer.scattering_type == "O-2"):
+            scatterer.scattering_type = "O2-"
+         if (scatterer.scattering_type == "Ca+2"):
+            scatterer.scattering_type = "Ca2+"
+         if (scatterer.scattering_type == "Si+4"):
+            scatterer.scattering_type = "Si4+"
 
    def Compute_Relative_Intensities(self,d_min=1.0,lammbda="CUA1"):
       r"""Returns squared structure factors, weighted by the multiplicity of 
@@ -234,7 +218,7 @@ class RietveldPhases:
       f_miller_set = self.structure.build_miller_set(anomalous_flag, \
          d_min=d_min).sort()
       # Let's use scattering factors from the International Tables
-      self.structure.scattering_type_registry(table="it1992"), # "it1992",  
+      self.structure.scattering_type_registry(table="it1992") #,  "it1992",  
          # "wk1995" "n_gaussian"\
       self.structure.set_inelastic_form_factors( \
          photon=wavelengths.characteristic(lammbda),table="sasaki")
@@ -288,6 +272,7 @@ class RietveldPhases:
       
       # Assemble into a single array
       self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
+         #: list of peak positions as a function of :math:`2\theta`
       self.two_theta_peaks.shape = (self.two_theta_peaks.shape[0],1)
       self.weighted_intensities = np.concatenate( \
          (factors[0]*relative_intensities,factors[1]*relative_intensities))
@@ -316,7 +301,32 @@ class RietveldPhases:
          /np.sin(math.pi/360*two_theta_peaks) \
          /np.sin(math.pi/180*two_theta_peaks))
 
-   def PseudoVoigtProfile(self, two_theta):
+   def eta_Polynomial(self, two_theta):
+      r""" Returns a numpy array populated by the values of the eta 
+      polynomial, :math:`\eta(2\theta)`, with input parameters :math:`\eta_i` 
+      stored in the class variable ``RietveldPhases.eta``:
+
+      .. math:: P(2\theta) = \sum_{i=0}^{M} \eta_i (2\theta)^i
+
+      where *M* is the length of the numpy array ``RietveldPhases.eta``.
+
+      :param np.array two_theta: a list of :math:`(2\theta)` values
+      :return: the values of the eta polynomial at points in 
+         ``two_theta``
+      :rtype: np.array
+
+      """
+      mask = np.isin(np.array(range(0,len(RietveldPhases.x))), \
+         np.array(range(self.eta_0_index,self.eta_0_index+self.eta_rank)))
+      eta = RietveldPhases.x['values'][mask]
+      dim = len(eta)
+      powers = np.array(range(dim))
+      powers.shape = (dim,1)
+      # print "two_theta_shape: " + str(two_theta.shape)
+      # powers = np.tile(powers,(1,two_theta.shape[1]))
+      return np.dot(eta,np.power(two_theta,powers))
+
+   def PseudoVoigtProfile(self, two_theta,two_theta_peak,weighted_intensity):
       r"""
          Computes the *Pseudo-Voigt* profile using the function 
          in eq. :eq:`PVDefn`:
@@ -337,21 +347,40 @@ class RietveldPhases:
          function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
          :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
       """
-      tan_thetapeak = np.tan(math.pi/360.0*self.two_theta_peaks)
+      tan_thetapeak = np.tan(math.pi/360.0*two_theta_peak)
       two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
-      omegaUVW_squared = abs(RietveldPhases.x['values'][self.U_index] \
-         *tan_thetapeak**2 \
+      omegaUVW_squared = abs( \
+          RietveldPhases.x['values'][self.U_index]*tan_thetapeak**2 \
          +RietveldPhases.x['values'][self.V_index]*tan_thetapeak \
          +RietveldPhases.x['values'][self.W_index])
-      two_thetabar_squared = (two_theta -two_theta_0 
-         -self.two_theta_peaks)**2/omegaUVW_squared
-      return self.x['values'][self.Amplitude_index] \
-         *self.weighted_intensities*(self.eta_Polynomial(two_theta) \
-         /(1 +two_thetabar_squared) +(1-self.eta_Polynomial(two_theta)) \
+      two_thetabar_squared = (two_theta -two_theta_0 -two_theta_peak)**2 \
+         /omegaUVW_squared
+      eta_val = self.eta_Polynomial(two_theta)
+      Amplitude = self.x['values'][self.Amplitude_index]
+      return Amplitude*weighted_intensity* \
+         (eta_val/(1 +two_thetabar_squared) +(1-eta_val) \
          *np.exp(-np.log(2)*two_thetabar_squared))
 
-   def Phase_Profile(self, two_theta):
-      return np.sum(self.PseudoVoigtProfile(two_theta),axis=0)
+   def Phase_Profile(self, two_theta, delta_theta=0.5):
+      result = np.zeros(len(two_theta))
+      masks = self.peak_masks(two_theta,delta_theta=delta_theta)
+      for i in xrange(0,len(self.two_theta_peaks)):
+         result[masks[i]] += self.PseudoVoigtProfile(two_theta[masks[i]], \
+            self.two_theta_peaks[i],self.weighted_intensities[i])
+      return result
+
+   def peak_masks(self,two_theta,delta_theta=0.5):
+      return np.abs(two_theta-self.two_theta_peaks) < delta_theta
+
+   def bkgd_mask(self,two_theta,delta_theta=0.5):
+      # tmp = self.peak_masks(two_theta,delta_theta=delta_theta)
+      # print tmp.shape
+      # print tmp[0:100,0:100]
+      # tmp2 = np.invert(np.any(self.peak_masks(two_theta,delta_theta=delta_theta),axis=0))
+      # print tmp2.shape
+      # print "tmp2: " + str(tmp2[0:100])
+      return np.invert( \
+         np.any(self.peak_masks(two_theta,delta_theta=delta_theta),axis=0))
 
    def showPVProfilePlot(self,plottitle,index,two_theta,y, delta_theta=0.5 \
       ,autohide=True):
@@ -364,7 +393,8 @@ class RietveldPhases:
 
       plt.plot(two_theta,self.Phase_Profile(two_theta), \
          label=r'Total $I_{\rm calc}$')
-      plt.plot(two_theta,self.PseudoVoigtProfile(two_theta)[index], \
+      plt.plot(two_theta,self.PseudoVoigtProfile(two_theta, \
+         self.two_theta_peaks[index],self.weighted_intensities[index]), \
          label=r'$I_{\rm calc}$')
 
       plt.legend(bbox_to_anchor=(.8,.7))

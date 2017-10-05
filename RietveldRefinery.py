@@ -25,7 +25,8 @@ class RietveldRefinery:
       a file/string.
    """
 
-   def __init__(self,Phase_list,two_theta,y):
+   def __init__(self,Phase_list,two_theta,y, input_string="", 
+      use_bkgd_mask=False):
       """
          Given some list of phases, an instance of the refinery is initialized
          to readily run a refinement process.
@@ -34,8 +35,56 @@ class RietveldRefinery:
       self.Phase_list = Phase_list
       self.two_theta = two_theta
       self.y = y
+      self.use_bkgd_mask = use_bkgd_mask
 
       self.mask = np.ones(len(self.x),dtype=bool)
+
+      if input_string != "":
+         if input_string[-4:] == ".txt":
+            self.params_from_file(input_string)
+         else:
+            self.params_from_string(input_string)
+         # self.Compute_Relative_Intensities()
+         # self.Compile_Weighted_Peak_Intensities()
+
+      if self.use_bkgd_mask:
+         bkgd_mask = np.any( \
+            [self.Phase_list[i].bkgd_mask(self.two_theta,delta_theta=0.5) \
+            for i in xrange(0,len(self.Phase_list))],axis=0)
+         # print bkgd_mask[0:500]
+         # print np.all(bkgd_mask)
+         self.two_theta = self.two_theta[bkgd_mask]
+         self.y = self.y[bkgd_mask]
+
+   def params_from_file(self,filename):
+      """
+         Reads in a set of optimization parameters from a file
+         
+         :param str filename: the name of the file from which to read parameters
+
+      """
+      with open(filename) as file:
+         self.params_from_string(file.read())
+
+   def params_from_string(self,input_string):
+      """
+         Reads in a set of optimization parameters from a string
+      
+         :param str input_string: a string containing input parameters
+      """
+      for line in input_string.splitlines():
+         if line.split()[0] == "approx_grad":
+            self.approx_grad = bool(line.split()[1])
+         if line.split()[0] == "factr":
+            self.factr = float(line.split()[1])
+         if line.split()[0] == "iprint":
+            self.iprint = int(line.split()[1])
+         if line.split()[0] == "m":
+            self.m = int(line.split()[1])
+         if line.split()[0] == "pgtol":
+            self.pgtol = float(line.split()[1])
+         if line.split()[0] == "epsilon":
+            self.epsilon = float(line.split()[1])
 
    def TotalProfile(self,delta_theta=0.5):
       # np.set_printoptions(threshold=None)
@@ -48,9 +97,13 @@ class RietveldRefinery:
          # print t1-t0
       # print np.sum(self.Phase_list[i].Phase_Profile(self.two_theta) \
       #    for i in xrange(0,len(self.Phase_list)))
-      return RietveldPhases.Background_Polynomial(self.two_theta) \
-         + np.sum(self.Phase_list[i].Phase_Profile(self.two_theta)  \
-            for i in xrange(0,len(self.Phase_list)))
+      if self.use_bkgd_mask:
+         return RietveldPhases.Background_Polynomial(self.two_theta)
+      else:
+         return RietveldPhases.Background_Polynomial(self.two_theta) \
+            + np.sum( \
+            self.Phase_list[i].Phase_Profile(self.two_theta, \
+               delta_theta=delta_theta) for i in xrange(0,len(self.Phase_list)))
 
    def Weighted_Squared_Errors(self):
       return (self.y - self.TotalProfile())**2/self.y
@@ -61,56 +114,61 @@ class RietveldRefinery:
       return np.sum(self.Weighted_Squared_Errors())
 
    def minimize(self):
-      print minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
-         approx_grad = True, \
-         factr = 1e6,
-         iprint = 1000,
-         m=5,
-         pgtol = 1e-5,
-         epsilon=1e-8)#, \
-         # bounds = zip(self.x['l_limits'],self.x['u_limits']))
+      t0 = time.time()
+      minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
+         approx_grad = self.approx_grad, \
+         factr = self.factr,
+         iprint = self.iprint,
+         m = self.m,
+         pgtol = self.pgtol,
+         epsilon = self.epsilon, \
+         bounds = zip(self.x['l_limits'][self.mask], \
+            self.x['u_limits'][self.mask]))
+      t1 = time.time()
+      print "Time elapsed: " + str(t1-t0)
 
-   def minimize_Amplitude_and_Offset(self,display_plots = True):
-      if display_plots:
-         self.show_multiplot("Sum of Phases", \
-         two_theta_roi=30, \
-         delta_theta=10, \
-         autohide=False)
-
-      self.mask = np.logical_or( \
-         np.char.startswith(self.x['labels'],"Amplitude"),
-         np.char.startswith(self.x['labels'],"two_theta_0"))
+   def minimize_Amplitude(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"Amp")
       self.minimize()
 
-      if display_plots:
-         self.show_multiplot("Sum of Phases", \
-         two_theta_roi=30, \
-         delta_theta=10, \
-         autohide=False)
+   def minimize_Amplitude_Offset(self,display_plots = True):
+      self.mask = np.logical_or( \
+         np.char.startswith(self.x['labels'],"Amp"),
+         np.char.startswith(self.x['labels'],"two_"))
+      self.minimize()
 
-   def display(self,fn):
-      self.show_multiplot("Sum of Phases", \
-      two_theta_roi=30, \
-      delta_theta=10, \
-      autohide=False)
-      print fn.__name__
+   def minimize_Bkgd(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"Bkgd")
+      self.minimize()
 
-      fn(self)
-
-      self.show_multiplot("Sum of Phases", \
-      two_theta_roi=30, \
-      delta_theta=10, \
-      autohide=False)
+   def minimize_Amplitude_Bkgd_Offset(self,display_plots = True):
+      self.mask = np.logical_or( \
+         np.char.startswith(self.x['labels'],"Amp"), \
+         np.char.startswith(self.x['labels'],"Bkgd"), \
+         np.char.startswith(self.x['labels'],"two_"))
+      self.minimize()
 
    def minimize_All(self,display_plots = True):
       self.mask = np.ones(len(self.x),dtype=bool)
-      return self.minimize()
+      self.minimize()
+
+   def display(self,fn):
+      self.show_multiplot("Before: " + fn.__name__, \
+      two_theta_roi=30, \
+      delta_theta=10, \
+      autohide=False)
+
+      fn(self)
+
+      self.show_multiplot("After: " + fn.__name__, \
+      two_theta_roi=30, \
+      delta_theta=10, \
+      autohide=False)
 
    def show_plot(self,plottitle,scale_factor=1,autohide=True):
       if autohide:
          plt.ion()
       fig = plt.figure(figsize=(12, 8))
-      # plt.subplot(3,1,1)
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
       plt.title(plottitle)
 
@@ -120,7 +178,6 @@ class RietveldRefinery:
       plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
-      # fig, ax = plt.subplots()
       plt.show()
       if autohide:
          fig.canvas.flush_events()
@@ -129,39 +186,23 @@ class RietveldRefinery:
 
    def show_multiplot(self,plottitle,two_theta_roi=45, \
          delta_theta=0.5,autohide=True):
-      # print self.x['values'][self.x['labels'] == 'Amplitude']
-      # self.x['values'][self.x['labels'] == 'Amplitude'] \
-         # = np.array([0.001,1e-9])
-      # print self.x['values'][self.x['labels'] == 'Amplitude']
       if autohide:
          plt.ion()
       plt.figure(figsize=(12, 8))
+
       plt.subplot(3,1,1)
-      # for i in xrange(0,len(two_theta)):
-      #    if delta_theta[i]:
-      #       color = 'blue'
-      #    else: color = 'green'
-      #    plt.scatter(two_theta[i],y[i], color=color,s=1)
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
       plt.title(plottitle)
-      # plt.axis([20,60,0,1500])
 
       plt.plot(self.two_theta,self.TotalProfile(), label=r'$I_{\rm calc}$')
       plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
       plt.subplot(3,1,2)
-      # for i in xrange(0,len(two_theta)):
-      #    if delta_theta[i]:
-      #       color = 'blue'
-      #    else: color = 'green'
-      #    plt.scatter(two_theta[i],y[i], color=color,s=1)
       pltmask = np.abs(self.two_theta - two_theta_roi) \
          < delta_theta
       plt.scatter(self.two_theta[pltmask],self.y[pltmask],label='Data',s=1, \
          color='red')
-      # plt.title(r"Profile: $Al_2 O_3$")
-      # plt.axis([20,60,0,1500])
 
       plt.plot(self.two_theta[pltmask],self.TotalProfile()[pltmask], \
          label=r'$I_{\rm calc}$')
@@ -173,7 +214,7 @@ class RietveldRefinery:
       plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
       plt.xlabel(r'$2\,\theta$')
 
-      plt.show()#block=False)
+      plt.show()
       if autohide:
          fig.canvas.flush_events()
          time.sleep(1)

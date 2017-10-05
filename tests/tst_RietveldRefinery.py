@@ -38,6 +38,15 @@ Bkgd:          3
 two_theta_0       0.      -2.0  2.0
 """
 
+minimizer_input_string = """\
+approx_grad True
+factr       1e10
+iprint      10
+m           5
+pgtol       1e-5
+epsilon     1e-8
+"""
+
 tst_two_theta = []
 tst_y = []
 
@@ -73,16 +82,10 @@ def exercise_Rietveld_Refinery_SinglePhase():
       RV.Compute_Relative_Intensities(d_min=d_min)
       RV.Compile_Weighted_Peak_Intensities()
 
-   RR = RietveldRefinery(Rt,tst_two_theta,tst_y)
-   t0 = time.time()
-   RR.minimize_Amplitude_and_Offset(display_plots = display_plots)
-   t1 = time.time()
-   print "Time elapsed: " + str(t1-t0)
-
-   t0 = time.time()
+   RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
+   # RR.minimize_Amplitude_and_Offset(display_plots = display_plots)
+   RR.display(RR.minimize_Amplitude_Offset)
    RR.display(RR.minimize_All)
-   t1 = time.time()
-   print "Time elapsed: " + str(t1-t0)
 
 def exercise_Rietveld_Refinery_Multiphase():
    pass
