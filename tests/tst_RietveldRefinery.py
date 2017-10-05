@@ -67,17 +67,16 @@ tst_two_theta = np.array(tst_two_theta)
 tst_y = np.array(tst_y)
 
 def exercise_Rietveld_Refinery_SinglePhase():
-   # RietveldPhase.fromstring(input_string)
-   cifs = ["1000032.cif","1507774.cif"]
-   Rt = []
-   Rt.append(RietveldPhases(cifs[0],input_strings[0]))
-   RietveldPhases.global_params_from_string(global_input_string)
-
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
    d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
    # print "two_theta_max: " + str(tst_two_theta[-1])
    # print "d-min: "+ str(d_min)
    
+   cifs = ["1000032.cif","1507774.cif"]
+   Rt = []
+   Rt.append(RietveldPhases(cifs[0],input_strings[0],delta_theta=2.0))
+   RietveldPhases.global_params_from_string(global_input_string)
+
    for RV in Rt:
       RV.Compute_Relative_Intensities(d_min=d_min)
       RV.Compile_Weighted_Peak_Intensities()

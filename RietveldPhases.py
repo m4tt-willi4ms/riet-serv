@@ -47,8 +47,8 @@ class RietveldPhases:
 
    x = np.empty(0,dtype=custom_dtype)
 
-   K_alpha_2_factor = 0.48 #: Default value
-   delta_theta = 0.5 #: Default value (in degrees)
+   lambdas=["CUA1","CUA2"] #: Default values
+   K_alpha_factors = [1,0.48]  #: Default values
 
    @classmethod
    def read_param_line(cls,line):
@@ -112,17 +112,29 @@ class RietveldPhases:
       return np.dot(Bkgd,np.power(two_theta,powers))
 
 
-   def __init__(self,fn_cif,common_params_fn_or_string=""):
+   def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
+      two_theta_max,I_max,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
       self.load_cif(fn_cif)
+      self.d_min = d_min
+      self.d_max = d_max
+      self.I_max = I_max
+      self.two_theta_max = two_theta_max
+      self.Intensity_Cutoff = Intensity_Cutoff
+      self.delta_theta = delta_theta
       
-      if common_params_fn_or_string != "":
-         if common_params_fn_or_string[-4:] == ".txt":
-            self.params_from_file(common_params_fn_or_string)
-         else:
-            self.params_from_string(common_params_fn_or_string)
-         # self.Compute_Relative_Intensities()
-         # self.Compile_Weighted_Peak_Intensities()
+      if input_string_or_file_name[-4:] == ".txt":
+         self.params_from_file(input_string_or_file_name)
+      else:
+         self.params_from_string(input_string_or_file_name)
+      
+      self.Compute_Relative_Intensities()
+
+      LP_max = self.LP_Intensity_Scaling(self.two_theta_max)
+      weighted_intensity_max = self.weighted_intensities \
+         [np.abs(self.two_theta_peaks-two_theta_max).argmin()]
+      RietveldPhases.x['values'][self.Amplitude_index] =  \
+         1/LP_max/weighted_intensity_max
 
    def params_from_file(self,filename):
       """
@@ -164,7 +176,7 @@ class RietveldPhases:
             if line.split()[0] == "eta:":
                assert int(line.split()[1]) > 0
                self.eta_rank = int(line.split()[1])
-               self.eta_0_index = self.x.shape[0]
+               self.eta_0_index = RietveldPhases.x.shape[0]
                for p in xrange(0,self.eta_rank):
                   if p == 0:
                      RietveldPhases.x = np.append(RietveldPhases.x, \
@@ -203,7 +215,7 @@ class RietveldPhases:
          if (scatterer.scattering_type == "Si+4"):
             scatterer.scattering_type = "Si4+"
 
-   def Compute_Relative_Intensities(self,d_min=1.0,lammbda="CUA1"):
+   def Compute_Relative_Intensities(self,lammbda="CUA1"):
       r"""Returns squared structure factors, weighted by the multiplicity of 
          each reflection.
          
@@ -216,14 +228,14 @@ class RietveldPhases:
       """
       anomalous_flag = True
       f_miller_set = self.structure.build_miller_set(anomalous_flag, \
-         d_min=d_min).sort()
+         d_min=self.d_min).sort()
       # Let's use scattering factors from the International Tables
       self.structure.scattering_type_registry(table="it1992") #,  "it1992",  
          # "wk1995" "n_gaussian"\
       self.structure.set_inelastic_form_factors( \
          photon=wavelengths.characteristic(lammbda),table="sasaki")
 
-      f_calc =  self.structure.structure_factors(d_min=d_min, \
+      f_calc =  self.structure.structure_factors(d_min=self.d_min, \
          anomalous_flag=anomalous_flag).f_calc().sort()
 
       f_calc_sq = f_calc.as_intensity_array().sort().data() 
@@ -233,73 +245,50 @@ class RietveldPhases:
       self.relative_intensities = f_calc_sq * f_calc_mult.as_double() \
          .as_numpy_array() #: weight intensities by the corresponding
          #: multiplicity
+
+      # Drop any peaks below the Intensity Cutoff
+      rel_I_max_calc = np.amax(self.relative_intensities)
       if self.relative_intensities.shape[0] != 0:
+         mask = np.logical_and( \
+            self.relative_intensities > self.Intensity_Cutoff*rel_I_max_calc, \
+            self.d_spacings < self.d_max)
          self.d_spacings = self.d_spacings \
-         [self.relative_intensities > 0.01*np.amax(self.relative_intensities)]
+            [mask]
          self.relative_intensities = self.relative_intensities \
-         [self.relative_intensities > 0.01*np.amax(self.relative_intensities)]
+            [mask]
 
-      return np.vstack((self.d_spacings, self.relative_intensities))
-
-   def Compile_Weighted_Peak_Intensities(self,d_spacings = np.zeros(1), \
-      relative_intensities = np.zeros(1),lambdas=["CUA1","CUA2"]):
-      r"""
-         Takes a list of d-spacings and relative intensities (by default, those
-         belonging to the instance) and compiles a list of peak positions, 
-         labeled by their two_theta value
-
-         :param np.array d_spacings: a list of *d*-spacings
-         :param np.array relative_intensities: a list of relative 
-            intensities
-      """
-      # Set to the instance values if none are passed
-      if d_spacings == np.zeros(1):
-         d_spacings = self.d_spacings
-      if relative_intensities == np.zeros(1):
-         relative_intensities = self.relative_intensities
-
-      K_alpha_factors = [1,self.K_alpha_2_factor]
-      two_thetas = np.zeros((2,len(d_spacings)))
-      factors = np.zeros((2,len(d_spacings)))
-      for i in xrange(0,len(lambdas),1):
+      two_thetas = np.zeros((2,len(self.d_spacings)))
+      factors = np.zeros((2,len(self.d_spacings)))
+      for i in xrange(0,len(self.lambdas),1):
          # read wavelength
-         lambda_i = wavelengths.characteristic(lambdas[i]).as_angstrom()
+         lambda_i = wavelengths.characteristic(self.lambdas[i]).as_angstrom()
          # Compute two_theta for each d-spacing
-         two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/d_spacings)
-         # Compute the corresponding LP intensity weights for each peak
-         factors[i] = self.LP_Intensity_Scaling(two_thetas[i], \
-            K_alpha_factors[i])
+         two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/self.d_spacings)
       
       # Assemble into a single array
       self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
-         #: list of peak positions as a function of :math:`2\theta`
+      #: list of peak positions as a function of :math:`2\theta`
       self.two_theta_peaks.shape = (self.two_theta_peaks.shape[0],1)
       self.weighted_intensities = np.concatenate( \
-         (factors[0]*relative_intensities,factors[1]*relative_intensities))
+         (self.K_alpha_factors[0]*self.relative_intensities, \
+          self.K_alpha_factors[1]*self.relative_intensities))
       self.weighted_intensities.shape = (self.weighted_intensities.shape[0],1)
 
-   def LP_Intensity_Scaling(self,two_theta_peaks,K_alpha_factor):
+   def LP_Intensity_Scaling(self,two_theta):
       r"""
-         Computes the intensity scaling factors for a set of peaks at locations 
-         listed in ``two_theta_peaks``, via the equation in :eq:`LPDefn`:
+         Computes the Lorentz-Polarization intensity scaling factors for a 
+         set of two-theta values listed in ``two_theta``, via the equation
 
-         .. math:: LP(2\theta_{\rm peak}) = K_{\alpha}\,\frac{1+
-            \cos^2(2\theta_{\rm peak})}{\sin\theta_{\rm peak}\,
-            \sin(2\theta_{\rm peak})}
+         .. math:: LP(2\theta_{\rm peak}) = \frac{1+\cos^2(2\theta)}{\sin\theta
+            \,\sin(2\theta)} \,.
             :label: LPDefn
 
-         where :math:`K_{\alpha} \in \{K_{\alpha 1},K_{\alpha 2}\}`, as 
-         appropriate.
-
-         :param two_theta_peaks: list of :math:`2\theta` peak locations
-         :type two_theta_peaks: np.array
-         :param float K_alpha_factor: the :math:`K_\alpha` factor (either
-            1 or 0.48, by default)
+         :param two_theta: list of :math:`2\theta` positions
 
       """
-      return K_alpha_factor*abs((1+np.cos(math.pi/180*two_theta_peaks)**2) \
-         /np.sin(math.pi/360*two_theta_peaks) \
-         /np.sin(math.pi/180*two_theta_peaks))
+      return (1+np.cos(math.pi/180*two_theta)**2) \
+         /np.sin(math.pi/360*two_theta) \
+         /np.sin(math.pi/180*two_theta)
 
    def eta_Polynomial(self, two_theta):
       r""" Returns a numpy array populated by the values of the eta 
@@ -327,25 +316,24 @@ class RietveldPhases:
       return np.dot(eta,np.power(two_theta,powers))
 
    def PseudoVoigtProfile(self, two_theta,two_theta_peak,weighted_intensity):
-      r"""
-         Computes the *Pseudo-Voigt* profile using the function 
-         in eq. :eq:`PVDefn`:
-         
-         .. math:: PV(2\theta) = \frac{\eta}{1+\overline{\Delta\theta}^2}
-            +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2}\,, \quad{\rm where}
-            \quad
-            \overline{\Delta\theta}^2 
-            := \frac{(2\theta-2\theta_0-2\theta_{\rm peak})^2}{\omega^2}
-            :label: PVDefn
+      r"""Computes the *Pseudo-Voigt* profile using the function 
+      in eq. :eq:`PVDefn`:
+      
+      .. math:: PV(2\theta) = \frac{\eta}{1+\overline{\Delta\theta}^2}
+         +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2}\,, \quad{\rm where}
+         \quad
+         \overline{\Delta\theta}^2 
+         := \frac{(2\theta-2\theta_0-2\theta_{\rm peak})^2}{\omega^2}
+         :label: PVDefn
 
-         and where
+      and where
 
-         .. math:: \omega := \left| U\,\tan^2\theta_{\rm peak}
-            +V\,\tan\theta_{\rm peak}+W\right|
+      .. math:: \omega := \left| U\,\tan^2\theta_{\rm peak}
+         +V\,\tan\theta_{\rm peak}+W\right|
 
-         is the Cagliotti equation, describing the variation of peak width as a
-         function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
-         :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
+      is the Caglioti equation, describing the variation of peak width as a
+      function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
+      :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
       """
       tan_thetapeak = np.tan(math.pi/360.0*two_theta_peak)
       two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
@@ -356,34 +344,28 @@ class RietveldPhases:
       two_thetabar_squared = (two_theta -two_theta_0 -two_theta_peak)**2 \
          /omegaUVW_squared
       eta_val = self.eta_Polynomial(two_theta)
-      Amplitude = self.x['values'][self.Amplitude_index]
-      return Amplitude*weighted_intensity* \
+      LP_factor = self.LP_Intensity_Scaling(two_theta)
+      Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
+      return Amplitude*weighted_intensity*LP_factor* \
          (eta_val/(1 +two_thetabar_squared) +(1-eta_val) \
          *np.exp(-np.log(2)*two_thetabar_squared))
 
-   def Phase_Profile(self, two_theta, delta_theta=0.5):
+   def Phase_Profile(self, two_theta):
       result = np.zeros(len(two_theta))
-      masks = self.peak_masks(two_theta,delta_theta=delta_theta)
+      masks = self.peak_masks(two_theta,self.delta_theta)
       for i in xrange(0,len(self.two_theta_peaks)):
          result[masks[i]] += self.PseudoVoigtProfile(two_theta[masks[i]], \
             self.two_theta_peaks[i],self.weighted_intensities[i])
       return result
 
-   def peak_masks(self,two_theta,delta_theta=0.5):
+   def peak_masks(self,two_theta,delta_theta):
       return np.abs(two_theta-self.two_theta_peaks) < delta_theta
 
-   def bkgd_mask(self,two_theta,delta_theta=0.5):
-      # tmp = self.peak_masks(two_theta,delta_theta=delta_theta)
-      # print tmp.shape
-      # print tmp[0:100,0:100]
-      # tmp2 = np.invert(np.any(self.peak_masks(two_theta,delta_theta=delta_theta),axis=0))
-      # print tmp2.shape
-      # print "tmp2: " + str(tmp2[0:100])
-      return np.invert( \
-         np.any(self.peak_masks(two_theta,delta_theta=delta_theta),axis=0))
+   def bkgd_mask(self,two_theta,bkgd_delta_theta):
+      return np.any(self.peak_masks(two_theta,bkgd_delta_theta) \
+         ,axis=0)
 
-   def showPVProfilePlot(self,plottitle,index,two_theta,y, delta_theta=0.5 \
-      ,autohide=True):
+   def showPVProfilePlot(self,plottitle,index,two_theta,y,autohide=True):
       if autohide:
          plt.ion()
       fig = plt.figure(figsize=(12, 8))

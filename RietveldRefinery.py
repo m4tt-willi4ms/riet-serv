@@ -25,8 +25,8 @@ class RietveldRefinery:
       a file/string.
    """
 
-   def __init__(self,Phase_list,two_theta,y, input_string="", 
-      use_bkgd_mask=False):
+   def __init__(self,Phase_list,two_theta,y,input_string, \
+      use_bkgd_mask=False,bkgd_delta_theta=0.5):
       """
          Given some list of phases, an instance of the refinery is initialized
          to readily run a refinement process.
@@ -36,23 +36,21 @@ class RietveldRefinery:
       self.two_theta = two_theta
       self.y = y
       self.use_bkgd_mask = use_bkgd_mask
+      self.bkgd_delta_theta = bkgd_delta_theta
 
       self.mask = np.ones(len(self.x),dtype=bool)
 
-      if input_string != "":
-         if input_string[-4:] == ".txt":
-            self.params_from_file(input_string)
-         else:
-            self.params_from_string(input_string)
-         # self.Compute_Relative_Intensities()
-         # self.Compile_Weighted_Peak_Intensities()
+      if input_string[-4:] == ".txt":
+         self.params_from_file(input_string)
+      else:
+         self.params_from_string(input_string)
 
       if self.use_bkgd_mask:
-         bkgd_mask = np.any( \
-            [self.Phase_list[i].bkgd_mask(self.two_theta,delta_theta=0.5) \
-            for i in xrange(0,len(self.Phase_list))],axis=0)
-         # print bkgd_mask[0:500]
-         # print np.all(bkgd_mask)
+         bkgd_mask = np.invert(np.any( \
+            [self.Phase_list[i].bkgd_mask(self.two_theta, \
+               bkgd_delta_theta=self.bkgd_delta_theta) \
+               for i in xrange(0,len(self.Phase_list))] \
+               ,axis=0))
          self.two_theta = self.two_theta[bkgd_mask]
          self.y = self.y[bkgd_mask]
 
@@ -86,7 +84,7 @@ class RietveldRefinery:
          if line.split()[0] == "epsilon":
             self.epsilon = float(line.split()[1])
 
-   def TotalProfile(self,delta_theta=0.5):
+   def TotalProfile(self):
       # np.set_printoptions(threshold=None)
       # print RietveldPhases.Background_Polynomial(self.two_theta)
       # for i in xrange(0,len(self.Phase_list)):
@@ -101,11 +99,12 @@ class RietveldRefinery:
          return RietveldPhases.Background_Polynomial(self.two_theta)
       else:
          return RietveldPhases.Background_Polynomial(self.two_theta) \
-            + np.sum( \
-            self.Phase_list[i].Phase_Profile(self.two_theta, \
-               delta_theta=delta_theta) for i in xrange(0,len(self.Phase_list)))
+            + np.sum( self.Phase_list[i].Phase_Profile(self.two_theta) \
+               for i in xrange(0,len(self.Phase_list)))
 
    def Weighted_Squared_Errors(self):
+      # print (self.y - self.TotalProfile())**2/self.y
+      # print RietveldPhases.Background_Polynomial(self.two_theta)
       return (self.y - self.TotalProfile())**2/self.y
 
    def Weighted_Sum_of_Squares(self,x):
@@ -139,6 +138,10 @@ class RietveldRefinery:
 
    def minimize_Bkgd(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Bkgd")
+      self.minimize()
+
+   def minimize_Bkgd_0(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"Bkgd_0")
       self.minimize()
 
    def minimize_Amplitude_Bkgd_Offset(self,display_plots = True):

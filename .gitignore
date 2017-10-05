@@ -18,3 +18,4 @@ doc/Makefile
 doc/_build/
 doc/make.bat
 RietveldRefinery.pyc
+tests/Cement/minimizer-settings.txt

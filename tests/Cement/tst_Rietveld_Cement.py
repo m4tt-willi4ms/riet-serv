@@ -80,13 +80,21 @@ Bkgd:          3
 two_theta_0       0.      -0.5  0.5
 """
 
+bkgd_minimizer_input_string = """\
+approx_grad True
+factr       1e7
+iprint      1
+m           7
+pgtol       1e-5
+epsilon     1e-5
+"""
 minimizer_input_string = """\
 approx_grad True
-factr       1e8
+factr       1e4
 iprint      1000
-m           5
-pgtol       1e-5
-epsilon     1e-8
+m           7
+pgtol       1e-7
+epsilon     1e-5
 """
 
 tst_two_theta = []
@@ -120,7 +128,7 @@ def exercise_Rietveld_Refinery_Cement():
       "9007569-Arcanite.cif"]
    Rt = []
    for cif, input_string in zip(cifs,input_strings):
-      Rt.append(RietveldPhases(cif,input_string))
+      Rt.append(RietveldPhases(cif,input_string,delta_theta=5.0))
    RietveldPhases.global_params_from_string(global_input_string)
 
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
@@ -133,13 +141,14 @@ def exercise_Rietveld_Refinery_Cement():
       RV.Compile_Weighted_Peak_Intensities()
 
    #First fit the background
-   RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string, \
-      use_bkgd_mask=True)
+   RR = RietveldRefinery(Rt,tst_two_theta,tst_y,bkgd_minimizer_input_string, \
+      use_bkgd_mask=True,bkgd_delta_theta=0.2)
+   # RR.display(RR.minimize_Bkgd_0)
    RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
-   RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_Amplitude)
    RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    RR.display(RR.minimize_All)
 
