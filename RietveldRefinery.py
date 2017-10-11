@@ -125,7 +125,7 @@ class RietveldRefinery:
       # print self.mask
       self.x['values'][self.mask] = x
       x_epsilons = self.epsilon*np.ones(len(self.x))
-      x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-4
+      x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-3
       return approx_fprime(self.x['values'][self.mask], \
          self.Weighted_Sum_of_Squares, \
          epsilon = np.array(x_epsilons[self.mask]))
@@ -144,7 +144,7 @@ class RietveldRefinery:
          bounds = zip(self.x['l_limits'][self.mask], \
             self.x['u_limits'][self.mask]))
       t1 = time.time()
-      print "Time elapsed: " + str(t1-t0)
+      print "Time elapsed: " + str(t1-t0) + "\n"
 
    def callback(self,x):
       # self.x['values'][self.mask] = x
@@ -152,8 +152,8 @@ class RietveldRefinery:
       Amp_vals = self.x['values'][np.char.startswith(self.x['labels'],"Amp")] \
          [self.del_mask[np.char.startswith(self.x['labels'],"Amp")]]
       Amp_total = np.sum(Amp_vals)
-      print "Length of Amp_vals: " + str(len(Amp_vals))
-      print "Length of Phase_list: " + str(len(self.Phase_list))
+      # print "Length of Amp_vals: " + str(len(Amp_vals))
+      # print "Length of Phase_list: " + str(len(self.Phase_list))
       del_list = []
       for i,Amp_val in np.ndenumerate(Amp_vals):
          if Amp_val/Amp_total < 1e-3:
@@ -164,17 +164,17 @@ class RietveldRefinery:
                np.array(range(self.Phase_list[i[0]].phase_0_index, \
                   self.Phase_list[i[0]].phase_0_index \
                      +self.Phase_list[i[0]].num_params)))))
-            print "Deleting phase " + str(i[0]) + " of " + str(len(Amp_vals))
-            print "Length of del_mask: " + str(len(self.del_mask))
+            # print "Deleting phase " + str(i[0]) + " of " + str(len(Amp_vals))
+            # print "Length of del_mask: " + str(len(self.del_mask))
             # del self.Phase_list[i[0]]
             # self.Phase_list[i] = None
          else:
             del_list += [True]
-      print del_list
-      print "Length of Phase_list (Before): " + str(len(self.Phase_list))
+      # print del_list
+      # print "Length of Phase_list (Before): " + str(len(self.Phase_list))
       self.Phase_list = [self.Phase_list[i] for i in \
          xrange(len(self.Phase_list)) if del_list[i]]
-      print "Length of Phase_list (After): " + str(len(self.Phase_list))
+      # print "Length of Phase_list (After): " + str(len(self.Phase_list))
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -184,6 +184,13 @@ class RietveldRefinery:
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"),
          np.char.startswith(self.x['labels'],"two_"))
+      self.minimize()
+
+   def minimize_Amplitude_Offset_W(self,display_plots = True):
+      self.mask = np.logical_or( \
+         np.char.startswith(self.x['labels'],"Amp"), \
+            np.logical_or(np.char.startswith(self.x['labels'],"two_"), \
+               self.x['labels'] == "W"))
       self.minimize()
 
    def minimize_Bkgd(self,display_plots = True):
@@ -197,8 +204,8 @@ class RietveldRefinery:
    def minimize_Amplitude_Bkgd_Offset(self,display_plots = True):
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"), \
-         np.char.startswith(self.x['labels'],"Bkgd"), \
-         np.char.startswith(self.x['labels'],"two_"))
+            np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), \
+               np.char.startswith(self.x['labels'],"two_")))
       self.minimize()
 
    def minimize_Amplitude_Bkgd(self,display_plots = True):
@@ -221,6 +228,7 @@ class RietveldRefinery:
       two_theta_roi=30, \
       delta_theta=10, \
       autohide=False)
+      self.display_parameters()
 
       fn(self)
 
@@ -228,6 +236,8 @@ class RietveldRefinery:
       two_theta_roi=30, \
       delta_theta=10, \
       autohide=False)
+      self.display_parameters()
+      self.display_stats()
 
    def display_parameters(self):
       for label,value,l,u in zip( \
@@ -295,8 +305,6 @@ class RietveldRefinery:
       plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
       plt.xlabel(r'$2\,\theta$')
 
-      self.display_parameters()
-      self.display_stats()
       plt.show()
 
       if autohide:

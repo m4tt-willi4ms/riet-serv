@@ -1,18 +1,20 @@
 from __future__ import division
 import os, random, math
-import iotbx.cif, cctbx.miller
-import scitbx
-from cctbx import xray
-from cctbx import crystal
-from cctbx.array_family import flex
-from cctbx.eltbx import wavelengths
 import time
 import sys, subprocess
 import numpy as np
 import matplotlib.pyplot as plt
-from scitbx import lbfgsb
+
+import paths
+
+import iotbx.cif, cctbx.miller
+from cctbx import xray
+from cctbx import crystal
+from cctbx.array_family import flex
+from cctbx.eltbx import wavelengths
 import jsonpickle
 from libtbx import easy_pickle
+from scitbx import lbfgsb
 
 class RietveldPhases:
    r"""

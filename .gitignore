@@ -19,3 +19,5 @@ doc/_build/
 doc/make.bat
 RietveldRefinery.pyc
 tests/Cement/minimizer-settings.txt
+paths.pyc
+tests/tst_RietveldPhases.pyc
