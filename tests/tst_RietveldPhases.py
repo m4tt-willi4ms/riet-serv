@@ -41,10 +41,10 @@ two_theta_0       0.001      -2.0  2.0
 minimizer_input_string = """\
 approx_grad True
 factr       1e6
-iprint      1000
+iprint      1
 m           5
 pgtol       1e-5
-epsilon     1e-6
+epsilon     1e-8
 """
 
 tst_two_theta = []
@@ -77,12 +77,12 @@ def exercise_RietveldPhases():
    # print "two_theta_max: " + str(tst_two_theta[-1])
    # print "d-min: "+ str(d_min)
    tst_two_theta_max = tst_two_theta[np.argmax(tst_y)]
-   tst_y_max = np.amax(tst_y)*len(cifs)
+   tst_y_max = np.amax(tst_y)/len(cifs)
 
+   RietveldPhases.global_params_from_string(global_input_string)
    for cif,input_string in zip(cifs,input_strings):
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max,tst_two_theta_max, \
          tst_y_max, delta_theta = 2.0,Intensity_Cutoff = 0.005))
-   RietveldPhases.global_params_from_string(global_input_string)
 
    #Testing Read-in from input_string
    assert np.isclose(Rt[0].x['values'][Rt[0].U_index], 0.0)
@@ -131,25 +131,19 @@ def exercise_RietveldPhases():
 
    #Testing Relative Intensity Outputs
    assert np.all(np.isclose(Rt[0].relative_intensities[0:30], np.array(
-      [  12949.44312494,   39727.16679486,   19421.87399495,
-         76899.50827975,    1132.36117232,   56137.95066929,
-        137688.0464314 ,    3685.13103329,    5402.4298875 ,
-         11997.67216881,   74762.69288383,  120456.74674058,
-          2499.28046172,    3819.02636854,   45448.97349529,
-         23040.55770415,    1983.65265867,   19284.17450297,
-          1365.54203267,    1371.45457657,   15676.03452859,
-           905.25583001,   12101.76302655,    9260.3278845 ,
-         26213.83678193])))
+      [ 0.19906132,  0.61069362,  0.29855677,  1.18211397,  0.01740687,
+        0.86296333,  2.11656703,  0.05664854,  0.08304719,  0.18443051,
+        1.14926644,  1.85168419,  0.03841942,  0.0587068 ,  0.69865033,
+        0.35418387,  0.03049309,  0.29644002,  0.02099137,  0.02108226,
+        0.24097501,  0.01391577,  0.18603062,  0.14235153,  0.40296412])))
    # print repr(Rt[1].relative_intensities[0:30])
    assert np.all(np.isclose(Rt[1].relative_intensities[0:30], np.array(
-      [ 12342.53904257,  15309.03845694,   8919.0123103 ,  10646.47033418,
-         5302.85392553,   6608.63228893,   2795.98488148,   3678.96215863,
-         1438.20977804,  32065.22704467,   3495.67052981,    401.56560964,
-        28306.87781477,   2352.39728649,    639.25046916,   2877.29577368,
-         1973.8106993 ,    827.604127  ,    599.55532227,   1016.71204799,
-         2077.20221921,    555.68732744,   1244.77435141,   2191.06311163,
-         1109.16806415,   1088.71863178,   1603.83462435,   1452.97979503,
-        69859.1611933 ,   2306.61720178])))
+      [ 0.00991668,  0.01230013,  0.00716603,  0.00855396,  0.00426061,
+        0.00530974,  0.00224645,  0.00295588,  0.00115554,  0.02576297,
+        0.00280861,  0.00032264,  0.02274331,  0.00189005,  0.00051361,
+        0.00231178,  0.00158587,  0.00066494,  0.00048172,  0.00081688,
+        0.00166894,  0.00044647,  0.00100012,  0.00176042,  0.00089117,
+        0.00087474,  0.00128861,  0.0011674 ,  0.0561287 ,  0.00185326])))
 
    #Testing test-data read-in
    if is_Sim_data:
@@ -199,16 +193,16 @@ def exercise_RietveldPhases():
 
    #Testing Weighted Intensity outputs
    assert np.all(np.isclose(Rt[0].weighted_intensities[0:10], np.array(
-      [[  12949.44312494],
-       [  39727.16679486],
-       [  19421.87399495],
-       [  76899.50827975],
-       [   1132.36117232],
-       [  56137.95066929],
-       [ 137688.0464314 ],
-       [   3685.13103329],
-       [   5402.4298875 ],
-       [  11997.67216881]])))
+      [[ 0.19906132],
+       [ 0.61069362],
+       [ 0.29855677],
+       [ 1.18211397],
+       [ 0.01740687],
+       [ 0.86296333],
+       [ 2.11656703],
+       [ 0.05664854],
+       [ 0.08304719],
+       [ 0.18443051]])))
 
    #Testing PseudoVoigtProfile
    if display_plots:
@@ -228,6 +222,7 @@ def exercise_RietveldPhases():
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y, \
       input_string=minimizer_input_string)
    RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_All)
    # if display_plots:
    #    RR.show_multiplot("Sum of Phases", \
    #       two_theta_roi=30, \
@@ -241,6 +236,8 @@ def exercise_RietveldPhases():
    #       two_theta_roi=30, \
    #       delta_theta=10, \
    #       autohide=False)
+
+
 
 def run():
    exercise_RietveldPhases()

@@ -71,11 +71,13 @@ class RietveldPhases:
 
    @classmethod
    def global_params_from_string(cls,input_string):
+      cls.num_global_params = 0
       for line in input_string.splitlines():
          if line.split()[0][-1] != ':':
             if line.split()[0] == "two_theta_0":
                cls.two_theta_0_index = cls.x['values'].shape[0]
                cls.x = np.append(cls.x,cls.read_param_line(line))
+               cls.num_global_params += 1
             # if line.split()[0] == "K_alpha_2_factor":
             #    cls.K_alpha_2_factor = float(line.split()[1])
          else:
@@ -86,6 +88,7 @@ class RietveldPhases:
                for p in xrange(0,cls.Bkgd_rank):
                   cls.x = np.append(cls.x, \
                      cls.read_param_line("Bkgd_" + str(p) +" 0.0 -inf inf"))
+               cls.num_global_params += 1
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
@@ -111,7 +114,6 @@ class RietveldPhases:
       powers.shape = (dim,1)
       return np.dot(Bkgd,np.power(two_theta,powers))
 
-
    def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
       two_theta_max,I_max,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
@@ -130,11 +132,17 @@ class RietveldPhases:
       
       self.Compute_Relative_Intensities()
 
-      LP_max = self.LP_Intensity_Scaling(self.two_theta_max)
-      weighted_intensity_max = self.weighted_intensities \
-         [np.abs(self.two_theta_peaks-two_theta_max).argmin()]
+      # print "two_theta_max: " + str(self.two_theta_max)
+      # print "two_theta_peaks_max: " + str(self.two_theta_peaks \
+      #    [self.weighted_intensities.argmax()])
+      # print "I_max: " + str(self.I_max)
+
+      # print self.two_theta_peaks[:,0]
+      # print self.two_theta_peaks[1,:].reshape((1,self.two_theta_peaks.shape[0]))
       RietveldPhases.x['values'][self.Amplitude_index] =  \
-         1/LP_max/weighted_intensity_max
+         self.I_max/np.amax(self.Phase_Profile(self.two_theta_peaks[:,0]))
+      # print "Phase Profile:" + str(self.Phase_Profile(self.two_theta_peaks \
+      #    [self.weighted_intensities.argmax()]))
 
    def params_from_file(self,filename):
       """
@@ -152,24 +160,30 @@ class RietveldPhases:
       
          :param str input_string: a string containing input parameters
       """
+      self.num_params = 0
+      self.phase_0_index = RietveldPhases.x.shape[0]
       for l,line in enumerate(input_string.splitlines()):
          if line.split()[0][-1] != ':':
             if line.split()[0] == "U":
                self.U_index = RietveldPhases.x['values'].shape[0]
                RietveldPhases.x = np.append(RietveldPhases.x, \
                   self.read_param_line(line))
+               self.num_params += 1
             if line.split()[0] == "V":
                self.V_index = RietveldPhases.x['values'].shape[0]
                RietveldPhases.x = np.append(RietveldPhases.x, \
                   self.read_param_line(line))
+               self.num_params += 1
             if line.split()[0] == "W":
                self.W_index = RietveldPhases.x['values'].shape[0]
                RietveldPhases.x = np.append(RietveldPhases.x, \
                   self.read_param_line(line))
+               self.num_params += 1
             if line.split()[0] == "Amplitude":
                self.Amplitude_index = RietveldPhases.x['values'].shape[0]
                RietveldPhases.x = np.append(RietveldPhases.x, \
                   self.read_param_line(line))
+               self.num_params += 1
             # if line.split()[0] == "K_alpha_2_factor":
             #    cls.K_alpha_2_factor = float(line.split()[1])
          else:
@@ -182,10 +196,12 @@ class RietveldPhases:
                      RietveldPhases.x = np.append(RietveldPhases.x, \
                         RietveldPhases.read_param_line( \
                            "eta_" + str(p) +" 0.5 0.0 1.0"))
+                     self.num_params += 1
                   else:
                      RietveldPhases.x = np.append(RietveldPhases.x, \
                         RietveldPhases.read_param_line( \
-                           "eta_" + str(p) +" 0.0 0.0 "+ str(0.001*p)))
+                           "eta_" + str(p) +" 0.0 0.0 "+ str(0.001**p)))
+                     self.num_params += 1
 
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
@@ -238,13 +254,16 @@ class RietveldPhases:
       f_calc =  self.structure.structure_factors(d_min=self.d_min, \
          anomalous_flag=anomalous_flag).f_calc().sort()
 
-      f_calc_sq = f_calc.as_intensity_array().sort().data() 
+      unit_cell_volume = self.unit_cell.volume()
+      f_calc_sq = f_calc.as_intensity_array().sort().data() \
+         /unit_cell_volume/unit_cell_volume
       f_calc_mult = f_calc.multiplicities().sort().data()
 
       self.d_spacings = f_miller_set.d_spacings().data().as_numpy_array() 
       self.relative_intensities = f_calc_sq * f_calc_mult.as_double() \
          .as_numpy_array() #: weight intensities by the corresponding
          #: multiplicity
+      # print "Volume: " + str(self.unit_cell.volume())
 
       # Drop any peaks below the Intensity Cutoff
       rel_I_max_calc = np.amax(self.relative_intensities)

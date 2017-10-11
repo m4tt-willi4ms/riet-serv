@@ -76,25 +76,25 @@ eta:           1
 """]
 
 global_input_string = """\
-Bkgd:          3
+Bkgd:          2
 two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
 approx_grad True
-factr       1e7
+factr       1e6
 iprint      1
 m           7
 pgtol       1e-5
-epsilon     1e-5
+epsilon     1e-6
 """
 minimizer_input_string = """\
 approx_grad True
-factr       1e4
+factr       1e8
 iprint      1000
-m           7
-pgtol       1e-7
-epsilon     1e-5
+m           5
+pgtol       1e-5
+epsilon     1e-3
 """
 
 tst_two_theta = []
@@ -114,7 +114,9 @@ with open(r"cement_15_03_11_0028.xye") as file:
       tst_two_theta.append(float(two_thetatmp))
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
-tst_y = np.array(tst_y)
+mask = np.logical_and(tst_two_theta >25,tst_two_theta < 45)
+tst_two_theta = tst_two_theta[mask]
+tst_y = np.array(tst_y)[mask]
 
 def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string)
@@ -127,30 +129,42 @@ def exercise_Rietveld_Refinery_Cement():
       "1000053-Periclase.cif", \
       "9007569-Arcanite.cif"]
    Rt = []
-   for cif, input_string in zip(cifs,input_strings):
-      Rt.append(RietveldPhases(cif,input_string,delta_theta=5.0))
-   RietveldPhases.global_params_from_string(global_input_string)
 
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
    d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
+   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
    # print "two_theta_max: " + str(tst_two_theta[-1])
    # print "d-min: "+ str(d_min)
-   
-   for RV in Rt:
-      RV.Compute_Relative_Intensities(d_min=d_min)
-      RV.Compile_Weighted_Peak_Intensities()
+   tst_two_theta_max = tst_two_theta[np.argmax(tst_y)]
+   tst_y_max = np.amax(tst_y)/len(cifs)
+
+   RietveldPhases.global_params_from_string(global_input_string)
+
+   for cif, input_string in zip(cifs,input_strings):
+      Rt.append(RietveldPhases(cif,input_string,d_min,d_max,tst_two_theta_max, \
+         tst_y_max,delta_theta=5.0,Intensity_Cutoff = 0.005))
 
    #First fit the background
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,bkgd_minimizer_input_string, \
-      use_bkgd_mask=True,bkgd_delta_theta=0.2)
+      use_bkgd_mask=True,bkgd_delta_theta=0.1)
    # RR.display(RR.minimize_Bkgd_0)
    RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
-   RR.display(RR.minimize_Amplitude)
+   RR.display_parameters()
+   RR.display(RR.minimize_Amplitude_Offset)
+   RR.display_parameters()
+   RR.display_stats()
    RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   RR.display_parameters()
+   RR.display_stats()
+   RR.display(RR.minimize_All_except_Amplitude)
+   RR.display_parameters()
+   RR.display_stats()
    RR.display(RR.minimize_All)
+   RR.display_parameters()
+   RR.display_stats()
 
 def run():
    exercise_Rietveld_Refinery_Cement()
