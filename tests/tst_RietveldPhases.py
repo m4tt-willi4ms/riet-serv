@@ -37,11 +37,11 @@ two_theta_0       0.001      -2.0  2.0
 
 minimizer_input_string = """\
 approx_grad True
-factr       1e4
+factr       1e3
 iprint      1
 m           7
 pgtol       1e-5
-epsilon     1e-8
+epsilon     1e-6
 """
 
 tst_two_theta = []
@@ -53,7 +53,7 @@ display_plots = True #: Only use to see sample plots
 # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-with open(r"Jade-Al2O3-Sim.xye") as file:
+with open(os.path.dir(__file__) + "\\" + r"Jade-Al2O3-Sim.xye") as file:
    for line in file.readlines():#[4:]:
       # two_thetatmp, ytmp, ztmp = line.split()
       two_thetatmp, ytmp = line.split()
@@ -61,11 +61,13 @@ with open(r"Jade-Al2O3-Sim.xye") as file:
       tst_two_theta.append(float(two_thetatmp))
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
-tst_y = np.array(tst_y)
+tst_y = 0.01*np.array(tst_y)
 
 def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
    cifs = ["1000032.cif","1507774.cif"]
+   full_cifs = list(map( \
+      lambda x: os.path.dirname(__file__) + "\\" + x ,cifs))
    Rt = []
 
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
@@ -73,12 +75,11 @@ def exercise_RietveldPhases():
    d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
    # print "two_theta_max: " + str(tst_two_theta[-1])
    # print "d-min: "+ str(d_min)
-   tst_two_theta_max = tst_two_theta[np.argmax(tst_y)]
    tst_y_max = np.amax(tst_y)/len(cifs)
 
    RietveldPhases.global_params_from_string(global_input_string)
-   for cif,input_string in zip(cifs,input_strings):
-      Rt.append(RietveldPhases(cif,input_string,d_min,d_max,tst_two_theta_max, \
+   for cif,input_string in zip(full_cifs,input_strings):
+      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
          tst_y_max, delta_theta = 2.0,Intensity_Cutoff = 0.005))
 
    #Testing Read-in from input_string
@@ -148,7 +149,7 @@ def exercise_RietveldPhases():
       assert str(tst_two_theta) == \
       """[  5.     5.02   5.04 ...,  89.96  89.98  90.  ]"""
       assert str(tst_y) == \
-      """[ 1.  1.  1. ...,  2.  2.  2.]"""
+      """[ 0.01  0.01  0.01 ...,  0.02  0.02  0.02]"""
 
    # Testing Background_Polynomial
    RietveldPhases.x['values'] \
@@ -212,13 +213,18 @@ def exercise_RietveldPhases():
             delta_theta = 5
             # mask = np.ones(len(tst_two_theta),dtype=bool)
             mask = np.abs(tst_two_theta-tst_two_theta_peak) < delta_theta
-            RV.showPVProfilePlot("Test",rnd_index,tst_two_theta[mask], \
-               tst_y[mask], autohide=False)
+            # RV.showPVProfilePlot("Test",rnd_index,tst_two_theta[mask], \
+               # tst_y[mask], autohide=False)
 
    #Testing Refinery
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y, \
       input_string=minimizer_input_string)
+   RR.show_multiplot("Before: ", \
+      two_theta_roi=25.5, \
+      delta_theta=1, \
+      autohide=False)
    RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_All)
    # if display_plots:
    #    RR.show_multiplot("Sum of Phases", \

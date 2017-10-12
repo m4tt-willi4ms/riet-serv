@@ -21,3 +21,6 @@ RietveldRefinery.pyc
 tests/Cement/minimizer-settings.txt
 paths.pyc
 tests/tst_RietveldPhases.pyc
+doc/exts/
+tests/tst_RietveldRefinery.pyc
+tests/Cement/tst_Rietveld_Cement.pyc

@@ -19,6 +19,8 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../notebooks'))
+sys.path.append(os.path.abspath('exts'))
 # sys.path.insert(0, os.path.abspath('./../../../bin'))
 # sys.path.insert(0, os.path.abspath('./../../../lib'))
 # sys.path.insert(0, os.path.abspath('./../../../../sources/cctbx_project/libtbx/pythonpath'))
@@ -26,8 +28,8 @@ sys.path.insert(0, os.path.abspath('..'))
 # sys.path.insert(0, os.path.abspath('./../../../../sources/cctbx_project/clipper_adaptbx'))
 # sys.path.insert(0, os.path.abspath('./../../../../sources'))
 # sys.path.insert(0, os.path.abspath('./../../../../sources/cctbx_project'))
-autodoc_mock_imports = ["iotbx.cif","cctbx.miller","scitbx","libtbx"]
-
+# autodoc_mock_imports = ["iotbx.cif","cctbx.miller","scitbx","libtbx"]
+numpydoc_class_members_toctree = False
 
 # -- General configuration ------------------------------------------------
 
@@ -39,7 +41,10 @@ autodoc_mock_imports = ["iotbx.cif","cctbx.miller","scitbx","libtbx"]
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
+    'nbsphinx',
+    'numpydoc',
     'sphinx.ext.coverage',
+    'sphinx.ext.autosummary',
     'sphinx.ext.mathjax']
 
 # Add any paths that contain templates here, relative to this directory.
@@ -78,7 +83,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**.ipynb_checkpoints']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'

@@ -86,6 +86,8 @@ class RietveldRefinery:
             self.m = int(line.split()[1])
          if line.split()[0] == "pgtol":
             self.pgtol = float(line.split()[1])
+         if line.split()[0] == "maxiter":
+            self.maxiter = float(line.split()[1])
          if line.split()[0] == "epsilon":
             self.epsilon = float(line.split()[1])
 
@@ -125,13 +127,13 @@ class RietveldRefinery:
       # print self.mask
       self.x['values'][self.mask] = x
       x_epsilons = self.epsilon*np.ones(len(self.x))
-      x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-3
+      # x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-3
       return approx_fprime(self.x['values'][self.mask], \
          self.Weighted_Sum_of_Squares, \
          epsilon = np.array(x_epsilons[self.mask]))
 
    def minimize(self):
-      t0 = time.time()
+      self.t0 = time.time()
       self.mask = np.logical_and(self.del_mask,self.mask)
       minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
          callback = self.callback, \
@@ -139,12 +141,12 @@ class RietveldRefinery:
          factr = self.factr,
          iprint = self.iprint,
          m = self.m,
+         maxiter = self.maxiter,
          pgtol = self.pgtol,
          epsilon = self.epsilon, \
          bounds = zip(self.x['l_limits'][self.mask], \
             self.x['u_limits'][self.mask]))
-      t1 = time.time()
-      print "Time elapsed: " + str(t1-t0) + "\n"
+      self.t1 = time.time()
 
    def callback(self,x):
       # self.x['values'][self.mask] = x
@@ -156,7 +158,7 @@ class RietveldRefinery:
       # print "Length of Phase_list: " + str(len(self.Phase_list))
       del_list = []
       for i,Amp_val in np.ndenumerate(Amp_vals):
-         if Amp_val/Amp_total < 1e-3:
+         if Amp_val/Amp_total < 1e-6:
             del_list += [False]
             # self.del_mask[i[0]] = False
             self.del_mask = np.logical_and(self.del_mask, \
@@ -171,10 +173,12 @@ class RietveldRefinery:
          else:
             del_list += [True]
       # print del_list
-      # print "Length of Phase_list (Before): " + str(len(self.Phase_list))
-      self.Phase_list = [self.Phase_list[i] for i in \
-         xrange(len(self.Phase_list)) if del_list[i]]
-      # print "Length of Phase_list (After): " + str(len(self.Phase_list))
+      print "Time elapsed: " + str(time.time()-self.t0)
+      if not all(del_list):
+         print "Length of Phase_list (Before): " + str(len(self.Phase_list))
+         self.Phase_list = [self.Phase_list[i] for i in \
+            xrange(len(self.Phase_list)) if del_list[i]]
+         print "Length of Phase_list (After): " + str(len(self.Phase_list))
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -186,11 +190,30 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
 
+   def minimize_only_Alite(self,display_plots = True):
+      self.mask = np.logical_or( \
+                     np.logical_or( \
+                        np.char.startswith(self.x['labels'],"Amp"), \
+                        np.char.startswith(self.x['labels'],"two_")),
+                     np.isin(np.array(range(0,len(RietveldPhases.x))), \
+               np.array(range(self.Phase_list[0].phase_0_index, \
+                  self.Phase_list[0].phase_0_index \
+                     +self.Phase_list[0].num_params))))
+      self.minimize()
+
    def minimize_Amplitude_Offset_W(self,display_plots = True):
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"), \
             np.logical_or(np.char.startswith(self.x['labels'],"two_"), \
                self.x['labels'] == "W"))
+      self.minimize()
+
+   def minimize_Amplitude_Bkgd_Offset_W(self,display_plots = True):
+      self.mask = np.logical_or( 
+         np.char.startswith(self.x['labels'],"Amp"), 
+            np.logical_or(np.char.startswith(self.x['labels'],"two_"), 
+               np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), 
+                  self.x['labels'] == "W")))
       self.minimize()
 
    def minimize_Bkgd(self,display_plots = True):
@@ -224,17 +247,18 @@ class RietveldRefinery:
       self.minimize()
 
    def display(self,fn):
-      self.show_multiplot("Before: " + fn.__name__, \
-      two_theta_roi=30, \
-      delta_theta=10, \
-      autohide=False)
+      # self.show_multiplot("Before: " + fn.__name__, \
+      # two_theta_roi=30, \
+      # delta_theta=10, \
+      # autohide=False)
+      self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
 
       fn(self)
 
       self.show_multiplot("After: " + fn.__name__, \
-      two_theta_roi=30, \
-      delta_theta=10, \
+      two_theta_roi=32.5, \
+      delta_theta=3, \
       autohide=False)
       self.display_parameters()
       self.display_stats()
@@ -252,14 +276,21 @@ class RietveldRefinery:
       WSS = self.Weighted_Sum_of_Squares(self.x['values'])
       R_wp = np.sqrt(WSS/self.sum_y)
       R_e = np.sqrt((len(self.two_theta)-len(self.x))/self.sum_y)
+      print "\nTime elapsed: " + str(self.t1-self.t0)
       print "\nR_wp: " + str(R_wp)
       print "R_e: " + str(R_e)
       print "Goodness-of-Fit: " + str(R_wp/R_e)
 
+      Amplitudes = RR.x['values'][np.char.startswith(RR.x['labels'],"Amp")]
+      total = np.sum(Amplitudes) 
+      print "\n"
+      for i,val in np.ndenumerate(Amplitudes):
+         print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
+
    def show_plot(self,plottitle,scale_factor=1,autohide=True):
       if autohide:
          plt.ion()
-      fig = plt.figure(figsize=(12, 8))
+      fig = plt.figure(figsize=(8,6))
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
       plt.title(plottitle)
 
@@ -277,9 +308,9 @@ class RietveldRefinery:
 
    def show_multiplot(self,plottitle,two_theta_roi=45, \
          delta_theta=0.5,autohide=True):
-      if autohide:
-         plt.ion()
-      plt.figure(figsize=(12, 8))
+      # if autohide:
+      # plt.ion()
+      fig = plt.figure(figsize=(7, 5))
 
       plt.subplot(3,1,1)
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')

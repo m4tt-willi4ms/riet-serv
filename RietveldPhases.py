@@ -21,6 +21,27 @@ class RietveldPhases:
       Used to group together methods for calculating powder profiles
       for Rietveld phases.  
 
+      Parameters
+      -----------
+      fn_cif : string
+         This string stores the file name of the CIF card (including the .cif 
+         xtension) for the corresponding phase
+      input_string_or_file_name : string
+         This string contains either: 
+            -  The name of a file (ending in .txt) in which the initial 
+               parameters, limits will be stored
+            -  The input string itself (for debugging purposes)
+
+      Other Parameters
+      -----------------
+      two_theta_0 : float
+         :math:`2\theta_0` is a refinable offset, used 
+         to adjust for any miscalibration of detector motor positions when
+         collecting data
+      Bkgd : np.array
+         This array contains the coefficients of a polynomial
+         used to model the profile background
+
       :cvar float two_theta_0: :math:`2\theta_0` is a refinable offset, used 
          to adjust for any miscalibration of detector motor positions when
          collecting data
@@ -33,6 +54,10 @@ class RietveldPhases:
          which a given peak profile is evaluated. (In practice it's inefficient 
          to evaluate profile tails many standard deviations away from the peak, 
          so some limit is set hard-coded here.)
+
+      Notes
+      -----
+      Testing out the notes functionality in numpydocs
    """
 
    two_theta_0 = 0 #:
@@ -117,13 +142,12 @@ class RietveldPhases:
       return np.dot(Bkgd,np.power(two_theta,powers))
 
    def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
-      two_theta_max,I_max,delta_theta = 0.5,Intensity_Cutoff=0.01):
+      I_max,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
       self.load_cif(fn_cif)
       self.d_min = d_min
       self.d_max = d_max
       self.I_max = I_max
-      self.two_theta_max = two_theta_max
       self.Intensity_Cutoff = Intensity_Cutoff
       self.delta_theta = delta_theta
       
@@ -134,17 +158,21 @@ class RietveldPhases:
       
       self.Compute_Relative_Intensities()
 
-      # print "two_theta_max: " + str(self.two_theta_max)
       # print "two_theta_peaks_max: " + str(self.two_theta_peaks \
       #    [self.weighted_intensities.argmax()])
       # print "I_max: " + str(self.I_max)
 
-      # print self.two_theta_peaks[:,0]
-      # print self.two_theta_peaks[1,:].reshape((1,self.two_theta_peaks.shape[0]))
+      # print "Phase Profile Max (Before): " + \
+      #    str(np.amax(self.Phase_Profile(self.two_theta_peaks[:,0])))
+      # print "x (Before): " + str(RietveldPhases.x['values'] \
+      #    [self.Amplitude_index]) 
       RietveldPhases.x['values'][self.Amplitude_index] =  \
-         self.I_max/np.amax(self.Phase_Profile(self.two_theta_peaks[:,0]))
-      # print "Phase Profile:" + str(self.Phase_Profile(self.two_theta_peaks \
-      #    [self.weighted_intensities.argmax()]))
+         RietveldPhases.x['values'][self.Amplitude_index] * \
+            self.I_max/np.amax(self.Phase_Profile(self.two_theta_peaks[:,0]))
+      # print "Phase Profile Max (After): " + \
+      #    str(np.amax(self.Phase_Profile(self.two_theta_peaks[:,0])))
+      # print "x (After): " + str(RietveldPhases.x['values'] \
+      #    [self.Amplitude_index]) 
 
    def params_from_file(self,filename):
       """
@@ -221,8 +249,9 @@ class RietveldPhases:
       """
       with open(fn, 'r') as file:
          as_cif = file.read()
-      self.structure = iotbx.cif.reader(
-       input_string=as_cif).build_crystal_structures()[fn[0:7]]
+      self.structure = iotbx.cif.reader( \
+         input_string=as_cif).build_crystal_structures() \
+            [os.path.split(fn)[1][0:7]]
       self.unit_cell = self.structure.unit_cell()
 
       for scatterer in self.structure.scatterers():
@@ -389,7 +418,7 @@ class RietveldPhases:
    def showPVProfilePlot(self,plottitle,index,two_theta,y,autohide=True):
       if autohide:
          plt.ion()
-      fig = plt.figure(figsize=(12, 8))
+      fig = plt.figure(figsize=(7,5))
       # plt.subplot(3,1,1)
       plt.scatter(two_theta,y,label='Data',s=1, color='red')
       plt.title(plottitle)

@@ -40,11 +40,11 @@ two_theta_0       0.      -2.0  2.0
 
 minimizer_input_string = """\
 approx_grad True
-factr       1e6
+factr       1e3
 iprint      1
-m           5
+m           7
 pgtol       1e-5
-epsilon     1e-8
+epsilon     1e-6
 """
 
 tst_two_theta = []
@@ -64,7 +64,7 @@ with open(r"Jade-Al2O3-Sim.xye") as file:
       tst_two_theta.append(float(two_thetatmp))
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
-tst_y = np.array(tst_y)
+tst_y = 0.01*np.array(tst_y)
 
 def exercise_Rietveld_Refinery_SinglePhase():
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
@@ -81,7 +81,7 @@ def exercise_Rietveld_Refinery_SinglePhase():
    RietveldPhases.global_params_from_string(global_input_string)
 
    Rt.append(RietveldPhases(cifs[0],input_strings[0],d_min,d_max, \
-      tst_two_theta_max,tst_y_max,delta_theta=2.0,Intensity_Cutoff=0.005))
+      tst_y_max,delta_theta=2.0,Intensity_Cutoff=0.005))
 
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
    RR.display(RR.minimize_Amplitude_Offset)
