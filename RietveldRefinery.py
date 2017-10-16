@@ -112,7 +112,7 @@ class RietveldRefinery:
          # t1 = time.time()
          # print "TotalProfile Time: " + str(t1-t0)
          return RietveldPhases.Background_Polynomial(self.two_theta) \
-            + np.sum( self.Phase_list[i].Phase_Profile(self.two_theta) \
+            + np.sum( self.Phase_list[i].Phase_Profile() \
                for i in xrange(0,len(self.Phase_list)))
 
    def Weighted_Squared_Errors(self):
@@ -127,7 +127,7 @@ class RietveldRefinery:
       # print self.mask
       self.x['values'][self.mask] = x
       x_epsilons = self.epsilon*np.ones(len(self.x))
-      # x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-3
+      x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-4
       return approx_fprime(self.x['values'][self.mask], \
          self.Weighted_Sum_of_Squares, \
          epsilon = np.array(x_epsilons[self.mask]))
@@ -135,6 +135,7 @@ class RietveldRefinery:
    def minimize(self):
       self.t0 = time.time()
       self.mask = np.logical_and(self.del_mask,self.mask)
+      self.display_parameters()
       minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
          callback = self.callback, \
          fprime = self.Weighted_Sum_of_Squares_Grad, \
@@ -173,12 +174,14 @@ class RietveldRefinery:
          else:
             del_list += [True]
       # print del_list
-      print "Time elapsed: " + str(time.time()-self.t0)
+      sys.stdout.write('.')
+      sys.stdout.flush()
+      # print "Time elapsed: " + str(time.time()-self.t0)
       if not all(del_list):
-         print "Length of Phase_list (Before): " + str(len(self.Phase_list))
+         print "\nLength of Phase_list (Before): " + str(len(self.Phase_list))
          self.Phase_list = [self.Phase_list[i] for i in \
             xrange(len(self.Phase_list)) if del_list[i]]
-         print "Length of Phase_list (After): " + str(len(self.Phase_list))
+         print "Length of Phase_list (After): " + str(len(self.Phase_list)) 
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -251,19 +254,18 @@ class RietveldRefinery:
       # two_theta_roi=30, \
       # delta_theta=10, \
       # autohide=False)
-      self.mask = np.logical_and(self.del_mask,self.mask)
-      self.display_parameters()
-
       fn(self)
 
       self.show_multiplot("After: " + fn.__name__, \
       two_theta_roi=32.5, \
       delta_theta=3, \
       autohide=False)
-      self.display_parameters()
-      self.display_stats()
+      self.display_parameters(fn)
+      self.display_stats(fn)
 
-   def display_parameters(self):
+   def display_parameters(self,fn=None):
+      if fn is not None:
+         print "After " + fn.__name__ + ":"
       for label,value,l,u in zip( \
          RietveldPhases.x['labels'][self.mask], \
          RietveldPhases.x['values'][self.mask], \
@@ -271,26 +273,32 @@ class RietveldRefinery:
          RietveldPhases.x['u_limits'][self.mask]):
          print label + " = " + str(value) + " (" + str(l) + ", " + str(u) + ")"
 
-   def display_stats(self):
+   def display_stats(self,fn=None):
       self.mask = np.ones(len(self.x),dtype=bool)
       WSS = self.Weighted_Sum_of_Squares(self.x['values'])
       R_wp = np.sqrt(WSS/self.sum_y)
       R_e = np.sqrt((len(self.two_theta)-len(self.x))/self.sum_y)
-      print "\nTime elapsed: " + str(self.t1-self.t0)
-      print "\nR_wp: " + str(R_wp)
+      if fn is not None:
+         print "\nTime taken to run " + fn.__name__ + ": " \
+            + str(round(self.t1-self.t0,3)) + " seconds"
+      print "R_wp: " + str(R_wp)
       print "R_e: " + str(R_e)
       print "Goodness-of-Fit: " + str(R_wp/R_e)
 
-      Amplitudes = RR.x['values'][np.char.startswith(RR.x['labels'],"Amp")]
-      total = np.sum(Amplitudes) 
-      print "\n"
-      for i,val in np.ndenumerate(Amplitudes):
-         print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
+      if not self.use_bkgd_mask:
+         Amplitudes = self.x['values'] \
+            [np.char.startswith(self.x['labels'],"Amp")]
+         total = np.sum(Amplitudes) 
+         print "\n"
+         for i,val in np.ndenumerate(Amplitudes):
+            print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
+         print "\n"
 
    def show_plot(self,plottitle,scale_factor=1,autohide=True):
       if autohide:
          plt.ion()
-      fig = plt.figure(figsize=(8,6))
+      # fig = plt.figure(figsize=(8,6))
+      fig = plt.figure(figsize=(10,8))
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
       plt.title(plottitle)
 

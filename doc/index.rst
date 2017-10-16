@@ -41,6 +41,7 @@ versatile and more accommodating of multi-phase powder diffraction profiles.
 .. automodule:: RietveldPhases
 .. autoclass:: RietveldPhases
    :members:
+   :member-order: bysource
    :undoc-members:
    :inherited-members:
    :show-inheritance:
@@ -53,3 +54,7 @@ Rietveld Refinery Module
 .. automodule:: RietveldRefinery
 .. autoclass:: RietveldRefinery
    :members:
+   :member-order: bysource
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

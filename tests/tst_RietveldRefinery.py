@@ -1,22 +1,18 @@
 from __future__ import division
-from scitbx import lbfgsb
-# from scitbx.array_family import flex
-# import scitbx.math
-# from libtbx.test_utils import approx_equal, eps_eq, Exception_expected
-# import sys
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from cctbx.eltbx import wavelengths
 from random import randrange
-from libtbx import test_utils
-import libtbx.load_env
 
 import sys, os
 sys.path.append(os.path.abspath(".."))
 
 from RietveldPhases import RietveldPhases
 from RietveldRefinery import RietveldRefinery
+
+from cctbx.eltbx import wavelengths
+from libtbx import test_utils
+import libtbx.load_env
 
 input_strings = ["""\
 U              0.0   -0.1   0.1
@@ -41,6 +37,7 @@ two_theta_0       0.      -2.0  2.0
 minimizer_input_string = """\
 approx_grad True
 factr       1e3
+maxiter     100
 iprint      1
 m           7
 pgtol       1e-5

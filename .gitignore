@@ -24,3 +24,6 @@ tests/tst_RietveldPhases.pyc
 doc/exts/
 tests/tst_RietveldRefinery.pyc
 tests/Cement/tst_Rietveld_Cement.pyc
+tests/Cement/Cement.pyproj
+tests/tst_RietveldPhases.profile
+tests/tst_RietveldPhases_from_nb.py

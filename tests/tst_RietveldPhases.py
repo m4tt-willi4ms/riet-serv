@@ -3,14 +3,13 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 from random import randrange
+import profile, pstats
 
 import sys, os
 sys.path.append(os.path.abspath(".."))
 
 from RietveldPhases import RietveldPhases
 from RietveldRefinery import RietveldRefinery
-
-import paths 
 
 from cctbx.eltbx import wavelengths
 
@@ -38,6 +37,7 @@ two_theta_0       0.001      -2.0  2.0
 minimizer_input_string = """\
 approx_grad True
 factr       1e3
+maxiter     100
 iprint      1
 m           7
 pgtol       1e-5
@@ -53,7 +53,7 @@ display_plots = True #: Only use to see sample plots
 # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-with open(os.path.dir(__file__) + "\\" + r"Jade-Al2O3-Sim.xye") as file:
+with open(r"Jade-Al2O3-Sim.xye") as file:
    for line in file.readlines():#[4:]:
       # two_thetatmp, ytmp, ztmp = line.split()
       two_thetatmp, ytmp = line.split()
@@ -66,8 +66,6 @@ tst_y = 0.01*np.array(tst_y)
 def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
    cifs = ["1000032.cif","1507774.cif"]
-   full_cifs = list(map( \
-      lambda x: os.path.dirname(__file__) + "\\" + x ,cifs))
    Rt = []
 
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
@@ -78,9 +76,10 @@ def exercise_RietveldPhases():
    tst_y_max = np.amax(tst_y)/len(cifs)
 
    RietveldPhases.global_params_from_string(global_input_string)
-   for cif,input_string in zip(full_cifs,input_strings):
-      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
-         tst_y_max, delta_theta = 2.0,Intensity_Cutoff = 0.005))
+   for cif,input_string in zip(cifs,input_strings):
+      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, 
+         tst_two_theta,tst_y,I_max = tst_y_max, 
+         delta_theta = 2.0,Intensity_Cutoff = 0.005))
 
    #Testing Read-in from input_string
    assert np.isclose(Rt[0].x['values'][Rt[0].U_index], 0.0)
@@ -224,8 +223,8 @@ def exercise_RietveldPhases():
       delta_theta=1, \
       autohide=False)
    RR.display(RR.minimize_Amplitude_Offset)
-   RR.display(RR.minimize_Amplitude_Offset_W)
-   RR.display(RR.minimize_All)
+   # RR.display(RR.minimize_Amplitude_Offset_W)
+   # RR.display(RR.minimize_All)
    # if display_plots:
    #    RR.show_multiplot("Sum of Phases", \
    #       two_theta_roi=30, \
@@ -246,4 +245,13 @@ def run():
    print "OK"
 
 if (__name__ == "__main__"):
+   # pr = profile.Profile()
+   # pr.enable()
    run()
+   # profile.run('run(); print')
+   # pr.disable()
+   # s = StringIO.StringIO()
+   # sortby = 'cumulative'
+   # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+   # ps.print_stats()
+   # print s.getvalue()

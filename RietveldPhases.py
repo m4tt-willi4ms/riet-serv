@@ -142,21 +142,28 @@ class RietveldPhases:
       return np.dot(Bkgd,np.power(two_theta,powers))
 
    def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
-      I_max,delta_theta = 0.5,Intensity_Cutoff=0.01):
+      two_theta,I,I_max=None,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
       self.load_cif(fn_cif)
       self.d_min = d_min
       self.d_max = d_max
-      self.I_max = I_max
+      self.two_theta = two_theta
+      self.I = I
       self.Intensity_Cutoff = Intensity_Cutoff
       self.delta_theta = delta_theta
-      
+
+      if I_max is not None:
+         self.I_max= I_max
+      else:
+         self.I_max = np.amax(I)
+
       if input_string_or_file_name[-4:] == ".txt":
          self.params_from_file(input_string_or_file_name)
       else:
          self.params_from_string(input_string_or_file_name)
       
       self.Compute_Relative_Intensities()
+      self.LP_factors = self.LP_Intensity_Scaling(self.two_theta)
 
       # print "two_theta_peaks_max: " + str(self.two_theta_peaks \
       #    [self.weighted_intensities.argmax()])
@@ -168,7 +175,7 @@ class RietveldPhases:
       #    [self.Amplitude_index]) 
       RietveldPhases.x['values'][self.Amplitude_index] =  \
          RietveldPhases.x['values'][self.Amplitude_index] * \
-            self.I_max/np.amax(self.Phase_Profile(self.two_theta_peaks[:,0]))
+            self.I_max/np.amax(self.Phase_Profile())
       # print "Phase Profile Max (After): " + \
       #    str(np.amax(self.Phase_Profile(self.two_theta_peaks[:,0])))
       # print "x (After): " + str(RietveldPhases.x['values'] \
@@ -323,6 +330,9 @@ class RietveldPhases:
          (self.K_alpha_factors[0]*self.relative_intensities, \
           self.K_alpha_factors[1]*self.relative_intensities))
       self.weighted_intensities.shape = (self.weighted_intensities.shape[0],1)
+      self.tan_two_theta_peaks = np.tan(math.pi/360.0*self.two_theta_peaks)
+      self.tan_two_theta_peaks.shape = (self.tan_two_theta_peaks.shape[0],1)
+      self.masks = self.peak_masks()
 
    def LP_Intensity_Scaling(self,two_theta):
       r"""
@@ -365,7 +375,8 @@ class RietveldPhases:
       # powers = np.tile(powers,(1,two_theta.shape[1]))
       return np.dot(eta,np.power(two_theta,powers))
 
-   def PseudoVoigtProfile(self, two_theta,two_theta_peak,weighted_intensity):
+   def PseudoVoigtProfile(self, two_theta,two_theta_peak,weighted_intensity,
+         tan_two_theta_peak,eta,LP_factor):
       r"""Computes the *Pseudo-Voigt* profile using the function 
       in eq. :eq:`PVDefn`:
       
@@ -385,31 +396,34 @@ class RietveldPhases:
       function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
       :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
       """
-      tan_thetapeak = np.tan(math.pi/360.0*two_theta_peak)
       two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       omegaUVW_squared = abs( \
-          RietveldPhases.x['values'][self.U_index]*tan_thetapeak**2 \
-         +RietveldPhases.x['values'][self.V_index]*tan_thetapeak \
+          RietveldPhases.x['values'][self.U_index]*tan_two_theta_peak**2 \
+         +RietveldPhases.x['values'][self.V_index]*tan_two_theta_peak \
          +RietveldPhases.x['values'][self.W_index])
       two_thetabar_squared = (two_theta -two_theta_0 -two_theta_peak)**2 \
          /omegaUVW_squared
-      eta_val = self.eta_Polynomial(two_theta)
-      LP_factor = self.LP_Intensity_Scaling(two_theta)
       Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
       return Amplitude*weighted_intensity*LP_factor* \
-         (eta_val/(1 +two_thetabar_squared) +(1-eta_val) \
+         (eta/(1 +two_thetabar_squared) +(1-eta) \
          *np.exp(-np.log(2)*two_thetabar_squared))
 
-   def Phase_Profile(self, two_theta):
-      result = np.zeros(len(two_theta))
-      masks = self.peak_masks(two_theta,self.delta_theta)
+   def Phase_Profile(self):
+      result = np.zeros(len(self.two_theta))
+      masks = self.masks
+      eta_vals = self.eta_Polynomial(self.two_theta)
       for i in xrange(0,len(self.two_theta_peaks)):
-         result[masks[i]] += self.PseudoVoigtProfile(two_theta[masks[i]], \
-            self.two_theta_peaks[i],self.weighted_intensities[i])
+         result[masks[i]] += self.PseudoVoigtProfile(self.two_theta[masks[i]],
+            self.two_theta_peaks[i],self.weighted_intensities[i], 
+            self.tan_two_theta_peaks[i],eta_vals[masks[i]],
+            self.LP_factors[masks[i]])
       return result
 
-   def peak_masks(self,two_theta,delta_theta):
-      return np.abs(two_theta-self.two_theta_peaks) < delta_theta
+   def peak_masks(self,delta_theta=None):
+      if delta_theta is not None:
+         return np.abs(self.two_theta-self.two_theta_peaks) < delta_theta
+      else:
+         return np.abs(self.two_theta-self.two_theta_peaks) < self.delta_theta
 
    def bkgd_mask(self,two_theta,bkgd_delta_theta):
       return np.any(self.peak_masks(two_theta,bkgd_delta_theta) \

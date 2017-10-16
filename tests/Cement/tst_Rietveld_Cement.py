@@ -20,58 +20,58 @@ from libtbx import test_utils
 import libtbx.load_env
 
 input_strings = ["""\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """,
 """\
-U              0.2   -0.1   0.1
-V              0.3   -0.1   0.1
-W              0.0008   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.000001 0      inf
 eta:           1
 """,
 """\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """,
 """\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """,
 """\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """,
 """\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """,
 """\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """,
 """\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
+U              0.001    0     0.1
+V              -0.001   -0.1   0
+W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
 """]
@@ -82,17 +82,15 @@ two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
-approx_grad True
 factr       1e2
 iprint      1
 maxiter     150
 m           7
 pgtol       1e-5
-epsilon     1e-5
+epsilon     1e-6
 """
 
 minimizer_input_string = """\
-approx_grad True
 factr       1e3
 iprint      1000
 maxiter     100
@@ -120,7 +118,7 @@ with open("cement_15_03_11_0028.xye") as file:
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
 # mask = np.ones(len(tst_two_theta),dtype=bool) 
-mask = np.logical_and(tst_two_theta >25,tst_two_theta < 45)
+mask = np.logical_and(tst_two_theta >25,tst_two_theta < 55)
 tst_two_theta = tst_two_theta[mask]
 tst_y = np.array(tst_y)[mask]
 
@@ -152,10 +150,10 @@ def exercise_Rietveld_Refinery_Cement():
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
          tst_y_max,delta_theta=5.0,Intensity_Cutoff = 0.005))
 
-   #First fit the background
+   # First fit the background
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,bkgd_minimizer_input_string, \
-      use_bkgd_mask=True,bkgd_delta_theta=0.1)
-   # RR.display(RR.minimize_Bkgd_0)
+      use_bkgd_mask=True,bkgd_delta_theta=0.05)
+   RR.display(RR.minimize_Bkgd_0)
    RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
@@ -167,10 +165,11 @@ def exercise_Rietveld_Refinery_Cement():
       autohide=False)
 
    RR.display(RR.minimize_Amplitude_Offset)
-   RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   # RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # RR.display(RR.minimize_only_Alite)
-   # RR.display(RR.minimize_All)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   RR.display(RR.minimize_only_Alite)
+   RR.display(RR.minimize_All)
 
 
 def run():
