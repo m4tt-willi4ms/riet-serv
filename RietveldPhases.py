@@ -375,48 +375,50 @@ class RietveldPhases:
       # powers = np.tile(powers,(1,two_theta.shape[1]))
       return np.dot(eta,np.power(two_theta,powers))
 
-   def PseudoVoigtProfile(self, two_theta,two_theta_peak,weighted_intensity,
-         tan_two_theta_peak,eta,LP_factor):
-      r"""Computes the *Pseudo-Voigt* profile using the function 
-      in eq. :eq:`PVDefn`:
+   # def PseudoVoigtProfile(self, two_theta,two_theta_peak,weighted_intensity,
+   #       tan_two_theta_peak,eta,LP_factor):
+   #    r"""Computes the *Pseudo-Voigt* profile using the function 
+   #    in eq. :eq:`PVDefn`:
       
-      .. math:: PV(2\theta) = \frac{\eta}{1+\overline{\Delta\theta}^2}
-         +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2}\,, \quad{\rm where}
-         \quad
-         \overline{\Delta\theta}^2 
-         := \frac{(2\theta-2\theta_0-2\theta_{\rm peak})^2}{\omega^2}
-         :label: PVDefn
+   #    .. math:: PV(2\theta) = \frac{\eta}{1+\overline{\Delta\theta}^2}
+   #       +\left(1-\eta\right)2^{-\overline{\Delta\theta}^2}\,, \quad{\rm where}
+   #       \quad
+   #       \overline{\Delta\theta}^2 
+   #       := \frac{(2\theta-2\theta_0-2\theta_{\rm peak})^2}{\omega^2}
+   #       :label: PVDefn
 
-      and where
+   #    and where
 
-      .. math:: \omega := \left| U\,\tan^2\theta_{\rm peak}
-         +V\,\tan\theta_{\rm peak}+W\right|
+   #    .. math:: \omega := \left| U\,\tan^2\theta_{\rm peak}
+   #       +V\,\tan\theta_{\rm peak}+W\right|
 
-      is the Caglioti equation, describing the variation of peak width as a
-      function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
-      :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
-      """
-      two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
-      omegaUVW_squared = abs( \
-          RietveldPhases.x['values'][self.U_index]*tan_two_theta_peak**2 \
-         +RietveldPhases.x['values'][self.V_index]*tan_two_theta_peak \
-         +RietveldPhases.x['values'][self.W_index])
-      two_thetabar_squared = (two_theta -two_theta_0 -two_theta_peak)**2 \
-         /omegaUVW_squared
-      Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
-      return Amplitude*weighted_intensity*LP_factor* \
-         (eta/(1 +two_thetabar_squared) +(1-eta) \
-         *np.exp(-np.log(2)*two_thetabar_squared))
+   #    is the Caglioti equation, describing the variation of peak width as a
+   #    function of the Bragg angle, :math:`\theta_{\rm peak}`. (In eq. 
+   #    :eq:`PVDefn`, :math:`2\theta_0` describes a refinable offset.)
+   #    """
+
+   #    return Amplitude*weighted_intensity*LP_factor* \
+   #       (eta/(1 +two_thetabar_squared) +(1-eta) \
+   #       *np.exp(-np.log(2)*two_thetabar_squared))
 
    def Phase_Profile(self):
       result = np.zeros(len(self.two_theta))
-      masks = self.masks
+      two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
+      Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
       eta_vals = self.eta_Polynomial(self.two_theta)
+      omegaUVW_squareds = abs(
+          RietveldPhases.x['values'][self.U_index]*self.tan_two_theta_peaks**2 \
+         +RietveldPhases.x['values'][self.V_index]*self.tan_two_theta_peaks \
+         +RietveldPhases.x['values'][self.W_index])
       for i in xrange(0,len(self.two_theta_peaks)):
-         result[masks[i]] += self.PseudoVoigtProfile(self.two_theta[masks[i]],
-            self.two_theta_peaks[i],self.weighted_intensities[i], 
-            self.tan_two_theta_peaks[i],eta_vals[masks[i]],
-            self.LP_factors[masks[i]])
+         two_thetabar_squared = (self.two_theta[self.masks[i]] -two_theta_0 
+            -self.two_theta_peaks[i])**2 \
+            /omegaUVW_squareds[i]
+         eta = eta_vals[self.masks[i]]
+         result[self.masks[i]] += Amplitude*self.weighted_intensities[i]* \
+            self.LP_factors[self.masks[i]]* \
+         (eta/(1 +two_thetabar_squared) +(1-eta) \
+         *np.exp(-np.log(2)*two_thetabar_squared))
       return result
 
    def peak_masks(self,delta_theta=None):
@@ -426,7 +428,7 @@ class RietveldPhases:
          return np.abs(self.two_theta-self.two_theta_peaks) < self.delta_theta
 
    def bkgd_mask(self,two_theta,bkgd_delta_theta):
-      return np.any(self.peak_masks(two_theta,bkgd_delta_theta) \
+      return np.any(self.peak_masks(bkgd_delta_theta) \
          ,axis=0)
 
    def showPVProfilePlot(self,plottitle,index,two_theta,y,autohide=True):
