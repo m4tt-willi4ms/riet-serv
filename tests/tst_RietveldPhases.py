@@ -35,13 +35,12 @@ two_theta_0       0.001      -2.0  2.0
 """
 
 minimizer_input_string = """\
-approx_grad True
-factr       1e3
+factr       1e7
 maxiter     100
 iprint      1
-m           7
+m           5
 pgtol       1e-5
-epsilon     1e-6
+epsilon     1e-7
 """
 
 tst_two_theta = []

@@ -85,16 +85,16 @@ bkgd_minimizer_input_string = """\
 factr       1e2
 iprint      1
 maxiter     150
-m           7
+m           5
 pgtol       1e-5
 epsilon     1e-6
 """
 
 minimizer_input_string = """\
 factr       1e3
-iprint      1000
+iprint      1
 maxiter     100
-m           7
+m           5
 pgtol       1e-5
 epsilon     1e-6
 """
@@ -148,7 +148,7 @@ def exercise_Rietveld_Refinery_Cement():
 
    for cif, input_string in zip(cifs,input_strings):
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
-         tst_y_max,delta_theta=5.0,Intensity_Cutoff = 0.005))
+         tst_two_theta,tst_y,delta_theta=5.0,Intensity_Cutoff = 0.005))
 
    # First fit the background
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,bkgd_minimizer_input_string, \
