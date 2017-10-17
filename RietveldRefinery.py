@@ -127,7 +127,7 @@ class RietveldRefinery:
       # print self.mask
       self.x['values'][self.mask] = x
       x_epsilons = self.epsilon*np.ones(len(self.x))
-      x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-5
+      # x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-8
       return approx_fprime(self.x['values'][self.mask], \
          self.Weighted_Sum_of_Squares, \
          epsilon = np.array(x_epsilons[self.mask]))
@@ -147,27 +147,21 @@ class RietveldRefinery:
          epsilon = self.epsilon, \
          bounds = zip(self.x['l_limits'][self.mask], \
             self.x['u_limits'][self.mask]))
-      # self.x['values'][self.mask] = x
-      # print np.char.startswith(self.x['labels'],"Amp")
+      self.t1 = time.time()
+
+   def Update_Phase_list(self):
       Amp_vals = self.x['values'][np.char.startswith(self.x['labels'],"Amp")] \
          [self.del_mask[np.char.startswith(self.x['labels'],"Amp")]]
       Amp_total = np.sum(Amp_vals)
-      # print "Length of Amp_vals: " + str(len(Amp_vals))
-      # print "Length of Phase_list: " + str(len(self.Phase_list))
       del_list = []
       for i,Amp_val in np.ndenumerate(Amp_vals):
-         if Amp_val/Amp_total < 1e-5:
+         if Amp_val/Amp_total < 1e-3:
             del_list += [False]
-            # self.del_mask[i[0]] = False
             self.del_mask = np.logical_and(self.del_mask, \
                np.invert(np.isin(np.array(range(0,len(RietveldPhases.x))), \
                np.array(range(self.Phase_list[i[0]].phase_0_index, \
                   self.Phase_list[i[0]].phase_0_index \
                      +self.Phase_list[i[0]].num_params)))))
-            # print "Deleting phase " + str(i[0]) + " of " + str(len(Amp_vals))
-            # print "Length of del_mask: " + str(len(self.del_mask))
-            # del self.Phase_list[i[0]]
-            # self.Phase_list[i] = None
          else:
             del_list += [True]
       if not all(del_list):
@@ -175,41 +169,10 @@ class RietveldRefinery:
          self.Phase_list = [self.Phase_list[i] for i in \
             xrange(len(self.Phase_list)) if del_list[i]]
          print "Length of Phase_list (After): " + str(len(self.Phase_list)) 
-      self.t1 = time.time()
 
    def callback(self,x):
-      # # self.x['values'][self.mask] = x
-      # # print np.char.startswith(self.x['labels'],"Amp")
-      # Amp_vals = self.x['values'][np.char.startswith(self.x['labels'],"Amp")] \
-      #    [self.del_mask[np.char.startswith(self.x['labels'],"Amp")]]
-      # Amp_total = np.sum(Amp_vals)
-      # # print "Length of Amp_vals: " + str(len(Amp_vals))
-      # # print "Length of Phase_list: " + str(len(self.Phase_list))
-      # del_list = []
-      # for i,Amp_val in np.ndenumerate(Amp_vals):
-      #    if Amp_val/Amp_total < 1e-7:
-      #       del_list += [False]
-      #       # self.del_mask[i[0]] = False
-      #       self.del_mask = np.logical_and(self.del_mask, \
-      #          np.invert(np.isin(np.array(range(0,len(RietveldPhases.x))), \
-      #          np.array(range(self.Phase_list[i[0]].phase_0_index, \
-      #             self.Phase_list[i[0]].phase_0_index \
-      #                +self.Phase_list[i[0]].num_params)))))
-      #       # print "Deleting phase " + str(i[0]) + " of " + str(len(Amp_vals))
-      #       # print "Length of del_mask: " + str(len(self.del_mask))
-      #       # del self.Phase_list[i[0]]
-      #       # self.Phase_list[i] = None
-      #    else:
-      #       del_list += [True]
-      # # print del_list
       sys.stdout.write('.')
       sys.stdout.flush()
-      # # print "Time elapsed: " + str(time.time()-self.t0)
-      # if not all(del_list):
-      #    print "\nLength of Phase_list (Before): " + str(len(self.Phase_list))
-      #    self.Phase_list = [self.Phase_list[i] for i in \
-      #       xrange(len(self.Phase_list)) if del_list[i]]
-      #    print "Length of Phase_list (After): " + str(len(self.Phase_list)) 
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -238,6 +201,7 @@ class RietveldRefinery:
             np.logical_or(np.char.startswith(self.x['labels'],"two_"), \
                self.x['labels'] == "W"))
       self.minimize()
+      self.Update_Phase_list()
 
    def minimize_Amplitude_Bkgd_Offset_W(self,display_plots = True):
       self.mask = np.logical_or( 

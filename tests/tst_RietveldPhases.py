@@ -222,8 +222,8 @@ def exercise_RietveldPhases():
       delta_theta=1, \
       autohide=False)
    RR.display(RR.minimize_Amplitude_Offset)
-   # RR.display(RR.minimize_Amplitude_Offset_W)
-   # RR.display(RR.minimize_All)
+   RR.display(RR.minimize_Amplitude_Offset_W)
+   RR.display(RR.minimize_All)
    # if display_plots:
    #    RR.show_multiplot("Sum of Phases", \
    #       two_theta_roi=30, \

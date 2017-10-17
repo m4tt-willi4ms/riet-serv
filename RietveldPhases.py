@@ -4,6 +4,7 @@ import time
 import sys, subprocess
 import numpy as np
 import matplotlib.pyplot as plt
+import multiprocessing
 
 import paths
 
@@ -67,9 +68,9 @@ class RietveldPhases:
    #: parameters used in refinement
    custom_dtype = np.dtype([ \
       ('labels','S12'), \
-      ('values','f4'), \
-      ('l_limits','f4'), \
-      ('u_limits','f4') \
+      ('values','f8'), \
+      ('l_limits','f8'), \
+      ('u_limits','f8') \
       ])
 
    x = np.empty(0,dtype=custom_dtype)
@@ -161,9 +162,9 @@ class RietveldPhases:
          self.params_from_file(input_string_or_file_name)
       else:
          self.params_from_string(input_string_or_file_name)
-      
-      self.Compute_Relative_Intensities()
+
       self.LP_factors = self.LP_Intensity_Scaling(self.two_theta)
+      self.Compute_Relative_Intensities()
 
       # print "two_theta_peaks_max: " + str(self.two_theta_peaks \
       #    [self.weighted_intensities.argmax()])
@@ -334,6 +335,23 @@ class RietveldPhases:
       self.tan_two_theta_peaks.shape = (self.tan_two_theta_peaks.shape[0],1)
       self.masks = self.peak_masks()
 
+      self.two_theta_masked = \
+         np.broadcast_to(self.two_theta,
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+      self.LP_factors_masked = \
+         np.broadcast_to(self.LP_factors,
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+      self.weighted_intensities_masked = \
+         np.broadcast_to(self.weighted_intensities,
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+      self.two_theta_peaks_masked = \
+         np.broadcast_to(self.two_theta_peaks,
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+      self.tan_two_theta_peaks_masked = \
+         np.broadcast_to(self.tan_two_theta_peaks,
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+      self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2 
+
    def LP_Intensity_Scaling(self,two_theta):
       r"""
          Computes the Lorentz-Polarization intensity scaling factors for a 
@@ -402,24 +420,33 @@ class RietveldPhases:
    #       *np.exp(-np.log(2)*two_thetabar_squared))
 
    def Phase_Profile(self):
-      result = np.zeros(len(self.two_theta))
+      result = np.zeros((len(self.two_theta_peaks),len(self.two_theta)))
       two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
-      eta_vals = self.eta_Polynomial(self.two_theta)
-      omegaUVW_squareds = abs(
-          RietveldPhases.x['values'][self.U_index]*self.tan_two_theta_peaks**2 \
-         +RietveldPhases.x['values'][self.V_index]*self.tan_two_theta_peaks \
+      eta_vals = np.broadcast_to(self.eta_Polynomial(self.two_theta), \
+         (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+      omegaUVW_squareds = np.abs(
+         RietveldPhases.x['values'][self.U_index] 
+            *self.tan_two_theta_peaks_sq_masked
+         +RietveldPhases.x['values'][self.V_index] 
+            *self.tan_two_theta_peaks_masked 
          +RietveldPhases.x['values'][self.W_index])
-      for i in xrange(0,len(self.two_theta_peaks)):
-         two_thetabar_squared = (self.two_theta[self.masks[i]] -two_theta_0 
-            -self.two_theta_peaks[i])**2 \
-            /omegaUVW_squareds[i]
-         eta = eta_vals[self.masks[i]]
-         result[self.masks[i]] += Amplitude*self.weighted_intensities[i]* \
-            self.LP_factors[self.masks[i]]* \
-         (eta/(1 +two_thetabar_squared) +(1-eta) \
-         *np.exp(-np.log(2)*two_thetabar_squared))
-      return result
+      two_thetabar_squared = (self.two_theta_masked -two_theta_0 
+            -self.two_theta_peaks_masked)**2 \
+            /omegaUVW_squareds
+      result[self.masks] = Amplitude*self.weighted_intensities_masked \
+         *self.LP_factors_masked*(eta_vals/(1+two_thetabar_squared) \
+            +(1-eta_vals)*np.exp(-np.log(2)*two_thetabar_squared))
+      # for i in xrange(0,len(self.two_theta_peaks)):
+      #    two_thetabar_squared = (self.two_theta[self.masks[i]] -two_theta_0 
+      #       -self.two_theta_peaks[i])**2 \
+      #       /omegaUVW_squareds[i]
+      #    eta = eta_vals[self.masks[i]]
+      #    result[self.masks[i]] += Amplitude*self.weighted_intensities[i]* \
+      #       self.LP_factors[self.masks[i]]* \
+      #    (eta/(1 +two_thetabar_squared) +(1-eta) \
+      #    *np.exp(-np.log(2)*two_thetabar_squared))
+      return np.sum(result,axis=0)
 
    def peak_masks(self,delta_theta=None):
       if delta_theta is not None:

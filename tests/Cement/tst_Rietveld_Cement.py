@@ -21,7 +21,7 @@ import libtbx.load_env
 
 input_strings = ["""\
 U              0.001    0     0.1
-V              -0.001   -0.1   0
+V              -0.001   -0.5   0
 W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           1
@@ -82,7 +82,7 @@ two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
-factr       1e2
+factr       1e5
 iprint      1
 maxiter     150
 m           5
@@ -91,12 +91,12 @@ epsilon     1e-6
 """
 
 minimizer_input_string = """\
-factr       1e3
+factr       1e7
 iprint      1
-maxiter     100
-m           5
+maxiter     1500
+m           9
 pgtol       1e-5
-epsilon     1e-6
+epsilon     1e-8
 """
 
 tst_two_theta = []
@@ -118,22 +118,20 @@ with open("cement_15_03_11_0028.xye") as file:
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
 # mask = np.ones(len(tst_two_theta),dtype=bool) 
-mask = np.logical_and(tst_two_theta >25,tst_two_theta < 55)
+mask = np.logical_and(tst_two_theta >25,tst_two_theta < 75)
 tst_two_theta = tst_two_theta[mask]
 tst_y = np.array(tst_y)[mask]
 
 def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string) 
-   cifs = ["1540705-Alite.cif", \
-      "9012789-Belite.cif", \
-      "1200009-Ferrite.cif", \
-      "1011094-FreeLime.cif", \
-      "1000039-AluminateCubic.cif", \
-      "9014308-AluminateOrtho.cif", \
-      "1000053-Periclase.cif", \
+   cifs = ["1540705-Alite.cif", 
+      "9012789-Belite.cif", 
+      "1200009-Ferrite.cif", 
+      "1011094-FreeLime.cif", 
+      "1000039-AluminateCubic.cif", 
+      "9014308-AluminateOrtho.cif", 
+      "1000053-Periclase.cif", 
       "9007569-Arcanite.cif"]
-   full_cifs = list(map( \
-      lambda x: os.path.dirname(__file__) + "\\" + x ,cifs))
    Rt = []
 
 
@@ -165,8 +163,8 @@ def exercise_Rietveld_Refinery_Cement():
       autohide=False)
 
    RR.display(RR.minimize_Amplitude_Offset)
-   # RR.display(RR.minimize_Amplitude_Offset_W)
-   RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
+   RR.display(RR.minimize_Amplitude_Offset_W)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
    # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    RR.display(RR.minimize_only_Alite)
    RR.display(RR.minimize_All)
