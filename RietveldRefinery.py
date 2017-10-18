@@ -201,7 +201,7 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"Amp"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_only_Alite(self,display_plots = True):
       self.mask = np.logical_or( \
@@ -212,6 +212,22 @@ class RietveldRefinery:
                np.array(range(self.Phase_list[0].phase_0_index, \
                   self.Phase_list[0].phase_0_index \
                      +self.Phase_list[0].num_params))))
+      self.minimize()
+
+   def minimize_First_n_Phases(self,n,display_plots = True):
+
+      tmp = np.zeros(len(self.x),dtype=bool)
+      for i in xrange(0,len(self.Phase_list)):
+         tmp = np.logical_or(tmp, \
+            np.isin(np.array(range(0,len(RietveldPhases.x))), \
+               np.array(range(self.Phase_list[i].phase_0_index, \
+                  self.Phase_list[i].phase_0_index \
+                     +self.Phase_list[i].num_params))))
+      self.mask = np.logical_or( \
+                     np.logical_or( \
+                        np.char.startswith(self.x['labels'],"Amp"), \
+                        np.char.startswith(self.x['labels'],"two_")),
+                     tmp)
       self.minimize()
 
    def minimize_Amplitude_Offset_W(self,display_plots = True):
@@ -348,8 +364,8 @@ class RietveldRefinery:
       if autohide or interactive:
          plt.ion()
 
-      # self.fig = plt.figure(figsize=(8,6))
-      self.fig = plt.figure(figsize=(6,4))
+      self.fig = plt.figure(figsize=(10,8))
+      # self.fig = plt.figure(figsize=(6,4))
       self.fig.suptitle(plottitle)
 
       self.subplot1 = self.fig.add_subplot(311) #plt.subplot(3,1,1)

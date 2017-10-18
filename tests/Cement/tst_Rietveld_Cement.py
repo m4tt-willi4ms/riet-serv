@@ -147,6 +147,12 @@ def exercise_Rietveld_Refinery_Cement():
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
          I_max = tst_y_max, delta_theta=5.0,Intensity_Cutoff = 0.005))
 
+   for i,Rp in enumerate(Rt):
+      tmp = Rp.two_theta_peaks[np.abs(Rp.two_theta_peaks-34) <0.5]
+      tmp2 = Rp.weighted_intensities[np.abs(Rp.two_theta_peaks-34) <0.5]
+      print str(i) + ": " + str(tmp)
+      print str(i) + ": " + str(tmp2)
+
    # First fit the background
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,bkgd_minimizer_input_string, \
       use_bkgd_mask=True,bkgd_delta_theta=0.05)
@@ -156,10 +162,10 @@ def exercise_Rietveld_Refinery_Cement():
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
 
    RR.display(RR.minimize_Amplitude_Offset)
-   RR.display(RR.minimize_Amplitude_Offset_W)
-   # RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
-   RR.display(RR.minimize_only_Alite)
+   # RR.display(RR.minimize_Amplitude_Offset_W)
+   # # RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
+   # # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   # RR.display(RR.minimize_only_Alite)
    RR.display(RR.minimize_All)
 
 
