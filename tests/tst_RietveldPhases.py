@@ -35,12 +35,12 @@ two_theta_0       0.001      -2.0  2.0
 """
 
 minimizer_input_string = """\
-factr       1e7
+factr       1e4
 maxiter     100
 iprint      1
-m           5
+m           10
 pgtol       1e-5
-epsilon     1e-7
+epsilon     1e-8
 """
 
 tst_two_theta = []
@@ -72,12 +72,11 @@ def exercise_RietveldPhases():
    d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
    # print "two_theta_max: " + str(tst_two_theta[-1])
    # print "d-min: "+ str(d_min)
-   tst_y_max = np.amax(tst_y)/len(cifs)
 
-   RietveldPhases.global_params_from_string(global_input_string)
+   RietveldPhases.global_params_from_string(global_input_string,
+      tst_two_theta,tst_y)
    for cif,input_string in zip(cifs,input_strings):
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, 
-         tst_two_theta,tst_y,I_max = tst_y_max, 
          delta_theta = 2.0,Intensity_Cutoff = 0.005))
 
    #Testing Read-in from input_string
@@ -217,10 +216,7 @@ def exercise_RietveldPhases():
    #Testing Refinery
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y, \
       input_string=minimizer_input_string)
-   RR.show_multiplot("Before: ", \
-      two_theta_roi=25.5, \
-      delta_theta=1, \
-      autohide=False)
+
    RR.display(RR.minimize_Amplitude_Offset)
    RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_All)

@@ -28,3 +28,4 @@ tests/Cement/Cement.pyproj
 tests/tst_RietveldPhases.profile
 tests/tst_RietveldPhases_from_nb.py
 tests/Cement/tst_Rietveld_Cement.profile
+tests/Cement/.vs/

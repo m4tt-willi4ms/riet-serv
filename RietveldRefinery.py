@@ -11,6 +11,7 @@ import sys, subprocess
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from scitbx import lbfgsb
 import jsonpickle
 from libtbx import easy_pickle
@@ -103,7 +104,8 @@ class RietveldRefinery:
       # print np.sum(self.Phase_list[i].Phase_Profile(self.two_theta) \
       #    for i in xrange(0,len(self.Phase_list)))
       if self.use_bkgd_mask:
-         return RietveldPhases.Background_Polynomial(self.two_theta)
+         self.TotalProfile_state = \
+            RietveldPhases.Background_Polynomial(self.two_theta)
       else:
          # t0 = time.time()
          # print RietveldPhases.Background_Polynomial(self.two_theta) \
@@ -111,12 +113,25 @@ class RietveldRefinery:
          #       for i in xrange(0,len(self.Phase_list)))
          # t1 = time.time()
          # print "TotalProfile Time: " + str(t1-t0)
-         return RietveldPhases.Background_Polynomial(self.two_theta) \
-            + np.sum( self.Phase_list[i].Phase_Profile() \
-               for i in xrange(0,len(self.Phase_list)))
+         # print map(lambda x: np.amax(self.Phase_list[x].Phase_Profile()), 
+         #       range(0,len(self.Phase_list)))
+         # print np.sum( x \
+         #       for x in self.Profile_generator())
+         self.TotalProfile_state = \
+            RietveldPhases.Background_Polynomial(self.two_theta) \
+            + np.sum( x for x in self.Phase_Profiles())
+            # + np.sum(map(lambda x: self.Phase_list[x].Phase_Profile(), 
+            #    range(0,len(self.Phase_list))))
+      return self.TotalProfile_state
+
+   def Phase_Profiles(self):
+      for i in xrange(0,len(self.Phase_list)):
+         yield self.Phase_list[i].Phase_Profile()
 
    def Weighted_Squared_Errors(self):
-      return (self.y - self.TotalProfile())**2/self.y
+      self.Weighted_Squared_Errors_state = \
+      (self.y - self.TotalProfile())**2/self.y
+      return self.Weighted_Squared_Errors_state
 
    def Weighted_Sum_of_Squares(self,x):
       # print self.mask
@@ -148,6 +163,7 @@ class RietveldRefinery:
          bounds = zip(self.x['l_limits'][self.mask], \
             self.x['u_limits'][self.mask]))
       self.t1 = time.time()
+      print "\n"
 
    def Update_Phase_list(self):
       Amp_vals = self.x['values'][np.char.startswith(self.x['labels'],"Amp")] \
@@ -168,11 +184,14 @@ class RietveldRefinery:
          print "\nLength of Phase_list (Before): " + str(len(self.Phase_list))
          self.Phase_list = [self.Phase_list[i] for i in \
             xrange(len(self.Phase_list)) if del_list[i]]
-         print "Length of Phase_list (After): " + str(len(self.Phase_list)) 
+         print "Length of Phase_list (After): " + str(len(self.Phase_list)) \
+            + "\n"
 
    def callback(self,x):
       sys.stdout.write('.')
       sys.stdout.flush()
+      time.sleep(0.5)
+      # self.update_plot()
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -183,6 +202,7 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"Amp"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
+      self.Update_Phase_list()
 
    def minimize_only_Alite(self,display_plots = True):
       self.mask = np.logical_or( \
@@ -246,14 +266,33 @@ class RietveldRefinery:
       # two_theta_roi=30, \
       # delta_theta=10, \
       # autohide=False)
-      fn(self)
-
-      self.show_multiplot("After: " + fn.__name__, \
+      self.show_multiplot("Progress: " + fn.__name__, \
       two_theta_roi=32.5, \
       delta_theta=3, \
       autohide=False)
+
+      fn(self)
+
+      self.update_plot()
+      plt.ioff()
+      self.fig.suptitle(fn.__name__)
+      # self.show_multiplot("After: " + fn.__name__, \
+      # two_theta_roi=32.5, \
+      # delta_theta=3, \
+      # autohide=False)
       self.display_parameters(fn)
       self.display_stats(fn)
+      plt.show()
+      # plt.ioff()
+      # plt.show()
+
+   def update_plot(self):
+      self.current_profile.set_ydata(self.TotalProfile_state)
+      self.current_profile_masked.set_ydata(self.TotalProfile_state 
+         [self.pltmask])
+      self.residuals.set_ydata(self.Weighted_Squared_Errors_state)
+      # self.fig.suptitle += str(frame_number)
+      # self.fig.canvas.draw()
 
    def display_parameters(self,fn=None):
       if fn is not None:
@@ -286,59 +325,81 @@ class RietveldRefinery:
             print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
          print "\n"
 
-   def show_plot(self,plottitle,scale_factor=1,autohide=True):
-      if autohide:
-         plt.ion()
-      # fig = plt.figure(figsize=(8,6))
-      fig = plt.figure(figsize=(10,8))
-      plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
-      plt.title(plottitle)
+   # def show_plot(self,plottitle,scale_factor=1,autohide=True):
+   #    if autohide:
+   #       plt.ion()
+   #    # fig = plt.figure(figsize=(9,7))
+   #    fig = plt.figure(figsize=(10,8))
+   #    plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
+   #    plt.title(plottitle)
 
-      plt.plot(self.two_theta,scale_factor*self.TotalProfile(), \
-         label=r'$I_{\rm calc}$')
+   #    plt.plot(self.two_theta,scale_factor*self.TotalProfile(), \
+   #       label=r'$I_{\rm calc}$')
 
-      plt.legend(bbox_to_anchor=(.8,.7))
-      plt.ylabel(r"$I$")
+   #    plt.legend(bbox_to_anchor=(.8,.7))
+   #    plt.ylabel(r"$I$")
 
-      plt.show()
-      if autohide:
-         fig.canvas.flush_events()
-         time.sleep(1)
-         plt.close('all')
+   #    plt.show()
+   #    if autohide:
+   #       fig.canvas.flush_events()
+   #       time.sleep(1)
+   #       plt.close('all')
 
    def show_multiplot(self,plottitle,two_theta_roi=45, \
-         delta_theta=0.5,autohide=True):
-      # if autohide:
-      # plt.ion()
-      fig = plt.figure(figsize=(7, 5))
+         delta_theta=0.5,autohide=True,interactive=True):
+      if autohide or interactive:
+         plt.ion()
 
-      plt.subplot(3,1,1)
+      self.fig = plt.figure(figsize=(8,6))
+      # self.fig = plt.figure(figsize=(6,4))
+      self.fig.suptitle(plottitle)
+
+      self.subplot1 = self.fig.add_subplot(311) #plt.subplot(3,1,1)
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
-      plt.title(plottitle)
 
-      plt.plot(self.two_theta,self.TotalProfile(), label=r'$I_{\rm calc}$')
+      self.current_profile, = self.subplot1.plot(self.two_theta,
+         self.TotalProfile(), label=r'$I_{\rm calc}$')
       plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
-      plt.subplot(3,1,2)
-      pltmask = np.abs(self.two_theta - two_theta_roi) \
+      subplot2 = self.fig.add_subplot(312) #plt.subplot(3,1,2)
+      self.pltmask = np.abs(self.two_theta - two_theta_roi) \
          < delta_theta
-      plt.scatter(self.two_theta[pltmask],self.y[pltmask],label='Data',s=1, \
-         color='red')
+      plt.scatter(self.two_theta[self.pltmask],self.y[self.pltmask],
+         label='Data',s=1, color='red')
 
-      plt.plot(self.two_theta[pltmask],self.TotalProfile()[pltmask], \
-         label=r'$I_{\rm calc}$')
+      self.current_profile_masked, = subplot2.plot(self.two_theta[self.pltmask],
+         self.TotalProfile()[self.pltmask], label=r'$I_{\rm calc}$')
       plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
-      plt.subplot(3,1,3)
-      plt.scatter(self.two_theta,self.Weighted_Squared_Errors())
+      subplot3 = self.fig.add_subplot(313) #plt.subplot(3,1,3)
+      self.residuals, = subplot3.plot(self.two_theta,
+         self.Weighted_Squared_Errors(),'bo',ms=1)
       plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
       plt.xlabel(r'$2\,\theta$')
 
-      plt.show()
+      # self.plot_init(plottitle,two_theta_roi=two_theta_roi, \
+      #    delta_theta=delta_theta,autohide=autohide,interactive=interactive)
+      
+      animation = FuncAnimation(self.fig,self.animate,
+         init_func=self.plot_init,blit=True,interval=1000)
+      # plt.show()
 
       if autohide:
          fig.canvas.flush_events()
          time.sleep(1)
          plt.close('all')
+
+   def animate(self,n):
+      self.current_profile.set_ydata(self.TotalProfile_state)
+      self.current_profile_masked.set_ydata(self.TotalProfile_state 
+         [self.pltmask])
+      self.residuals.set_ydata(self.Weighted_Squared_Errors_state)
+      # self.fig.canvas.draw()
+      return self.current_profile,self.current_profile_masked,self.residuals,
+
+   def plot_init(self):
+      # self.fig.canvas.draw()
+      print "here"
+      return self.current_profile,self.current_profile_masked,self.residuals,

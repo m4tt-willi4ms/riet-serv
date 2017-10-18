@@ -37,11 +37,11 @@ two_theta_0       0.      -2.0  2.0
 minimizer_input_string = """\
 approx_grad True
 factr       1e3
-maxiter     100
-iprint      1
-m           7
+maxiter     150
+iprint      -1
+m           10
 pgtol       1e-5
-epsilon     1e-6
+epsilon     1e-8
 """
 
 tst_two_theta = []
@@ -64,21 +64,17 @@ tst_two_theta = np.array(tst_two_theta)
 tst_y = 0.01*np.array(tst_y)
 
 def exercise_Rietveld_Refinery_SinglePhase():
-   CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-   d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
-   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
-   # print "two_theta_max: " + str(tst_two_theta[-1])
-   # print "d-min: "+ str(d_min)
-   tst_two_theta_max = tst_two_theta[np.argmax(tst_y)]
-   tst_y_max = np.amax(tst_y)
-   
    cifs = ["1000032.cif","1507774.cif"]
    Rt = []
-   
-   RietveldPhases.global_params_from_string(global_input_string)
+
+   CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+   d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
+   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])  
+   RietveldPhases.global_params_from_string(global_input_string,
+      tst_two_theta,tst_y)
 
    Rt.append(RietveldPhases(cifs[0],input_strings[0],d_min,d_max, \
-      tst_y_max,delta_theta=2.0,Intensity_Cutoff=0.005))
+      delta_theta=2.0,Intensity_Cutoff=0.005))
 
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
    RR.display(RR.minimize_Amplitude_Offset)
