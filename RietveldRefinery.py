@@ -11,7 +11,7 @@ import sys, subprocess
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+import matplotlib.animation as animation
 from scitbx import lbfgsb
 import jsonpickle
 from libtbx import easy_pickle
@@ -190,8 +190,7 @@ class RietveldRefinery:
    def callback(self,x):
       sys.stdout.write('.')
       sys.stdout.flush()
-      time.sleep(0.5)
-      # self.update_plot()
+      self.update_plot()
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -291,8 +290,7 @@ class RietveldRefinery:
       self.current_profile_masked.set_ydata(self.TotalProfile_state 
          [self.pltmask])
       self.residuals.set_ydata(self.Weighted_Squared_Errors_state)
-      # self.fig.suptitle += str(frame_number)
-      # self.fig.canvas.draw()
+      self.fig.canvas.draw()
 
    def display_parameters(self,fn=None):
       if fn is not None:
@@ -325,33 +323,33 @@ class RietveldRefinery:
             print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
          print "\n"
 
-   # def show_plot(self,plottitle,scale_factor=1,autohide=True):
-   #    if autohide:
-   #       plt.ion()
-   #    # fig = plt.figure(figsize=(9,7))
-   #    fig = plt.figure(figsize=(10,8))
-   #    plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
-   #    plt.title(plottitle)
+   def show_plot(self,plottitle,scale_factor=1,autohide=True):
+      if autohide:
+         plt.ion()
+      # fig = plt.figure(figsize=(9,7))
+      fig = plt.figure(figsize=(10,8))
+      plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
+      plt.title(plottitle)
 
-   #    plt.plot(self.two_theta,scale_factor*self.TotalProfile(), \
-   #       label=r'$I_{\rm calc}$')
+      plt.plot(self.two_theta,scale_factor*self.TotalProfile(), \
+         label=r'$I_{\rm calc}$')
 
-   #    plt.legend(bbox_to_anchor=(.8,.7))
-   #    plt.ylabel(r"$I$")
+      plt.legend(bbox_to_anchor=(.8,.7))
+      plt.ylabel(r"$I$")
 
-   #    plt.show()
-   #    if autohide:
-   #       fig.canvas.flush_events()
-   #       time.sleep(1)
-   #       plt.close('all')
+      plt.show()
+      if autohide:
+         fig.canvas.flush_events()
+         time.sleep(1)
+         plt.close('all')
 
    def show_multiplot(self,plottitle,two_theta_roi=45, \
          delta_theta=0.5,autohide=True,interactive=True):
       if autohide or interactive:
          plt.ion()
 
-      self.fig = plt.figure(figsize=(8,6))
-      # self.fig = plt.figure(figsize=(6,4))
+      # self.fig = plt.figure(figsize=(8,6))
+      self.fig = plt.figure(figsize=(6,4))
       self.fig.suptitle(plottitle)
 
       self.subplot1 = self.fig.add_subplot(311) #plt.subplot(3,1,1)
@@ -379,27 +377,9 @@ class RietveldRefinery:
       plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
       plt.xlabel(r'$2\,\theta$')
 
-      # self.plot_init(plottitle,two_theta_roi=two_theta_roi, \
-      #    delta_theta=delta_theta,autohide=autohide,interactive=interactive)
-      
-      animation = FuncAnimation(self.fig,self.animate,
-         init_func=self.plot_init,blit=True,interval=1000)
-      # plt.show()
+      self.fig.canvas.draw()
 
       if autohide:
          fig.canvas.flush_events()
          time.sleep(1)
          plt.close('all')
-
-   def animate(self,n):
-      self.current_profile.set_ydata(self.TotalProfile_state)
-      self.current_profile_masked.set_ydata(self.TotalProfile_state 
-         [self.pltmask])
-      self.residuals.set_ydata(self.Weighted_Squared_Errors_state)
-      # self.fig.canvas.draw()
-      return self.current_profile,self.current_profile_masked,self.residuals,
-
-   def plot_init(self):
-      # self.fig.canvas.draw()
-      print "here"
-      return self.current_profile,self.current_profile_masked,self.residuals,
