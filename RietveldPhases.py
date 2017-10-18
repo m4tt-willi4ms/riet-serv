@@ -98,7 +98,10 @@ class RietveldPhases:
          cls.global_params_from_string(file.read())
 
    @classmethod
-   def global_params_from_string(cls,input_string):
+   def global_params_from_string(cls,input_string,two_theta,I):
+      cls.two_theta = two_theta
+      cls.I = I
+
       cls.num_global_params = 0
       for line in input_string.splitlines():
          if line.split()[0][-1] != ':':
@@ -143,27 +146,25 @@ class RietveldPhases:
       return np.dot(Bkgd,np.power(two_theta,powers))
 
    def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
-      two_theta,I,I_max=None,delta_theta = 0.5,Intensity_Cutoff=0.01):
+      I_max=None,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
       self.load_cif(fn_cif)
       self.d_min = d_min
       self.d_max = d_max
-      self.two_theta = two_theta
-      self.I = I
       self.Intensity_Cutoff = Intensity_Cutoff
       self.delta_theta = delta_theta
 
       if I_max is not None:
          self.I_max= I_max
       else:
-         self.I_max = np.amax(I)
+         self.I_max = np.amax(RietveldPhases.I)
 
       if input_string_or_file_name[-4:] == ".txt":
          self.params_from_file(input_string_or_file_name)
       else:
          self.params_from_string(input_string_or_file_name)
 
-      self.LP_factors = self.LP_Intensity_Scaling(self.two_theta)
+      self.LP_factors = self.LP_Intensity_Scaling(RietveldPhases.two_theta)
       self.Compute_Relative_Intensities()
 
       # print "two_theta_peaks_max: " + str(self.two_theta_peaks \

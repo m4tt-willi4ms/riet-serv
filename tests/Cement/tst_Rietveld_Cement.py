@@ -24,7 +24,7 @@ U              0.001    0     0.1
 V              -0.001   -0.5   0
 W              0.01   0     1
 Amplitude         0.1 0      inf
-eta:           1
+eta:           2
 """,
 """\
 U              0.001    0     0.1
@@ -82,19 +82,19 @@ two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
-factr       1e5
+factr       1e4
 iprint      1
 maxiter     150
-m           5
+m           10
 pgtol       1e-5
 epsilon     1e-6
 """
 
 minimizer_input_string = """\
-factr       1e7
+factr       1e3
 iprint      1
-maxiter     1500
-m           9
+maxiter     150
+m           8
 pgtol       1e-5
 epsilon     1e-8
 """
@@ -138,29 +138,22 @@ def exercise_Rietveld_Refinery_Cement():
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
    d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
    d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
-   # print "two_theta_max: " + str(tst_two_theta[-1])
-   # print "d-min: "+ str(d_min)
    tst_y_max = np.amax(tst_y)/len(cifs)
 
-   RietveldPhases.global_params_from_string(global_input_string)
+   RietveldPhases.global_params_from_string(global_input_string,
+      tst_two_theta,tst_y)
 
    for cif, input_string in zip(cifs,input_strings):
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
-         tst_two_theta,tst_y,delta_theta=5.0,Intensity_Cutoff = 0.005))
+         I_max = tst_y_max, delta_theta=5.0,Intensity_Cutoff = 0.005))
 
    # First fit the background
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,bkgd_minimizer_input_string, \
       use_bkgd_mask=True,bkgd_delta_theta=0.05)
-   RR.display(RR.minimize_Bkgd_0)
    RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
-
-   RR.show_multiplot("Before: ", \
-      two_theta_roi=32.5, \
-      delta_theta=3, \
-      autohide=False)
 
    RR.display(RR.minimize_Amplitude_Offset)
    RR.display(RR.minimize_Amplitude_Offset_W)
