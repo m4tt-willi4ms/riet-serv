@@ -168,6 +168,11 @@ def exercise_Rietveld_Refinery_Cement():
    #    print str(i) + ": " + str(tmp)
    #    print str(i) + ": " + str(tmp2)
 
+   numpeaks = 0
+   for i,Rp in enumerate(Rt):
+      print Rp.two_theta_peaks.shape
+      numpeaks += Rp.two_theta_peaks.shape
+
    # First fit the background
    RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
       use_bkgd_mask=True,bkgd_delta_theta=0.05,store_intermediate_state=False)
