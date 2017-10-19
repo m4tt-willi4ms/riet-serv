@@ -27,18 +27,19 @@ class RietveldRefinery:
       a file/string.
    """
 
-   def __init__(self,Phase_list,two_theta,y,input_string, \
-      use_bkgd_mask=False,bkgd_delta_theta=0.5):
+   def __init__(self,Phase_list,input_string, \
+      use_bkgd_mask=False,bkgd_delta_theta=0.5,store_intermediate_state=False):
       """
          Given some list of phases, an instance of the refinery is initialized
          to readily run a refinement process.
       """
       self.x = RietveldPhases.x
       self.Phase_list = Phase_list
-      self.two_theta = two_theta
-      self.y = y
+      self.two_theta = RietveldPhases.two_theta
+      self.y = RietveldPhases.I
       self.use_bkgd_mask = use_bkgd_mask
       self.bkgd_delta_theta = bkgd_delta_theta
+      self.store_intermediate_state = store_intermediate_state
 
       self.mask = np.ones(len(self.x),dtype=bool)
 
@@ -104,8 +105,11 @@ class RietveldRefinery:
       # print np.sum(self.Phase_list[i].Phase_Profile(self.two_theta) \
       #    for i in xrange(0,len(self.Phase_list)))
       if self.use_bkgd_mask:
-         self.TotalProfile_state = \
-            RietveldPhases.Background_Polynomial(self.two_theta)
+         if self.store_intermediate_state:
+            self.TotalProfile_state = \
+               RietveldPhases.Background_Polynomial(self.two_theta)
+         else:
+            return RietveldPhases.Background_Polynomial(self.two_theta)
       else:
          # t0 = time.time()
          # print RietveldPhases.Background_Polynomial(self.two_theta) \
@@ -117,11 +121,15 @@ class RietveldRefinery:
          #       range(0,len(self.Phase_list)))
          # print np.sum( x \
          #       for x in self.Profile_generator())
-         self.TotalProfile_state = \
-            RietveldPhases.Background_Polynomial(self.two_theta) \
-            + np.sum( x for x in self.Phase_Profiles())
+         if self.store_intermediate_state:
+            self.TotalProfile_state = \
+               RietveldPhases.Background_Polynomial(self.two_theta) \
+               + np.sum( x for x in self.Phase_Profiles())
             # + np.sum(map(lambda x: self.Phase_list[x].Phase_Profile(), 
             #    range(0,len(self.Phase_list))))
+         else: 
+            return RietveldPhases.Background_Polynomial(self.two_theta) \
+               + np.sum( x for x in self.Phase_Profiles())
       return self.TotalProfile_state
 
    def Phase_Profiles(self):
@@ -129,8 +137,11 @@ class RietveldRefinery:
          yield self.Phase_list[i].Phase_Profile()
 
    def Weighted_Squared_Errors(self):
-      self.Weighted_Squared_Errors_state = \
-      (self.y - self.TotalProfile())**2/self.y
+      if self.store_intermediate_state:
+         self.Weighted_Squared_Errors_state = \
+         (self.y - self.TotalProfile())**2/self.y
+      else:
+         return (self.y - self.TotalProfile())**2/self.y
       return self.Weighted_Squared_Errors_state
 
    def Weighted_Sum_of_Squares(self,x):
@@ -166,12 +177,12 @@ class RietveldRefinery:
       print "\n"
 
    def Update_Phase_list(self):
-      Amp_vals = self.x['values'][np.char.startswith(self.x['labels'],"Amp")] \
-         [self.del_mask[np.char.startswith(self.x['labels'],"Amp")]]
+      Amp_mask = np.char.startswith(self.x['labels'],"Amp")
+      Amp_vals = self.x['values'][Amp_mask][self.del_mask[Amp_mask]]
       Amp_total = np.sum(Amp_vals)
       del_list = []
       for i,Amp_val in np.ndenumerate(Amp_vals):
-         if Amp_val/Amp_total < 1e-3:
+         if Amp_val/Amp_total < 1e-5:
             del_list += [False]
             self.del_mask = np.logical_and(self.del_mask, \
                np.invert(np.isin(np.array(range(0,len(RietveldPhases.x))), \
@@ -188,9 +199,11 @@ class RietveldRefinery:
             + "\n"
 
    def callback(self,x):
+
       sys.stdout.write('.')
       sys.stdout.flush()
-      self.update_plot()
+      if self.store_intermediate_state:
+         self.update_plot()
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
@@ -201,7 +214,7 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"Amp"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
-      # self.Update_Phase_list()
+      self.Update_Phase_list()
 
    def minimize_only_Alite(self,display_plots = True):
       self.mask = np.logical_or( \
@@ -214,15 +227,18 @@ class RietveldRefinery:
                      +self.Phase_list[0].num_params))))
       self.minimize()
 
-   def minimize_First_n_Phases(self,n,display_plots = True):
+   def minimize_First_n_Phases(self,n=1,display_plots = True):
+      tmp = np.argsort(self.x['values'] 
+         [np.char.startswith(self.x['labels'],"Amp")])
+      n_phases = [self.Phase_list[i] for i in tmp]
 
       tmp = np.zeros(len(self.x),dtype=bool)
-      for i in xrange(0,len(self.Phase_list)):
+      for i in xrange(0,n):
          tmp = np.logical_or(tmp, \
             np.isin(np.array(range(0,len(RietveldPhases.x))), \
-               np.array(range(self.Phase_list[i].phase_0_index, \
-                  self.Phase_list[i].phase_0_index \
-                     +self.Phase_list[i].num_params))))
+               np.array(range(n_phases[i].phase_0_index, \
+                  n_phases[i].phase_0_index \
+                     +n_phases[i].num_params))))
       self.mask = np.logical_or( \
                      np.logical_or( \
                         np.char.startswith(self.x['labels'],"Amp"), \
@@ -245,6 +261,7 @@ class RietveldRefinery:
                np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), 
                   self.x['labels'] == "W")))
       self.minimize()
+      self.Update_Phase_list()
 
    def minimize_Bkgd(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Bkgd")
@@ -276,27 +293,36 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"Amp")))
       self.minimize()
 
-   def display(self,fn):
+   def display(self,fn,**kwargs):
       # self.show_multiplot("Before: " + fn.__name__, \
       # two_theta_roi=30, \
       # delta_theta=10, \
       # autohide=False)
-      self.show_multiplot("Progress: " + fn.__name__, \
-      two_theta_roi=32.5, \
-      delta_theta=3, \
-      autohide=False)
+      if self.store_intermediate_state:
+         self.show_multiplot("Progress: " + fn.__name__, \
+         two_theta_roi=32.5, \
+         delta_theta=3, \
+         autohide=False)
 
-      fn(self)
+      if kwargs is not None:
+         fn(**kwargs)
+      else:
+         print "here"
+         fn()
 
-      self.update_plot()
-      plt.ioff()
-      self.fig.suptitle(fn.__name__)
-      # self.show_multiplot("After: " + fn.__name__, \
-      # two_theta_roi=32.5, \
-      # delta_theta=3, \
-      # autohide=False)
+      if self.store_intermediate_state:
+         self.update_plot()
+         self.fig.suptitle(fn.__name__)
+
+
+      if not self.store_intermediate_state:
+         self.show_multiplot("After: " + fn.__name__, \
+         two_theta_roi=32.5, \
+         delta_theta=3, \
+         autohide=False)
       self.display_parameters(fn)
       self.display_stats(fn)
+      plt.ioff()
       plt.show()
       # plt.ioff()
       # plt.show()
@@ -364,8 +390,8 @@ class RietveldRefinery:
       if autohide or interactive:
          plt.ion()
 
-      self.fig = plt.figure(figsize=(10,8))
-      # self.fig = plt.figure(figsize=(6,4))
+      # self.fig = plt.figure(figsize=(7,5))
+      self.fig = plt.figure()#figsize=(6,4))
       self.fig.suptitle(plottitle)
 
       self.subplot1 = self.fig.add_subplot(311) #plt.subplot(3,1,1)
@@ -380,16 +406,16 @@ class RietveldRefinery:
       self.pltmask = np.abs(self.two_theta - two_theta_roi) \
          < delta_theta
       plt.scatter(self.two_theta[self.pltmask],self.y[self.pltmask],
-         label='Data',s=1, color='red')
+         label='Data',s=2, color='red')
 
       self.current_profile_masked, = subplot2.plot(self.two_theta[self.pltmask],
          self.TotalProfile()[self.pltmask], label=r'$I_{\rm calc}$')
-      plt.legend(bbox_to_anchor=(.8,.7))
+      # plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
       subplot3 = self.fig.add_subplot(313) #plt.subplot(3,1,3)
       self.residuals, = subplot3.plot(self.two_theta,
-         self.Weighted_Squared_Errors(),'bo',ms=1)
+         self.Weighted_Squared_Errors(),'bo',ms=2)
       plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
       plt.xlabel(r'$2\,\theta$')
 
