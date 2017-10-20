@@ -1,24 +1,16 @@
 from __future__ import division
 import os, random, math
-import iotbx.cif, cctbx.miller
-import scitbx
-from cctbx import xray
-from cctbx import crystal
-from cctbx.array_family import flex
-from cctbx.eltbx import wavelengths
 import time
 import sys, subprocess
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from scitbx import lbfgsb
-import jsonpickle
-from libtbx import easy_pickle
-from scipy.optimize import minimize, approx_fprime
+from scipy.optimize import approx_fprime
+from scipy.optimize import fmin_l_bfgs_b as minimizer
+import json,codecs
 
 from RietveldPhases import RietveldPhases
-from scipy.optimize import fmin_l_bfgs_b as minimizer
 
 class RietveldRefinery:
    """
@@ -140,6 +132,12 @@ class RietveldRefinery:
       if self.store_intermediate_state:
          self.Weighted_Squared_Errors_state = \
          (self.y - self.TotalProfile())**2/self.y
+         a = np.arange(10).reshape(2,5) # a 2 by 5 array
+         json.dump(self.Weighted_Squared_Errors_state.tolist(), 
+            codecs.open("residuals.json", 'w', encoding='utf-8'), 
+            separators=(',', ':'), 
+            sort_keys=True, 
+            indent=4)
       else:
          return (self.y - self.TotalProfile())**2/self.y
       return self.Weighted_Squared_Errors_state

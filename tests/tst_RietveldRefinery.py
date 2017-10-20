@@ -19,14 +19,14 @@ U              0.0   -0.1   0.1
 V              0.0   -0.1   0.1
 W              0.0006   -0.1   0.1
 Amplitude         0.1 0      inf
-eta:           2
+eta:           4
 """,
 """\
 U              0.2   -0.1   0.1
 V              0.3   -0.1   0.1
 W              0.0008   -0.1   0.1
 Amplitude         0.000001 0      inf
-eta:           4
+eta:           2
 """]
 
 global_input_string = """\
@@ -36,12 +36,12 @@ two_theta_0       0.      -2.0  2.0
 
 minimizer_input_string = """\
 approx_grad True
-factr       1e3
+factr       1e9
 maxiter     150
 iprint      -1
 m           10
 pgtol       1e-5
-epsilon     1e-8
+epsilon     1e-10
 """
 
 tst_two_theta = []
@@ -61,27 +61,41 @@ with open(r"Jade-Al2O3-Sim.xye") as file:
       tst_two_theta.append(float(two_thetatmp))
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
-tst_y = 0.01*np.array(tst_y)
+tst_y = np.array(tst_y)
+cifs = ["1000032.cif","1507774.cif"]
+
+CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
+d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
 
 def exercise_Rietveld_Refinery_SinglePhase():
-   cifs = ["1000032.cif","1507774.cif"]
-   Rt = []
-
-   CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-   d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
-   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])  
    RietveldPhases.global_params_from_string(global_input_string,
       tst_two_theta,tst_y)
 
+   Rt = []
    Rt.append(RietveldPhases(cifs[0],input_strings[0],d_min,d_max, \
       delta_theta=2.0,Intensity_Cutoff=0.005))
 
-   RR = RietveldRefinery(Rt,tst_two_theta,tst_y,minimizer_input_string)
+   RR = RietveldRefinery(Rt,minimizer_input_string,
+      store_intermediate_state=True)
    RR.display(RR.minimize_Amplitude_Offset)
    RR.display(RR.minimize_All)
+   RietveldPhases.empty_x()
 
 def exercise_Rietveld_Refinery_Multiphase():
-   pass
+   RietveldPhases.global_params_from_string(global_input_string,
+      tst_two_theta,tst_y)
+
+   Rt = []
+   for cif,input_string in zip(cifs,input_strings):
+      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
+         delta_theta=2.0,Intensity_Cutoff=0.005))
+
+   RR = RietveldRefinery(Rt,minimizer_input_string,
+      store_intermediate_state=True)
+   RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_All)
+   RietveldPhases.empty_x()
 
 def run():
    exercise_Rietveld_Refinery_SinglePhase()

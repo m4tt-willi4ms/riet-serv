@@ -145,6 +145,10 @@ class RietveldPhases:
       powers.shape = (dim,1)
       return np.dot(Bkgd,np.power(two_theta,powers))
 
+   @classmethod
+   def empty_x(self):
+      RietveldPhases.x = np.empty(0,dtype=RietveldPhases.custom_dtype)
+
    def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
       I_max=None,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
@@ -449,6 +453,25 @@ class RietveldPhases:
       #    *np.exp(-np.log(2)*two_thetabar_squared))
       return np.sum(result,axis=0)
 
+   def PseudoVoigtProfile(self,index):
+      result = np.zeros(len(self.two_theta[self.masks[index]]))
+      two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
+      Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
+      eta_vals = self.eta_Polynomial(self.two_theta[self.masks[index]])
+      omegaUVW_squareds = np.abs(
+         RietveldPhases.x['values'][self.U_index] 
+            *self.tan_two_theta_peaks_sq_masked[index]
+         +RietveldPhases.x['values'][self.V_index] 
+            *self.tan_two_theta_peaks_masked[index]
+         +RietveldPhases.x['values'][self.W_index])
+      two_thetabar_squared = (self.two_theta[self.masks[index]] -two_theta_0 
+            -self.two_theta_peaks_masked[index])**2 \
+            /omegaUVW_squareds
+      result = Amplitude*self.weighted_intensities_masked[index] \
+         *self.LP_factors[self.masks[index]]*(eta_vals/(1+two_thetabar_squared) \
+            +(1-eta_vals)*np.exp(-np.log(2)*two_thetabar_squared))
+      return result
+
    def peak_masks(self,delta_theta=None):
       if delta_theta is not None:
          return np.abs(self.two_theta-self.two_theta_peaks) < delta_theta
@@ -459,24 +482,25 @@ class RietveldPhases:
       return np.any(self.peak_masks(bkgd_delta_theta) \
          ,axis=0)
 
-   def showPVProfilePlot(self,plottitle,index,two_theta,y,autohide=True):
-      if autohide:
-         plt.ion()
-      fig = plt.figure(figsize=(7,5))
+   def showPVProfilePlot(self,plottitle,index,autohide=True):
+      # if autohide:
+      plt.ion()
+      fig = plt.figure(figsize=(6,4))
       # plt.subplot(3,1,1)
-      plt.scatter(two_theta,y,label='Data',s=1, color='red')
+      plt.scatter(self.two_theta[self.masks[index]],self.I[self.masks[index]],
+         label='Data',s=1,color='red')
       plt.title(plottitle)
 
-      plt.plot(two_theta,self.Phase_Profile(two_theta), \
-         label=r'Total $I_{\rm calc}$')
-      plt.plot(two_theta,self.PseudoVoigtProfile(two_theta, \
-         self.two_theta_peaks[index],self.weighted_intensities[index]), \
+      plt.plot(self.two_theta[self.masks[index]],self.Phase_Profile() \
+         [self.masks[index]],label=r'Total $I_{\rm calc}$')
+      plt.plot(self.two_theta[self.masks[index]],self.PseudoVoigtProfile(index), \
          label=r'$I_{\rm calc}$')
 
       plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
       # fig, ax = plt.subplots()
+      plt.ioff()
       plt.show()
       if autohide:
          fig.canvas.flush_events()
