@@ -32,3 +32,4 @@ tests/Cement/.vs/
 *.json
 tests/Cement/Cement1.pyproj
 tests/Cement/Cement1.sln
+tests/9007634.cif

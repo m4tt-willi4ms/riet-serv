@@ -389,7 +389,7 @@ class RietveldRefinery:
          plt.ion()
 
       # self.fig = plt.figure(figsize=(7,5))
-      self.fig = plt.figure()#figsize=(6,4))
+      self.fig = plt.figure(figsize=(6,4))
       self.fig.suptitle(plottitle)
 
       self.subplot1 = self.fig.add_subplot(311) #plt.subplot(3,1,1)

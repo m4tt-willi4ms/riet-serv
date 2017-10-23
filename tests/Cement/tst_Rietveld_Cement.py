@@ -83,7 +83,7 @@ two_theta_0       0.      -0.5  0.5
 
 bkgd_minimizer_input_string = """\
 factr       1e9
-iprint      1
+iprint      -1
 maxiter     150
 m           10
 pgtol       1e-5
@@ -92,7 +92,7 @@ epsilon     1e-10
 
 minimizer_input_string = """\
 factr       1e12
-iprint      1
+iprint      -1
 maxiter     150
 m           10
 pgtol       1e-5
@@ -157,11 +157,11 @@ def exercise_Rietveld_Refinery_Cement():
       tst_two_theta,tst_y)
 
    for cif, input_string in zip(cifs,input_strings):
-      tt0 = time.time()
+   #    tt0 = time.time()
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
          I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
-      tt1 = time.time()
-      print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
+   #    tt1 = time.time()
+   #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 
    # for i,Rp in enumerate(Rt):
    #    tmp = Rp.two_theta_peaks[np.abs(Rp.two_theta_peaks-34) <0.5]
@@ -169,11 +169,11 @@ def exercise_Rietveld_Refinery_Cement():
    #    print str(i) + ": " + str(tmp)
    #    print str(i) + ": " + str(tmp2)
 
-   numpeaks = 0
-   for i,Rp in enumerate(Rt):
-      print Rp.two_theta_peaks.shape[0]
-      numpeaks += Rp.two_theta_peaks.shape[0]
-   print numpeaks
+   # numpeaks = 0
+   # for i,Rp in enumerate(Rt):
+   #    print Rp.two_theta_peaks.shape[0]
+   #    numpeaks += Rp.two_theta_peaks.shape[0]
+   # print numpeaks
 
    # First fit the background
    # RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
@@ -204,8 +204,8 @@ def exercise_Rietveld_Refinery_Cement():
       fine_minimizer_input_string,store_intermediate_state=True)
    RR2.display(RR2.minimize_All)
    RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
 
 
 def run():

@@ -362,7 +362,7 @@ class RietveldPhases:
          Computes the Lorentz-Polarization intensity scaling factors for a 
          set of two-theta values listed in ``two_theta``, via the equation
 
-         .. math:: LP(2\theta_{\rm peak}) = \frac{1+\cos^2(2\theta)}{\sin\theta
+         .. math:: LP(2\theta) = \frac{1+\cos^2(2\theta)}{\sin\theta
             \,\sin(2\theta)} \,.
             :label: LPDefn
 
@@ -500,7 +500,8 @@ class RietveldPhases:
       plt.ylabel(r"$I$")
 
       # fig, ax = plt.subplots()
-      plt.ioff()
+      # plt.ioff()
+      fig.canvas.draw()
       plt.show()
       if autohide:
          fig.canvas.flush_events()
