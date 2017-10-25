@@ -82,8 +82,8 @@ two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
-factr       1e9
-iprint      -1
+factr       1e8
+iprint      1
 maxiter     150
 m           10
 pgtol       1e-5
@@ -92,7 +92,7 @@ epsilon     1e-10
 
 minimizer_input_string = """\
 factr       1e12
-iprint      -1
+iprint      1
 maxiter     150
 m           10
 pgtol       1e-5
@@ -127,7 +127,7 @@ with open("cement_15_03_11_0028.xye") as file:
       tst_y.append(float(ytmp))
 tst_two_theta = np.array(tst_two_theta)
 # mask = np.ones(len(tst_two_theta),dtype=bool)
-mask = tst_two_theta > 25 
+mask = tst_two_theta > 20 
 # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
 #    tst_two_theta>34.3))
 # mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
@@ -136,7 +136,8 @@ tst_y = np.array(tst_y)[mask]
 
 def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string) 
-   cifs = ["1540705-Alite.cif", 
+   cifs = [
+      "1540705-Alite.cif", 
       "9012789-Belite.cif", 
       "1200009-Ferrite.cif", 
       "1000039-AluminateCubic.cif", 
@@ -175,13 +176,15 @@ def exercise_Rietveld_Refinery_Cement():
    #    numpeaks += Rp.two_theta_peaks.shape[0]
    # print numpeaks
 
-   # First fit the background
+   # # First fit the background
    # RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
-   #    use_bkgd_mask=True,bkgd_delta_theta=0.05,store_intermediate_state=True)
+   #    use_bkgd_mask=False,bkgd_delta_theta=0.05,
+   #    store_intermediate_state=True, show_plots=True)
    # RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
-   RR = RietveldRefinery(Rt,minimizer_input_string,store_intermediate_state=True)
+   RR = RietveldRefinery(Rt,minimizer_input_string,
+      store_intermediate_state=True, show_plots=True)
 
    RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Amplitude)
@@ -190,8 +193,8 @@ def exercise_Rietveld_Refinery_Cement():
    # RR.display(RR.minimize_First_n_Phases)
    # RR.display(RR.minimize_First_n_Phases,n=3)
    # RR.display(RR.minimize_Amplitude_Offset_W)
-   RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    # RR.display(RR.minimize_only_Alite)
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
@@ -199,11 +202,11 @@ def exercise_Rietveld_Refinery_Cement():
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
 
-   #For fine-tuning
-   RR2 = RietveldRefinery(RR.Phase_list,
-      fine_minimizer_input_string,store_intermediate_state=True)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
+   # #For fine-tuning
+   # RR2 = RietveldRefinery(RR.Phase_list,
+   #    fine_minimizer_input_string,store_intermediate_state=True)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
 

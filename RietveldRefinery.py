@@ -20,7 +20,10 @@ class RietveldRefinery:
    """
 
    def __init__(self,Phase_list,input_string, \
-      use_bkgd_mask=False,bkgd_delta_theta=0.5,store_intermediate_state=False):
+      use_bkgd_mask=False,
+      bkgd_delta_theta=0.5,
+      store_intermediate_state=False,
+      show_plots=True):
       """
          Given some list of phases, an instance of the refinery is initialized
          to readily run a refinement process.
@@ -32,6 +35,7 @@ class RietveldRefinery:
       self.use_bkgd_mask = use_bkgd_mask
       self.bkgd_delta_theta = bkgd_delta_theta
       self.store_intermediate_state = store_intermediate_state
+      self.show_plots = show_plots
 
       self.mask = np.ones(len(self.x),dtype=bool)
 
@@ -133,11 +137,14 @@ class RietveldRefinery:
          self.Weighted_Squared_Errors_state = \
          (self.y - self.TotalProfile())**2/self.y
          a = np.arange(10).reshape(2,5) # a 2 by 5 array
-         json.dump(self.Weighted_Squared_Errors_state.tolist(), 
-            codecs.open("residuals.json", 'w', encoding='utf-8'), 
-            separators=(',', ':'), 
-            sort_keys=True, 
-            indent=4)
+         try:
+            json.dump(self.Weighted_Squared_Errors_state.tolist(), 
+               codecs.open("residuals.json", 'w', encoding='utf-8'), 
+               separators=(',', ':'), 
+               sort_keys=True, 
+               indent=4)
+         except IOError:
+            pass
       else:
          return (self.y - self.TotalProfile())**2/self.y
       return self.Weighted_Squared_Errors_state
@@ -200,7 +207,7 @@ class RietveldRefinery:
 
       sys.stdout.write('.')
       sys.stdout.flush()
-      if self.store_intermediate_state:
+      if self.show_plots:
          self.update_plot()
 
    def minimize_Amplitude(self,display_plots = True):
@@ -296,7 +303,7 @@ class RietveldRefinery:
       # two_theta_roi=30, \
       # delta_theta=10, \
       # autohide=False)
-      if self.store_intermediate_state:
+      if self.show_plots:
          self.show_multiplot("Progress: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
@@ -305,25 +312,23 @@ class RietveldRefinery:
       if kwargs is not None:
          fn(**kwargs)
       else:
-         print "here"
          fn()
 
-      if self.store_intermediate_state:
+      if (self.store_intermediate_state and self.show_plots):
          self.update_plot()
          self.fig.suptitle(fn.__name__)
 
 
-      if not self.store_intermediate_state:
+      if ((not self.store_intermediate_state) and self.show_plots):
          self.show_multiplot("After: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
          autohide=False)
       self.display_parameters(fn)
       self.display_stats(fn)
-      plt.ioff()
-      plt.show()
-      # plt.ioff()
-      # plt.show()
+      if self.show_plots:
+         plt.ioff()
+         plt.show()
 
    def update_plot(self):
       self.current_profile.set_ydata(self.TotalProfile_state)
