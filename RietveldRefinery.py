@@ -138,8 +138,13 @@ class RietveldRefinery:
          (self.y - self.TotalProfile())**2/self.y
          a = np.arange(10).reshape(2,5) # a 2 by 5 array
          try:
-            json.dump(self.Weighted_Squared_Errors_state.tolist(), 
-               codecs.open("residuals.json", 'w', encoding='utf-8'), 
+            json.dump(self.TotalProfile().tolist(), 
+               codecs.open("current_profile.json", 'w', encoding='utf-8'), 
+               separators=(',', ':'), 
+               sort_keys=True, 
+               indent=4)
+            json.dump(self.x.tolist(), 
+               codecs.open("xparams.json", 'w', encoding='utf-8'), 
                separators=(',', ':'), 
                sort_keys=True, 
                indent=4)
