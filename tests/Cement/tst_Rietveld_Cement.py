@@ -91,7 +91,7 @@ epsilon     1e-10
 """
 
 minimizer_input_string = """\
-factr       1e12
+factr       1e10
 iprint      1
 maxiter     150
 m           10
@@ -168,19 +168,20 @@ def exercise_Rietveld_Refinery_Cement():
    #    print str(i) + ": " + str(tmp)
    #    print str(i) + ": " + str(tmp2)
 
-   numpeaks = 0
-   for i,Rp in enumerate(Rt):
-      print Rp.two_theta_peaks.shape
-      numpeaks += Rp.two_theta_peaks.shape
+   # numpeaks = 0
+   # for i,Rp in enumerate(Rt):
+   #    print Rp.two_theta_peaks.shape
+   #    numpeaks += Rp.two_theta_peaks.shape
 
    # First fit the background
-   RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
-      use_bkgd_mask=True,bkgd_delta_theta=0.05,store_intermediate_state=False)
-   RR.display(RR.minimize_Bkgd)
+   # RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
+   #    use_bkgd_mask=True,bkgd_delta_theta=0.05,store_intermediate_state=True)
+   # RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
-   RR = RietveldRefinery(Rt,minimizer_input_string,store_intermediate_state=False)
+   RR = RietveldRefinery(Rt,minimizer_input_string,store_intermediate_state=True)
 
+   RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Amplitude)
    # RR.display(RR.minimize_Amplitude)
    RR.display(RR.minimize_Amplitude_Offset)
