@@ -91,7 +91,7 @@ epsilon     1e-10
 """
 
 minimizer_input_string = """\
-factr       1e12
+factr       1e10
 iprint      1
 maxiter     150
 m           10
@@ -125,7 +125,9 @@ with open("cement_15_03_11_0028.xye") as file:
       # if float(two_thetatmp) < 15:
       tst_two_theta.append(float(two_thetatmp))
       tst_y.append(float(ytmp))
+print tst_two_theta[-1]
 tst_two_theta = np.array(tst_two_theta)
+print tst_two_theta[-1]
 # mask = np.ones(len(tst_two_theta),dtype=bool)
 mask = tst_two_theta > 20 
 # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
