@@ -205,34 +205,14 @@ def exercise_RietveldPhases():
          #Select a random peak:
          if len(RV.two_theta_peaks) != 0:
             rnd_index = randrange(0,len(RV.two_theta_peaks),1)
-            tst_two_theta_peak = RV.two_theta_peaks[rnd_index]
-            tst_weighted_intensity = RV.weighted_intensities[rnd_index]
-            delta_theta = 5
-            # mask = np.ones(len(tst_two_theta),dtype=bool)
-            mask = np.abs(tst_two_theta-tst_two_theta_peak) < delta_theta
-            # RV.showPVProfilePlot("Test",rnd_index,tst_two_theta[mask], \
-               # tst_y[mask], autohide=False)
+            RV.showPVProfilePlot("Test",rnd_index, autohide=False)
 
    #Testing Refinery
-   RR = RietveldRefinery(Rt,tst_two_theta,tst_y, \
-      input_string=minimizer_input_string)
+   RR = RietveldRefinery(Rt,minimizer_input_string,store_intermediate_state=True)
 
    RR.display(RR.minimize_Amplitude_Offset)
    RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_All)
-   # if display_plots:
-   #    RR.show_multiplot("Sum of Phases", \
-   #       two_theta_roi=30, \
-   #       delta_theta=10, \
-   #       autohide=False)
-   # RR.minimize()
-   # if display_plots:
-   #    print RietveldPhases.x['labels']
-   #    print RietveldPhases.x['values']
-   #    RR.show_multiplot("Sum of Phases", \
-   #       two_theta_roi=30, \
-   #       delta_theta=10, \
-   #       autohide=False)
 
 
 def run():

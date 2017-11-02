@@ -1,24 +1,16 @@
 from __future__ import division
 import os, random, math
-import iotbx.cif, cctbx.miller
-import scitbx
-from cctbx import xray
-from cctbx import crystal
-from cctbx.array_family import flex
-from cctbx.eltbx import wavelengths
 import time
 import sys, subprocess
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from scitbx import lbfgsb
-import jsonpickle
-from libtbx import easy_pickle
-from scipy.optimize import minimize, approx_fprime
+from scipy.optimize import approx_fprime
+from scipy.optimize import fmin_l_bfgs_b as minimizer
+import json,codecs
 
 from RietveldPhases import RietveldPhases
-from scipy.optimize import fmin_l_bfgs_b as minimizer
 
 class RietveldRefinery:
    """
@@ -28,7 +20,10 @@ class RietveldRefinery:
    """
 
    def __init__(self,Phase_list,input_string, \
-      use_bkgd_mask=False,bkgd_delta_theta=0.5,store_intermediate_state=False):
+      use_bkgd_mask=False,
+      bkgd_delta_theta=0.5,
+      store_intermediate_state=False,
+      show_plots=True):
       """
          Given some list of phases, an instance of the refinery is initialized
          to readily run a refinement process.
@@ -40,6 +35,7 @@ class RietveldRefinery:
       self.use_bkgd_mask = use_bkgd_mask
       self.bkgd_delta_theta = bkgd_delta_theta
       self.store_intermediate_state = store_intermediate_state
+      self.show_plots = show_plots
 
       self.mask = np.ones(len(self.x),dtype=bool)
 
@@ -139,24 +135,62 @@ class RietveldRefinery:
    def Weighted_Squared_Errors(self):
       if self.store_intermediate_state:
          self.Weighted_Squared_Errors_state = \
-         (self.y - self.TotalProfile())**2/self.y
+         (self.y - self.TotalProfile_state)**2/self.y
+         try:
+            json.dump(self.TotalProfile().tolist(), 
+               codecs.open("current_profile.json", 'w', encoding='utf-8'), 
+               separators=(',', ':'), 
+               # sort_keys=True, 
+               indent=4)
+            json.dump(self.x.tolist(), 
+               codecs.open("xparams.json", 'w', encoding='utf-8'), 
+               separators=(',', ':'), 
+               # sort_keys=True, 
+               indent=4)
+         except IOError:
+            pass
       else:
-         return (self.y - self.TotalProfile())**2/self.y
+         return (self.y - self.TotalProfile_state)**2/self.y
       return self.Weighted_Squared_Errors_state
+
+   def Relative_Differences(self):
+      return (self.TotalProfile_state-self.y)/self.y
+
+   def Update_state(self):
+      self.TotalProfile_state = self.TotalProfile()
+      self.Relative_Differences_state = self.Relative_Differences()
+      # self.Relative_Differences_state.shape = \
+      #    (self.Relative_Differences_state.shape[0],1)
+      self.Weighted_Squared_Errors_state = self.Weighted_Squared_Errors()
 
    def Weighted_Sum_of_Squares(self,x):
       # print self.mask
       self.x['values'][self.mask] = x
+      self.Update_state()
       return np.sum(self.Weighted_Squared_Errors())
 
    def Weighted_Sum_of_Squares_Grad(self,x):
-      # print self.mask
       self.x['values'][self.mask] = x
-      x_epsilons = self.epsilon*np.ones(len(self.x))
-      # x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-8
-      return approx_fprime(self.x['values'][self.mask], \
-         self.Weighted_Sum_of_Squares, \
-         epsilon = np.array(x_epsilons[self.mask]))
+
+      result = np.zeros(len(self.x[self.mask]))
+
+      bkgd_mask = np.logical_and(self.mask, 
+         np.char.startswith(self.x['labels'],"Bkgd"))[self.mask]
+      if np.any(bkgd_mask):
+         result[bkgd_mask] = \
+            np.sum(2*np.multiply(RietveldPhases.two_theta_powers,
+               self.Relative_Differences_state),axis=1)
+
+      for i in xrange(0,len(self.Phase_list)):
+         mask = np.logical_and(self.mask,np.logical_or(
+            RietveldPhases.get_global_parameters_mask(include_bkgd=False),
+            self.Phase_list[i].get_phase_parameters_mask())
+            )
+         if np.any(mask):
+            result[mask[self.mask]] += np.sum(2*np.multiply(self.Phase_list[i].
+               Phase_Profile_Grad(mask, epsilon=self.epsilon),
+               self.Relative_Differences_state),axis=1)
+      return result
 
    def minimize(self):
       self.t0 = time.time()
@@ -202,7 +236,7 @@ class RietveldRefinery:
 
       sys.stdout.write('.')
       sys.stdout.flush()
-      if self.store_intermediate_state:
+      if self.show_plots:
          self.update_plot()
 
    def minimize_Amplitude(self,display_plots = True):
@@ -298,7 +332,7 @@ class RietveldRefinery:
       # two_theta_roi=30, \
       # delta_theta=10, \
       # autohide=False)
-      if self.store_intermediate_state:
+      if self.show_plots:
          self.show_multiplot("Progress: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
@@ -307,25 +341,23 @@ class RietveldRefinery:
       if kwargs is not None:
          fn(**kwargs)
       else:
-         print "here"
          fn()
 
-      if self.store_intermediate_state:
+      if (self.store_intermediate_state and self.show_plots):
          self.update_plot()
          self.fig.suptitle(fn.__name__)
 
 
-      if not self.store_intermediate_state:
+      if ((not self.store_intermediate_state) and self.show_plots):
          self.show_multiplot("After: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
          autohide=False)
       self.display_parameters(fn)
       self.display_stats(fn)
-      plt.ioff()
-      plt.show()
-      # plt.ioff()
-      # plt.show()
+      if self.show_plots:
+         plt.ioff()
+         plt.show()
 
    def update_plot(self):
       self.current_profile.set_ydata(self.TotalProfile_state)
@@ -391,7 +423,7 @@ class RietveldRefinery:
          plt.ion()
 
       # self.fig = plt.figure(figsize=(7,5))
-      self.fig = plt.figure()#figsize=(6,4))
+      self.fig = plt.figure(figsize=(6,4))
       self.fig.suptitle(plottitle)
 
       self.subplot1 = self.fig.add_subplot(311) #plt.subplot(3,1,1)
