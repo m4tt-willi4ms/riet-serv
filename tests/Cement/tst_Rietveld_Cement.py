@@ -82,7 +82,7 @@ two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
-factr       1e9
+factr       1e8
 iprint      1
 maxiter     150
 m           10
@@ -91,7 +91,7 @@ epsilon     1e-10
 """
 
 minimizer_input_string = """\
-factr       1e12
+factr       1e10
 iprint      1
 maxiter     150
 m           10
@@ -124,10 +124,10 @@ with open("cement_15_03_11_0028.xye") as file:
       # two_thetatmp, ytmp = line.split()
       # if float(two_thetatmp) < 15:
       tst_two_theta.append(float(two_thetatmp))
-      tst_y.append(float(ytmp))
+      tst_y.append(float(ztmp)**2)
 tst_two_theta = np.array(tst_two_theta)
 # mask = np.ones(len(tst_two_theta),dtype=bool)
-mask = tst_two_theta > 25 
+mask = tst_two_theta > 20 
 # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
 #    tst_two_theta>34.3))
 # mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
@@ -136,14 +136,16 @@ tst_y = np.array(tst_y)[mask]
 
 def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string) 
-   cifs = ["1540705-Alite.cif", 
+   cifs = [
+      "1540705-Alite.cif", 
       "9012789-Belite.cif", 
       "1200009-Ferrite.cif", 
-      "1011094-FreeLime.cif", 
       "1000039-AluminateCubic.cif", 
       "9014308-AluminateOrtho.cif", 
+      "9007569-Arcanite.cif",
+      "1011094-FreeLime.cif", 
       "1000053-Periclase.cif", 
-      "9007569-Arcanite.cif"]
+      ]
    Rt = []
 
 
@@ -155,12 +157,12 @@ def exercise_Rietveld_Refinery_Cement():
    RietveldPhases.global_params_from_string(global_input_string,
       tst_two_theta,tst_y)
 
-   tt0 = time.time()
    for cif, input_string in zip(cifs,input_strings):
+   #    tt0 = time.time()
       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
          I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
-   tt1 = time.time()
-   print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
+   #    tt1 = time.time()
+   #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 
    # for i,Rp in enumerate(Rt):
    #    tmp = Rp.two_theta_peaks[np.abs(Rp.two_theta_peaks-34) <0.5]
@@ -168,14 +170,23 @@ def exercise_Rietveld_Refinery_Cement():
    #    print str(i) + ": " + str(tmp)
    #    print str(i) + ": " + str(tmp2)
 
-   # First fit the background
-   RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
-      use_bkgd_mask=True,bkgd_delta_theta=0.05,store_intermediate_state=False)
-   RR.display(RR.minimize_Bkgd)
+   # numpeaks = 0
+   # for i,Rp in enumerate(Rt):
+   #    print Rp.two_theta_peaks.shape[0]
+   #    numpeaks += Rp.two_theta_peaks.shape[0]
+   # print numpeaks
+
+   # # First fit the background
+   # RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
+   #    use_bkgd_mask=False,bkgd_delta_theta=0.05,
+   #    store_intermediate_state=True, show_plots=True)
+   # RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
-   RR = RietveldRefinery(Rt,minimizer_input_string,store_intermediate_state=False)
+   RR = RietveldRefinery(Rt,minimizer_input_string,
+      store_intermediate_state=False, show_plots=False)
 
+   RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Amplitude)
    # RR.display(RR.minimize_Amplitude)
    RR.display(RR.minimize_Amplitude_Offset)
@@ -183,7 +194,7 @@ def exercise_Rietveld_Refinery_Cement():
    # RR.display(RR.minimize_First_n_Phases,n=3)
    # RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    # RR.display(RR.minimize_only_Alite)
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
@@ -193,11 +204,11 @@ def exercise_Rietveld_Refinery_Cement():
 
    #For fine-tuning
    RR2 = RietveldRefinery(RR.Phase_list,
-      fine_minimizer_input_string,store_intermediate_state=False)
+      fine_minimizer_input_string,store_intermediate_state=False,show_plots=False)
    RR2.display(RR2.minimize_All)
    RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
 
 
 def run():
