@@ -25,6 +25,12 @@ V              -0.00   -0.1   0
 W              0.01   0     1
 Amplitude         0.1 0      inf
 eta:           3
+unit_cell_a    0.01
+unit_cell_b    0.01
+unit_cell_c    0.01
+unit_cell_alpha   0.005
+unit_cell_beta    0.005
+unit_cell_gamma   0.005
 """,
 """\
 U              0.00    0     0.1
@@ -102,7 +108,7 @@ epsilon     1e-10
 fine_minimizer_input_string = """\
 factr       1e6
 iprint      1
-maxiter     10
+maxiter     150
 m           10
 pgtol       1e-5
 epsilon     1e-13
@@ -184,7 +190,7 @@ def exercise_Rietveld_Refinery_Cement():
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt,minimizer_input_string,
-      store_intermediate_state=False, show_plots=False)
+      store_intermediate_state=False, show_plots=True)
 
    RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Amplitude)
@@ -204,9 +210,9 @@ def exercise_Rietveld_Refinery_Cement():
 
    #For fine-tuning
    RR2 = RietveldRefinery(RR.Phase_list,
-      fine_minimizer_input_string,store_intermediate_state=False,show_plots=False)
+      fine_minimizer_input_string,store_intermediate_state=False,show_plots=True)
    RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
 

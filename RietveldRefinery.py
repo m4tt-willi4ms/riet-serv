@@ -133,6 +133,7 @@ class RietveldRefinery:
          yield self.Phase_list[i].Phase_Profile()
 
    def Weighted_Squared_Errors(self):
+      self.TotalProfile_state = self.TotalProfile()
       if self.store_intermediate_state:
          self.Weighted_Squared_Errors_state = \
          (self.y - self.TotalProfile_state)**2/self.y

@@ -90,6 +90,9 @@ class RietveldPhases:
                   )],dtype=cls.custom_dtype)
 
    @classmethod
+   def read_lattice_param_line(cls,line):
+
+   @classmethod
    def global_params_from_file(cls,filename):
       """
          Reads in a set of global refinement parameters from a file
@@ -246,6 +249,36 @@ class RietveldPhases:
                self.Amplitude_index = RietveldPhases.x['values'].shape[0]
                RietveldPhases.x = np.append(RietveldPhases.x, \
                   self.read_param_line(line))
+               self.num_params += 1
+            if line.split()[0] == "unit_cell_a":
+               self.unit_cell_a_index = RietveldPhases.x['values'].shape[0]
+               RietveldPhases.x = np.append(RietveldPhases.x, \
+                  self.read_lattice_param_line(line))
+               self.num_params += 1
+            if line.split()[0] == "unit_cell_b":
+               self.unit_cell_b_index = RietveldPhases.x['values'].shape[0]
+               RietveldPhases.x = np.append(RietveldPhases.x, \
+                  self.read_lattice_param_line(line))
+               self.num_params += 1
+            if line.split()[0] == "unit_cell_c":
+               self.unit_cell_c_index = RietveldPhases.x['values'].shape[0]
+               RietveldPhases.x = np.append(RietveldPhases.x, \
+                  self.read_lattice_param_line(line))
+               self.num_params += 1
+            if line.split()[0] == "unit_cell_alpha":
+               self.unit_cell_alpha_index = RietveldPhases.x['values'].shape[0]
+               RietveldPhases.x = np.append(RietveldPhases.x, \
+                  self.read_lattice_param_line(line))
+               self.num_params += 1
+            if line.split()[0] == "unit_cell_beta":
+               self.unit_cell_beta_index = RietveldPhases.x['values'].shape[0]
+               RietveldPhases.x = np.append(RietveldPhases.x, \
+                  self.read_lattice_param_line(line))
+               self.num_params += 1
+            if line.split()[0] == "unit_cell_gamma":
+               self.unit_cell_gamma_index = RietveldPhases.x['values'].shape[0]
+               RietveldPhases.x = np.append(RietveldPhases.x, \
+                  self.read_lattice_param_line(line))
                self.num_params += 1
             # if line.split()[0] == "K_alpha_2_factor":
             #    cls.K_alpha_2_factor = float(line.split()[1])
