@@ -135,38 +135,62 @@ class RietveldRefinery:
    def Weighted_Squared_Errors(self):
       if self.store_intermediate_state:
          self.Weighted_Squared_Errors_state = \
-         (self.y - self.TotalProfile())**2/self.y
-         a = np.arange(10).reshape(2,5) # a 2 by 5 array
+         (self.y - self.TotalProfile_state)**2/self.y
          try:
             json.dump(self.TotalProfile().tolist(), 
                codecs.open("current_profile.json", 'w', encoding='utf-8'), 
                separators=(',', ':'), 
-               sort_keys=True, 
+               # sort_keys=True, 
                indent=4)
             json.dump(self.x.tolist(), 
                codecs.open("xparams.json", 'w', encoding='utf-8'), 
                separators=(',', ':'), 
-               sort_keys=True, 
+               # sort_keys=True, 
                indent=4)
          except IOError:
             pass
       else:
-         return (self.y - self.TotalProfile())**2/self.y
+         return (self.y - self.TotalProfile_state)**2/self.y
       return self.Weighted_Squared_Errors_state
+
+   def Relative_Differences(self):
+      return (self.TotalProfile_state-self.y)/self.y
+
+   def Update_state(self):
+      self.TotalProfile_state = self.TotalProfile()
+      self.Relative_Differences_state = self.Relative_Differences()
+      # self.Relative_Differences_state.shape = \
+      #    (self.Relative_Differences_state.shape[0],1)
+      self.Weighted_Squared_Errors_state = self.Weighted_Squared_Errors()
 
    def Weighted_Sum_of_Squares(self,x):
       # print self.mask
       self.x['values'][self.mask] = x
+      self.Update_state()
       return np.sum(self.Weighted_Squared_Errors())
 
    def Weighted_Sum_of_Squares_Grad(self,x):
-      # print self.mask
       self.x['values'][self.mask] = x
-      x_epsilons = self.epsilon*np.ones(len(self.x))
-      # x_epsilons[np.char.startswith(self.x['labels'], "Amplitude")] = 1e-8
-      return approx_fprime(self.x['values'][self.mask], \
-         self.Weighted_Sum_of_Squares, \
-         epsilon = np.array(x_epsilons[self.mask]))
+
+      result = np.zeros(len(self.x[self.mask]))
+
+      bkgd_mask = np.logical_and(self.mask, 
+         np.char.startswith(self.x['labels'],"Bkgd"))[self.mask]
+      if np.any(bkgd_mask):
+         result[bkgd_mask] = \
+            np.sum(2*np.multiply(RietveldPhases.two_theta_powers,
+               self.Relative_Differences_state),axis=1)
+
+      for i in xrange(0,len(self.Phase_list)):
+         mask = np.logical_and(self.mask,np.logical_or(
+            RietveldPhases.get_global_parameters_mask(include_bkgd=False),
+            self.Phase_list[i].get_phase_parameters_mask())
+            )
+         if np.any(mask):
+            result[mask[self.mask]] += np.sum(2*np.multiply(self.Phase_list[i].
+               Phase_Profile_Grad(mask, epsilon=self.epsilon),
+               self.Relative_Differences_state),axis=1)
+      return result
 
    def minimize(self):
       self.t0 = time.time()
