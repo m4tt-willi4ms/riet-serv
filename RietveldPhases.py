@@ -3,6 +3,8 @@ import os, random, math
 import time
 import sys, subprocess
 import numpy as np
+import numdifftools as ndt
+from scipy.optimize import approx_fprime
 import matplotlib.pyplot as plt
 import multiprocessing
 
@@ -102,6 +104,7 @@ class RietveldPhases:
       cls.two_theta = two_theta
       cls.I = I
 
+      cls.global_params_zero_index = len(cls.x)
       cls.num_global_params = 0
       for line in input_string.splitlines():
          if line.split()[0][-1] != ':':
@@ -119,7 +122,24 @@ class RietveldPhases:
                for p in xrange(0,cls.Bkgd_rank):
                   cls.x = np.append(cls.x, \
                      cls.read_param_line("Bkgd_" + str(p) +" 0.0 -inf inf"))
-               cls.num_global_params += 1
+                  cls.num_global_params += 1
+
+      cls.two_theta_powers = np.power(cls.two_theta,np.array(
+         xrange(0,cls.Bkgd_rank)).reshape(cls.Bkgd_rank,1))
+
+   @classmethod
+   def get_global_parameters_mask(cls,include_bkgd=True):
+      result = np.isin(
+                  np.array(range(0,len(RietveldPhases.x))),
+                  np.array(range(cls.global_params_zero_index,
+                     cls.global_params_zero_index
+                        +cls.num_global_params))
+               )
+      if include_bkgd:
+         return result
+      else:
+         bkgd_mask = np.char.startswith(cls.x['labels'],"Bkgd")
+         return np.logical_xor(bkgd_mask,result)
 
    @classmethod
    def Background_Polynomial(cls, two_theta):
@@ -245,6 +265,14 @@ class RietveldPhases:
                         RietveldPhases.read_param_line( \
                            "eta_" + str(p) +" 0.0 0.0 "+ str(0.001**p)))
                      self.num_params += 1
+
+   def get_phase_parameters_mask(self):
+      return np.isin(
+               np.array(range(0,len(RietveldPhases.x))),
+               np.array(range(self.phase_0_index,
+                  self.phase_0_index
+                     +self.num_params))
+            )
 
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
@@ -452,6 +480,42 @@ class RietveldPhases:
       #    (eta/(1 +two_thetabar_squared) +(1-eta) \
       #    *np.exp(-np.log(2)*two_thetabar_squared))
       return np.sum(result,axis=0)
+
+   def Phase_Profile_x(self,x,mask):
+      RietveldPhases.x['values'][mask] = x
+      # print sys._getframe(1).f_code.co_name
+      return self.Phase_Profile()
+
+   def Phase_Profile_Grad(self, mask, epsilon=1e-6):
+      result = np.zeros((len(RietveldPhases.x[mask]),len(RietveldPhases.two_theta)))
+      # ppgrad = ndt.Gradient(self.Phase_Profile_x,step=epsilon,
+      #    check_num_steps=False, num_steps=1, order=2, step_nom=1)
+      epsilons = epsilon*np.identity(len(RietveldPhases.x[mask]))
+      # xs = np.broadcast_to(RietveldPhases.x['values'][mask],
+      #    (len(RietveldPhases.x['values'][mask]),
+      #       len(RietveldPhases.x['values'][mask])))
+      # masks = mask*np.broadcast_to(mask,
+      #    (len(RietveldPhases.x[mask]),len(RietveldPhases.x)))
+         # len(RietveldPhases.x),dtype=bool)
+      # print mask
+      # print masks
+      # np.broadcast_to(mask,
+      #    (len(RietveldPhases.x['values'][mask]),
+      #       len(RietveldPhases.x['values'])))
+      for i,eps in enumerate(epsilons):
+         # print eps
+         # print (self.Phase_Profile_x(RietveldPhases.x['values'][mask]+eps,mask)
+         #    -self.Phase_Profile_x(RietveldPhases.x['values'][mask]-eps,mask)) \
+         #    / 2/epsilon
+         result[i,:] = (self.Phase_Profile_x(RietveldPhases.x['values'][mask]+eps,mask)
+            -self.Phase_Profile_x(RietveldPhases.x['values'][mask]-eps,mask)) \
+            / 2/epsilon
+         # print result
+      # print np.sum(result,axis=0)
+      # print RietveldPhases.x['values'][mask]
+      # print RietveldPhases.x['values'][mask]+epsilons
+      # print RietveldPhases.x['values'][mask]-epsilons
+      return result
 
    def PseudoVoigtProfile(self,index):
       result = np.zeros(len(self.two_theta[self.masks[index]]))
