@@ -20,6 +20,7 @@ V              0.0   -0.1   0.1
 W              0.0006   -0.1   0.1
 Amplitude         1 0      inf
 eta:           2
+unit_cell_a    0.01
 """,
 """\
 U              0.2   -0.1   0.1
@@ -40,7 +41,7 @@ maxiter     100
 iprint      1
 m           10
 pgtol       1e-5
-epsilon     1e-8
+epsilon     1e-13
 """
 
 tst_two_theta = []
@@ -208,9 +209,10 @@ def exercise_RietveldPhases():
             RV.showPVProfilePlot("Test",rnd_index, autohide=False)
 
    #Testing Refinery
-   RR = RietveldRefinery(Rt,minimizer_input_string,store_intermediate_state=True)
+   RR = RietveldRefinery(Rt,minimizer_input_string,
+      store_intermediate_state=True) #,show_plots=False)
 
-   RR.display(RR.minimize_Amplitude_Offset)
+   # RR.display(RR.minimize_Amplitude_Offset)
    RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_All)
 

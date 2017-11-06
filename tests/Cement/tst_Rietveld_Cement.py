@@ -22,7 +22,7 @@ import libtbx.load_env
 input_strings = ["""\
 U              0.00    0     0.1
 V              -0.00   -0.1   0
-W              0.01   0     1
+W              0.01   0.0001     1
 Amplitude         0.1 0      inf
 eta:           3
 unit_cell_a    0.01
@@ -35,14 +35,28 @@ unit_cell_gamma   0.005
 """\
 U              0.00    0     0.1
 V              -0.00   -0.1   0
-W              0.01   0     1
+W              0.01   0.0001     1
 Amplitude         0.000001 0      inf
 eta:           2
 """,
 """\
 U              0.00    0     0.1
 V              -0.00   -0.1   0
-W              0.01   0     1
+W              0.01   0.0001     1
+Amplitude         0.1 0      inf
+eta:           2
+""",
+"""\
+U              0.00    0     0.1
+V              -0.00   -0.1   0
+W              0.01   0.0001     1
+Amplitude         0.1 0      inf
+eta:           2
+""",
+"""\
+U              0.00    0     0.1
+V              -0.00   -0.1   0
+W              0.01   0.0001     1
 Amplitude         0.1 0      inf
 eta:           2
 """,
@@ -56,28 +70,14 @@ eta:           2
 """\
 U              0.00    0     0.1
 V              -0.00   -0.1   0
-W              0.01   0     1
+W              0.01   0.0001     1
 Amplitude         0.1 0      inf
 eta:           2
 """,
 """\
 U              0.00    0     0.1
 V              -0.00   -0.1   0
-W              0.01   0     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0     1
+W              0.01   0.0001     1
 Amplitude         0.1 0      inf
 eta:           2
 """]
@@ -88,28 +88,28 @@ two_theta_0       0.      -0.5  0.5
 """
 
 bkgd_minimizer_input_string = """\
-factr       1e8
-iprint      1
+factr       1e10
+iprint      -1
 maxiter     150
 m           10
 pgtol       1e-5
-epsilon     1e-10
+epsilon     1e-13
 """
 
 minimizer_input_string = """\
 factr       1e10
-iprint      1
+iprint      -1
 maxiter     150
 m           10
 pgtol       1e-5
-epsilon     1e-10
+epsilon     1e-13
 """
 
 fine_minimizer_input_string = """\
-factr       1e6
+factr       1e2
 iprint      1
 maxiter     150
-m           10
+m           15
 pgtol       1e-5
 epsilon     1e-13
 """
@@ -154,6 +154,16 @@ def exercise_Rietveld_Refinery_Cement():
       ]
    Rt = []
 
+   print "cifs: \n" 
+   for p in cifs:
+      print p
+   print "\nInput String: \n"
+   for i,p in enumerate(input_strings):
+      print "Phase " + str(i+1) + ": \n" + p
+   print "Global Input String: \n" + global_input_string
+   print "Minimizer Input String: \n" + minimizer_input_string
+   print "Fine Minimizer Input String: \n" + fine_minimizer_input_string
+
 
    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
    d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
@@ -182,17 +192,18 @@ def exercise_Rietveld_Refinery_Cement():
    #    numpeaks += Rp.two_theta_peaks.shape[0]
    # print numpeaks
 
-   # # First fit the background
-   # RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
-   #    use_bkgd_mask=False,bkgd_delta_theta=0.05,
-   #    store_intermediate_state=True, show_plots=True)
-   # RR.display(RR.minimize_Bkgd)
+   # First fit the background
+   RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
+      use_bkgd_mask=False,bkgd_delta_theta=0.05,
+      store_intermediate_state=True, show_plots=True)
+   RR.display(RR.minimize_Bkgd)
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt,minimizer_input_string,
-      store_intermediate_state=False, show_plots=True)
+      store_intermediate_state=True, show_plots=False)
 
-   RR.display(RR.minimize_Bkgd)
+   # RR.display(RR.minimize_Bkgd)
+   # RR.display(RR.minimize_Bkgd_Offset)
    # RR.display(RR.minimize_Amplitude)
    # RR.display(RR.minimize_Amplitude)
    RR.display(RR.minimize_Amplitude_Offset)
@@ -210,7 +221,7 @@ def exercise_Rietveld_Refinery_Cement():
 
    #For fine-tuning
    RR2 = RietveldRefinery(RR.Phase_list,
-      fine_minimizer_input_string,store_intermediate_state=False,show_plots=True)
+      fine_minimizer_input_string,store_intermediate_state=True,show_plots=False)
    RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)

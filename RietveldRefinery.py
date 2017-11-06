@@ -302,6 +302,12 @@ class RietveldRefinery:
       self.mask = np.char.startswith(self.x['labels'],"Bkgd")
       self.minimize()
 
+   def minimize_Bkgd_Offset(self,display_plots = True):
+      self.mask = np.logical_or(
+         np.char.startswith(self.x['labels'],"Bkgd"),
+         np.char.startswith(self.x['labels'],"two_"))
+      self.minimize()
+
    def minimize_Bkgd_0(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Bkgd_0")
       self.minimize()
