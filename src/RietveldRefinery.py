@@ -133,6 +133,7 @@ class RietveldRefinery:
          yield self.Phase_list[i].Phase_Profile()
 
    def Weighted_Squared_Errors(self):
+      self.TotalProfile_state = self.TotalProfile()
       if self.store_intermediate_state:
          self.Weighted_Squared_Errors_state = \
          (self.y - self.TotalProfile_state)**2/self.y
@@ -250,6 +251,19 @@ class RietveldRefinery:
       self.minimize()
       self.Update_Phase_list()
 
+   def minimize_Amplitude_Offset_unit_cell(self,display_plots = True):
+      self.mask = np.logical_or(np.logical_or( \
+         np.char.startswith(self.x['labels'],"Amp"),
+         np.char.startswith(self.x['labels'],"two_")),
+         np.char.startswith(self.x['labels'],"unit_cell"))
+      self.minimize()
+      self.Update_Phase_list()
+
+   def minimize_unit_cell(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"unit_cell")
+      self.minimize()
+      self.Update_Phase_list()
+
    def minimize_only_Alite(self,display_plots = True):
       self.mask = np.logical_or( \
                      np.logical_or( \
@@ -299,6 +313,12 @@ class RietveldRefinery:
 
    def minimize_Bkgd(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Bkgd")
+      self.minimize()
+
+   def minimize_Bkgd_Offset(self,display_plots = True):
+      self.mask = np.logical_or(
+         np.char.startswith(self.x['labels'],"Bkgd"),
+         np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
 
    def minimize_Bkgd_0(self,display_plots = True):
