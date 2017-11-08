@@ -124,7 +124,7 @@ display_plots = True #: Only use to see sample plots
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
 # os.path.dirname(__file__) + r
-with open("cement_15_03_11_0028.xye") as file:
+with open(r"..//..//data//profiles//cement_15_03_11_0028.xye") as file:
    for line in file.readlines()[1:]:
       two_thetatmp, ytmp, ztmp = line.split()
       # two_thetatmp, ytmp = line.split()
