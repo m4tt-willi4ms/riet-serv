@@ -11,8 +11,8 @@ from random import randrange
 import sys, os
 sys.path.append(os.path.abspath("../.."))
 
-from src.RietveldPhases import RietveldPhases
-from src.RietveldRefinery import RietveldRefinery
+from RietveldPhases import RietveldPhases
+from RietveldRefinery import RietveldRefinery
 
 from scitbx import lbfgsb
 from cctbx.eltbx import wavelengths
@@ -97,7 +97,7 @@ epsilon     1e-13
 """
 
 minimizer_input_string = """\
-factr       1e10
+factr       1e2
 iprint      -1
 maxiter     150
 m           10
@@ -175,8 +175,7 @@ def exercise_Rietveld_Refinery_Cement():
 
    for cif, input_string in zip(cifs,input_strings):
    #    tt0 = time.time()
-      Rt.append(RietveldPhases(r"..//..//data//cifs//Cement/" 
-         +cif,input_string,d_min,d_max, \
+      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
          I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"

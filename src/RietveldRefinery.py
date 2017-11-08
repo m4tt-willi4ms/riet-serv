@@ -251,6 +251,19 @@ class RietveldRefinery:
       self.minimize()
       self.Update_Phase_list()
 
+   def minimize_Amplitude_Offset_unit_cell(self,display_plots = True):
+      self.mask = np.logical_or(np.logical_or( \
+         np.char.startswith(self.x['labels'],"Amp"),
+         np.char.startswith(self.x['labels'],"two_")),
+         np.char.startswith(self.x['labels'],"unit_cell"))
+      self.minimize()
+      self.Update_Phase_list()
+
+   def minimize_unit_cell(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"unit_cell")
+      self.minimize()
+      self.Update_Phase_list()
+
    def minimize_only_Alite(self,display_plots = True):
       self.mask = np.logical_or( \
                      np.logical_or( \

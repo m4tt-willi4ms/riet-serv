@@ -24,3 +24,5 @@ tests/Cement/.vs/
 *.json
 tests/Cement/Cement1.sln
 tests/9007634.cif
+tests/Cement/build/
+tests/Cement/dist/
