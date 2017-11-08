@@ -5,7 +5,14 @@ from __future__ import division
 # import sys
 import numpy as np
 import time
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import \
+   FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.figure import Figure
+import matplotlib.animation as animation
+from matplotlib import style
+
 from random import randrange
 
 import sys, os
@@ -18,6 +25,59 @@ from scitbx import lbfgsb
 from cctbx.eltbx import wavelengths
 from libtbx import test_utils
 import libtbx.load_env
+
+import Tkinter as tk
+
+LARGE_FONT = ("Verdana", 12)
+# style.use("ggplot")
+
+class RietveldGUI(tk.Tk):
+   def __init__(self, *args, **kwargs):
+      tk.Tk.__init__(self, *args, **kwargs)
+
+      tk.Tk.iconbitmap(self, default=u"doc//ProtoLogo_R.ico")
+      tk.Tk.wm_title(self, "Rietveld Refinement")
+      # tk.Tk.wm_geometry(self,'1000x800')
+
+      container = tk.Frame(self)
+
+      container.grid_rowconfigure(0, weight=1)
+      container.grid_columnconfigure(0, weight=1)
+
+      self.frames = {}
+
+      # frame = Example(container,self)
+      frame = RefinementParameterControl(container,self)
+      self.frames[RefinementParameterControl] = frame
+      frame.grid(row=0, column=0, sticky="nsew")
+
+      self.show_frame(RefinementParameterControl)
+
+   def show_frame(self, cont):
+      frame = self.frames[cont]
+      frame.tkraise()
+
+class RefinementParameterControl(tk.Frame):
+   def __init__(self, parent, controller, *args, **kwargs):
+      tk.Frame.__init__(self, parent)
+      self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
+         *args, **kwargs)
+      self.checkbutton.pack(side="left")
+
+   def checkbutton_clicked(self):
+      print "here"
+
+class Example(tk.Frame):
+
+   def __init__(self, parent,controller):
+      tk.Frame.__init__(self, parent)
+      self.RPControl = RefinementParameterControl(self, controller,
+         text="Param #1", font = LARGE_FONT)
+      self.RPControl.pack(side="top", fill="both", expand=True)
+
+if __name__ == "__main__":
+   root = RietveldGUI()
+   root.mainloop()
 
 input_strings = ["""\
 U              0.00    0     0.1
@@ -193,46 +253,46 @@ def exercise_Rietveld_Refinery_Cement():
    # print numpeaks
 
    # First fit the background
-   RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
-      use_bkgd_mask=False,bkgd_delta_theta=0.05,
-      store_intermediate_state=True, show_plots=True)
-   RR.display(RR.minimize_Bkgd)
-
-   #Now use the full dataset
-   RR = RietveldRefinery(Rt,minimizer_input_string,
-      store_intermediate_state=True, show_plots=True)
-
+   # RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
+   #    use_bkgd_mask=False,bkgd_delta_theta=0.05,
+   #    store_intermediate_state=True, show_plots=True)
    # RR.display(RR.minimize_Bkgd)
-   # RR.display(RR.minimize_Bkgd_Offset)
-   # RR.display(RR.minimize_Amplitude)
-   # RR.display(RR.minimize_Amplitude)
-   RR.display(RR.minimize_Amplitude_Offset)
-   # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
-   RR.display(RR.minimize_unit_cell)
-   # RR.display(RR.minimize_First_n_Phases)
-   # RR.display(RR.minimize_First_n_Phases,n=3)
-   # RR.display(RR.minimize_Amplitude_Offset_W)
-   RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
-   # RR.display(RR.minimize_only_Alite)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
 
-   #For fine-tuning
-   RR2 = RietveldRefinery(RR.Phase_list,
-      fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
-   RR2.display(RR2.minimize_All)
+   # #Now use the full dataset
+   # RR = RietveldRefinery(Rt,minimizer_input_string,
+   #    store_intermediate_state=True, show_plots=True)
+
+   # # RR.display(RR.minimize_Bkgd)
+   # # RR.display(RR.minimize_Bkgd_Offset)
+   # # RR.display(RR.minimize_Amplitude)
+   # # RR.display(RR.minimize_Amplitude)
+   # RR.display(RR.minimize_Amplitude_Offset)
+   # # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
+   # RR.display(RR.minimize_unit_cell)
+   # # RR.display(RR.minimize_First_n_Phases)
+   # # RR.display(RR.minimize_First_n_Phases,n=3)
+   # # RR.display(RR.minimize_Amplitude_Offset_W)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
+   # # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   # # RR.display(RR.minimize_only_Alite)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+
+   # #For fine-tuning
+   # RR2 = RietveldRefinery(RR.Phase_list,
+   #    fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
    # RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
+   # # RR2.display(RR2.minimize_All)
+   # # RR2.display(RR2.minimize_All)
+   # # RR2.display(RR2.minimize_All)
 
 
-def run():
-   exercise_Rietveld_Refinery_Cement()
-   print "OK"
+# def run():
+#    exercise_Rietveld_Refinery_Cement()
+#    print "OK"
 
-if (__name__ == "__main__"):
-   run()
+# if (__name__ == "__main__"):
+#    run()
