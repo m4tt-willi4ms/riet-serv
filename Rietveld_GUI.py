@@ -5,15 +5,15 @@ from __future__ import division
 # import sys
 import numpy as np
 import time
-import matplotlib
-matplotlib.use("TkAgg")
+import matplotlib as plt
+plt.use("TkAgg")
 from matplotlib.backends.backend_tkagg import \
    FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib.figure import Figure
-import matplotlib.animation as animation
 from matplotlib import style
+import matplotlib.animation as animation
+import ttk
 
-from random import randrange
+import json,codecs
 
 import sys, os
 # sys.path.append(os.path.abspath("../.."))
@@ -27,9 +27,97 @@ from libtbx import test_utils
 import libtbx.load_env
 
 import Tkinter as tk
+import tkFileDialog
 
-LARGE_FONT = ("Verdana", 12)
-# style.use("ggplot")
+LARGE_FONT = ("Verdana", 11)
+
+style.use("ggplot")
+fig = plt.figure.Figure(dpi=100)
+# fig.suptitle(plottitle)
+canvas = None
+ROI_mask = None
+ROI_center = 32
+ROI_delta_theta = 5
+
+subplot1 = fig.add_subplot(311) #plt.subplot(3,1,1)
+      # plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
+
+      # self.current_profile, = self.subplot1.plot(self.two_theta,
+      #    self.TotalProfile_state, label=r'$I_{\rm calc}$')
+subplot1.legend(bbox_to_anchor=(.8,.7))
+# subplot1.ylabel(r"$I$")
+
+subplot2 = fig.add_subplot(312) #plt.subplot(3,1,2)
+# self.pltmask = np.abs(self.two_theta - two_theta_roi) \
+#          < delta_theta
+#       plt.scatter(self.two_theta[self.pltmask],self.y[self.pltmask],
+#          label='Data',s=2, color='red')
+
+# self.current_profile_masked, = subplot2.plot(self.two_theta[self.pltmask],
+#    self.TotalProfile_state[self.pltmask], label=r'$I_{\rm calc}$')
+      # plt.legend(bbox_to_anchor=(.8,.7))
+# plt.ylabel(r"$I$")
+
+subplot3 = fig.add_subplot(313) #plt.subplot(3,1,3)
+      # self.residuals, = subplot3.plot(self.two_theta,
+      #    self.Weighted_Squared_Errors(),'bo',ms=2)
+# plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
+# plt.xlabel(r'$2\,\theta$')
+
+two_thetas = []
+ys = []
+
+Rt = []
+
+x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
+
+max_refinement_rounds = 5
+isLoaded = False
+
+CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+
+global_input_string = """\
+Bkgd:          3
+two_theta_0       0.      -0.5  0.5
+"""
+
+default_input_string = """\
+U              0.00    0     0.1
+V              -0.00   -0.1   0
+W              0.01   0.0001     1
+Amplitude         0.1 0      inf
+eta:           3
+unit_cell_a    0.01
+unit_cell_b    0.01
+unit_cell_c    0.01
+unit_cell_alpha   0.005
+unit_cell_beta    0.005
+unit_cell_gamma   0.005
+"""
+
+minimizer_input_string = """\
+factr       1e10
+iprint      -1
+maxiter     150
+m           10
+pgtol       1e-5
+epsilon     1e-13
+"""
+
+def animate(i):
+   profile_ys = json.load(
+      codecs.open("current_profile.json", 'r', encoding='utf-8'))
+   # for x,y in zip(two_thetas,profile_ys):
+   #    print x,y
+   subplot1.clear()
+   subplot1.plot(two_thetas,profile_ys)
+
+# json.dump(self.TotalProfile().tolist(), 
+#                codecs.open("current_profile.json", 'w', encoding='utf-8'), 
+#                separators=(',', ':'), 
+#                # sort_keys=True, 
+#                indent=4)
+      # self.fig.canvas.draw()
 
 class RietveldGUI(tk.Tk):
    def __init__(self, *args, **kwargs):
@@ -37,46 +125,366 @@ class RietveldGUI(tk.Tk):
 
       tk.Tk.iconbitmap(self, default=u"doc//ProtoLogo_R.ico")
       tk.Tk.wm_title(self, "Rietveld Refinement")
-      # tk.Tk.wm_geometry(self,'1000x800')
+      tk.Tk.wm_geometry(self,'1200x600')
 
-      container = tk.Frame(self)
+      self.container = tk.Frame(self)
+      self.container.pack(side="top", fill="both", expand=True)
 
-      container.grid_rowconfigure(0, weight=1)
-      container.grid_columnconfigure(0, weight=1)
+      self.container.grid_rowconfigure(0, weight=1)
+      self.container.grid_columnconfigure(0, weight=1)
 
-      self.frames = {}
+      self.menu = tk.Menu(self)
+      self.config(menu=self.menu)
+      
+      self.subMenu = tk.Menu(self.menu,tearoff=False)
+      self.menu.add_cascade(label="File", menu=self.subMenu)
+      self.subMenu.add_command(label="Load Profile...", command=self.getProfile)
+      self.subMenu.add_command(label="Load .cifs...", command=self.getCifs)
 
-      # frame = Example(container,self)
-      frame = RefinementParameterControl(container,self)
-      self.frames[RefinementParameterControl] = frame
-      frame.grid(row=0, column=0, sticky="nsew")
+      s = ttk.Style()
+      s.theme_use('clam')
+      s.configure('ButtonText.TButton', font=('Verdana', 11))
+      s.theme_create( "MyStyle", parent="alt", settings={
+        "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
+        "TNotebook.Tab": {"configure": {"padding": [100, 100] },}})
 
-      self.show_frame(RefinementParameterControl)
+      # s.theme_use("MyStyle")
 
-   def show_frame(self, cont):
-      frame = self.frames[cont]
-      frame.tkraise()
+      # self.frames = {}
+
+      # for fm in (Example,LoadFrame):
+      #    frame = fm(container,self)
+      #    self.frames[fm] = frame
+      #    frame.grid(row=0, column=0, sticky="nsew")
+
+
+
+
+
+      self.plotframe = PlotFrame(self.container,self)
+      self.plotframe.pack(side="right")
+
+      # frame = LoadFrame(container,self)
+      # self.frames[LoadFrame] = frame
+      # frame.grid(row=0, column=0, sticky="nsew")  
+
+      # frame2 = Example(container,self)
+      # self.frames[LoadFrame] = frame2
+      # frame2.grid(row=0, column=0, sticky="nsew")         
+
+      # self.show_frame(LoadFrame)
+
+      # self.plotframe.tkraise()
+
+   # def show_frame(self, cont):
+   #    frame = self.frames[cont]
+   #    frame.tkraise
+
+   def getCifs(self):
+      self.filePaths = tkFileDialog.askopenfilenames(
+         initialdir = "./data/cifs")
+      # iconEntry.insert(0,fileName)
+      for filePath in self.filePaths:
+         cif_file_name = os.path.split(filePath)[1]
+         self.paramframe.nb.add(
+            RefinementParameterSet(self.paramframe.nb,self.paramframe), 
+            text=cif_file_name)
+         Rt.append(RietveldPhases(filePath, d_min,d_max, 
+            input_string = default_input_string, I_max = y_max, 
+            delta_theta=1.5,Intensity_Cutoff = 0.005))
+
+   def getProfile(self):
+      self.fileName = tkFileDialog.askopenfilename(
+         initialdir = "./data/profiles")
+      # iconEntry.insert(0,fileName)
+
+      global two_thetas, ys
+      with open(self.fileName) as file:
+         for line in file.readlines()[1:]:
+            two_thetatmp, ytmp, ztmp = line.split()
+            # two_thetatmp, ytmp = line.split()
+            if float(two_thetatmp) > 20:
+               two_thetas.append(float(two_thetatmp))
+               ys.append(float(ztmp)**2)
+
+      global d_min, d_max, y_max
+      d_min = CU_wavelength/2/np.sin(np.pi/360*two_thetas[-1])
+      d_max = CU_wavelength/2/np.sin(np.pi/360*two_thetas[0])
+      y_max = np.amax(ys)#/len(cifs)
+
+      two_thetas = np.array(two_thetas)
+      ys = np.array(ys)
+      global ROI_mask
+      ROI_mask = np.abs(two_thetas - ROI_center) < ROI_delta_theta
+
+      RietveldPhases.global_params_from_string(global_input_string,
+         two_thetas,ys)
+      global isLoaded
+      isLoaded = True
+
+      global defaultphase
+      defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
+         initial_input_string,d_min,d_max)
+
+      self.paramframe = LoadFrame(self.container,self)
+      self.paramframe.pack(side="left") 
+
+      self.updateplot()
+      
+
+   def updateplot(self):
+      subplot1.clear()
+      subplot1.scatter(two_thetas,ys,label='Data',s=1, color='red')
+      subplot1.legend(bbox_to_anchor=(.8,.7))
+      subplot1.set_ylabel(r"$I$")
+      subplot2.clear()
+      subplot2.scatter(two_thetas[ROI_mask],ys[ROI_mask],
+         label='Data',s=1, color='red')
+      subplot2.set_ylabel(r"$I$")
+      canvas.show()
+
+class VarLabelEntry(tk.Frame):
+   def __init__(self,parent,text,x_label,index,*args, **kwargs):
+      tk.Frame.__init__(self,parent)
+
+      self.value = tk.StringVar(value=str(RietveldPhases.x[x_label]
+               [index]))
+      self.label = tk.Label(self,text=text)
+      self.entry = tk.Entry(self,textvariable=self.value, width=8)
+      self.label.grid(row=0,column=0)
+      self.entry.grid(row=0,column=1)
 
 class RefinementParameterControl(tk.Frame):
-   def __init__(self, parent, controller, *args, **kwargs):
+   def __init__(self, parent, controller, index, text="", *args, **kwargs):
       tk.Frame.__init__(self, parent)
+
+      self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
-         *args, **kwargs)
-      self.checkbutton.pack(side="left")
+         variable = self.state, text=text, *args, **kwargs)
+      self.checkbutton.grid(row=0,column=0,sticky='w')
+
+      self.initial = VarLabelEntry(self,'Start at:', 'values', index)
+      self.initial.grid(row=0,column=1,sticky='e')
+      
+      self.l_limit = VarLabelEntry(self,'Lower limit:', 'l_limits', index)
+      self.l_limit.grid(row=1,column=0,sticky='w')
+
+      self.u_limit = VarLabelEntry(self,'Upper limit:', 'u_limits', index)
+      self.u_limit.grid(row=1,column=1,sticky='e')
+
+      self.grid_columnconfigure(0,minsize=110)
+      self.grid_columnconfigure(1,minsize=110)
+
+      self.checkbutton_clicked()
 
    def checkbutton_clicked(self):
-      print "here"
+      if self.state.get() == 1:
+         self.initial.grid()
+         self.l_limit.grid()
+         self.u_limit.grid()
+      if self.state.get() == 0:
+         self.initial.grid_remove()
+         self.l_limit.grid_remove()
+         self.u_limit.grid_remove()
+
+class RefinementParameterPolynomControl(tk.Frame):
+   def __init__(self, parent, controller, 
+      text="", default_order=2, default_round=1,*args, **kwargs):
+      tk.Frame.__init__(self, parent)
+      self.state = tk.IntVar()
+      self.parent = parent
+      self.text = text
+
+      self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
+         text=text, variable = self.state,*args, **kwargs)
+      self.checkbutton.grid(row=0,column=0)
+
+      self.order_dropdownlist = Dropdown_Int_List(self, parent,
+         text="Order:", min_int=1, max_int=6, default_int=default_order)
+      self.order_dropdownlist.grid(row=0,column=1)
+
+      self.round_dropdownlist = Dropdown_Int_List(self, parent,
+         text="Round:", min_int=1, max_int=max_refinement_rounds, 
+         default_int=default_round)
+      self.round_dropdownlist.grid(row=0,column=2)
+
+      self.grid_columnconfigure(1,minsize=110)
+      self.grid_columnconfigure(2,minsize=110)
+
+      self.checkbutton_clicked()
+
+   def checkbutton_clicked(self):
+      if self.state.get() == 1:
+         self.order_dropdownlist.grid()
+         self.round_dropdownlist.grid()
+
+         if self.text == "Background":
+            RR = RietveldRefinery(Rt,minimizer_input_string, \
+               use_bkgd_mask=False,bkgd_delta_theta=0.05,
+               store_intermediate_state=False, show_plots=False)
+            RR.minimize_Bkgd()
+            profile = RR.TotalProfile()
+            subplot1.plot(two_thetas,profile,
+               label=r'$I_{\rm calc}$',color='blue')
+            subplot1.legend(bbox_to_anchor=(.8,.7))
+            subplot2.plot(two_thetas[ROI_mask],profile[ROI_mask],color='blue')
+            subplot3.plot(two_thetas,RR.Weighted_Squared_Errors(),
+               label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='magenta')
+            subplot3.set_xlabel(r'$2\,\theta$')
+            subplot3.set_ylabel(r"$\frac{1}{{\rm I}} \, (I-I_{\rm calc})^2$")
+            canvas.show()
+
+      if self.state.get() == 0:
+         self.order_dropdownlist.grid_remove()
+         self.round_dropdownlist.grid_remove()
+
+         if self.text == "Background":
+            if len(subplot1.axes.lines) is not 0:
+               subplot1.axes.lines[-1].remove()
+               subplot2.axes.lines[-1].remove()
+               subplot3.axes.lines[-1].remove()
+            canvas.show()
+
+
+
+
+class Dropdown_Int_List(tk.Frame):
+   def __init__(self, parent, controller, text="", default_int=2, min_int=0,
+         max_int=5,*args, **kwargs):
+      tk.Frame.__init__(self, parent)
+
+      self.order_label = tk.Label(self,text=text)
+      self.order_label.grid(row=0,column=0)
+
+      self.order = tk.StringVar(self)
+      self.orderMenu = ttk.Combobox(self, textvariable=self.order,
+         state='readonly',width =2)
+      order_values = ()
+      default_index = 0
+      for (index,i) in enumerate(xrange(min_int,max_int+1)):
+         order_values += (str(i),)
+         if i == default_int:
+            default_index = index
+      self.orderMenu['values'] = order_values
+      self.orderMenu.current(default_index)
+      self.orderMenu.bind("<<ComboboxSelected>>", self.order_selected)
+      self.orderMenu.grid(row=0,column=1)
+
+      self.grid_columnconfigure(0,minsize=50)
+      self.grid_columnconfigure(1,minsize=50)
+
+   def order_selected(self,tmp):
+      print self.order.get()
+      self.orderMenu.selection_clear()
+
+
+class RefinementParameterSet(tk.Frame):
+   def __init__(self, parent, controller, *args, **kwargs):
+      tk.Frame.__init__(self, parent)
+      self.globalLabelFrame = tk.LabelFrame(self,text="Global Parameters",
+         padx=10,pady=10)#, width=100, height=100)
+      self.globalLabelFrame.pack()
+
+      RefinementParameterPolynomControl(self.globalLabelFrame,self,
+         text="Background",default_order=2,default_round=1).grid(row=0,column=0,
+         sticky='w')
+      RefinementParameterControl(self.globalLabelFrame,self,
+         RietveldPhases.two_theta_0_index,text="Two theta offset") \
+         .grid(row=1,column=0,sticky='w')
+
+      self.phaseLabelFrame = tk.LabelFrame(self,text="Phase Parameters",
+         padx=10,pady=10)#, width=100, height=100)
+      self.phaseLabelFrame.pack()
+
+      RefinementParameterPolynomControl(self.phaseLabelFrame,self,
+         text="eta",default_order=1,default_round=3).grid(row=0,column=0,
+         sticky='w')
+      RefinementParameterControl(self.phaseLabelFrame,self,
+         defaultphase.W_index,text="Caglioti W") \
+         .grid(row=1,column=0,sticky='w')
+
+      # RefinementParameterControl(self.phaseLabelFrame,self,
+      #    text="Amplitude").pack()
 
 class Example(tk.Frame):
-
    def __init__(self, parent,controller):
       tk.Frame.__init__(self, parent)
       self.RPControl = RefinementParameterControl(self, controller,
-         text="Param #1", font = LARGE_FONT)
+         style='ButtonText.TButton')
       self.RPControl.pack(side="top", fill="both", expand=True)
+
+class LoadFrame(tk.Frame):
+   def __init__(self, parent,controller,*args,**kwargs):
+      # controller.minsize(width=400,height=400)
+      tk.Frame.__init__(self,parent,*args,**kwargs)
+      # self.loadProfileButton = ttk.Button(parent, text=' Load Profile... ', 
+      #    style='ButtonText.TButton', 
+      #    command=self.getProfile)
+      # self.loadProfileButton.grid(row=1,column=1,padx=10,pady=10)
+      # self.controller = controller
+
+      # self.loadCifButton = ttk.Button(parent, text=' Load .cif Files... ', 
+      #    style='ButtonText.TButton', 
+      #    command=self.getCifs)
+      # self.loadCifButton.grid(row=1,column=2,padx=10,pady=10)
+
+      if isLoaded:
+         self.nb = ttk.Notebook(self,style='ButtonText.TButton',
+            height=400,width=400)
+         self.nb.add(RefinementParameterSet(self.nb,self),text="All")
+         self.nb.pack(padx=20,pady=20)
+      # self.nb.grid(row=2,column=1,columnspan=2)
+
+      # self.canvas = FigureCanvasTkAgg(fig,self)
+      # self.canvas.get_tk_widget().grid(row=3,column=1,columnspan=2,
+      #    sticky='s')#, #fill=tk.BOTH,padx=20, pady=20)
+
+      # parent.grid_rowconfigure(0, weight=1)
+      # parent.grid_rowconfigure(4, weight=1)
+      # parent.grid_columnconfigure(0, weight=1)
+      # parent.grid_columnconfigure(4, weight=1)
+
+
+
+
+   # def getProfile(self):
+   #    self.fileName = tkFileDialog.askopenfilename()
+   #    # iconEntry.insert(0,fileName)
+
+   #    with open(self.fileName) as file:
+   #       for line in file.readlines()[1:]:
+   #          two_thetatmp, ytmp, ztmp = line.split()
+   #          # two_thetatmp, ytmp = line.split()
+   #          if float(two_thetatmp) > 20:
+   #             two_thetas.append(float(two_thetatmp))
+   #             ys.append(float(ztmp)**2)
+
+   #    global d_min, d_max, tst_y_max
+   #    d_min = CU_wavelength/2/np.sin(np.pi/360*two_thetas[-1])
+   #    d_max = CU_wavelength/2/np.sin(np.pi/360*two_thetas[0])
+   #    tst_y_max = np.amax(tst_y)/len(cifs)
+
+   #    subplot1.clear()
+   #    subplot1.scatter(two_thetas,ys,label='Data',s=1, color='red')
+   #    subplot2.clear()
+   #    subplot2.scatter(two_thetas,ys,label='Data',s=1, color='red')
+
+   #    self.canvas.show()
+      
+
+class PlotFrame(tk.Frame):
+   def __init__(self, parent,controller,*args,**kwargs):
+      tk.Frame.__init__(self,parent,*args,**kwargs)
+
+      global canvas 
+      canvas = FigureCanvasTkAgg(fig,self)
+      canvas.get_tk_widget().pack(padx=20, pady=20)
+      # self.canvas.show()
+
 
 if __name__ == "__main__":
    root = RietveldGUI()
+   # animation.FuncAnimation(fig,animate,interval=1000)
    root.mainloop()
 
 input_strings = ["""\

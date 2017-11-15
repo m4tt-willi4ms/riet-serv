@@ -5,7 +5,6 @@ import sys, subprocess
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 from scipy.optimize import approx_fprime
 from scipy.optimize import fmin_l_bfgs_b as minimizer
 import json,codecs
@@ -352,7 +351,9 @@ class RietveldRefinery:
       # two_theta_roi=30, \
       # delta_theta=10, \
       # autohide=False)
+
       if self.show_plots:
+         self.TotalProfile_state = self.TotalProfile()
          self.show_multiplot("Progress: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
@@ -369,6 +370,7 @@ class RietveldRefinery:
 
 
       if ((not self.store_intermediate_state) and self.show_plots):
+         self.TotalProfile_state = self.TotalProfile()
          self.show_multiplot("After: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
@@ -450,7 +452,7 @@ class RietveldRefinery:
       plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
 
       self.current_profile, = self.subplot1.plot(self.two_theta,
-         self.TotalProfile(), label=r'$I_{\rm calc}$')
+         self.TotalProfile_state, label=r'$I_{\rm calc}$')
       plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 
@@ -461,7 +463,7 @@ class RietveldRefinery:
          label='Data',s=2, color='red')
 
       self.current_profile_masked, = subplot2.plot(self.two_theta[self.pltmask],
-         self.TotalProfile()[self.pltmask], label=r'$I_{\rm calc}$')
+         self.TotalProfile_state[self.pltmask], label=r'$I_{\rm calc}$')
       # plt.legend(bbox_to_anchor=(.8,.7))
       plt.ylabel(r"$I$")
 

@@ -74,7 +74,8 @@ def exercise_Rietveld_Refinery_SinglePhase():
 
    Rt = []
    Rt.append(RietveldPhases(r"..//data//cifs//" + cifs[0],
-      input_strings[0],d_min,d_max, delta_theta=2.0,Intensity_Cutoff=0.005))
+      d_min,d_max, input_string_or_file_name=input_strings[0],
+      delta_theta=2.0,Intensity_Cutoff=0.005))
 
    RR = RietveldRefinery(Rt,minimizer_input_string,
       store_intermediate_state=True)
@@ -88,8 +89,9 @@ def exercise_Rietveld_Refinery_Multiphase():
 
    Rt = []
    for cif,input_string in zip(cifs,input_strings):
-      Rt.append(RietveldPhases(r"..//data//cifs//" + cif,
-         input_string,d_min,d_max, delta_theta=2.0,Intensity_Cutoff=0.005))
+      Rt.append(RietveldPhases(r"..//data//cifs//" + cif, d_min,d_max, 
+         input_string_or_file_name=input_string,
+         delta_theta=2.0,Intensity_Cutoff=0.005))
 
    RR = RietveldRefinery(Rt,minimizer_input_string,
       store_intermediate_state=True)

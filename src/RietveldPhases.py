@@ -20,6 +20,20 @@ import jsonpickle
 from libtbx import easy_pickle
 from scitbx import lbfgsb
 
+default_input_string = """\
+U              0.00    0     0.1
+V              -0.00   -0.1   0
+W              0.01   0.0001     1
+Amplitude         0.1 0      inf
+eta:           2
+unit_cell_a    0.01
+unit_cell_b    0.01
+unit_cell_c    0.01
+unit_cell_alpha   0.005
+unit_cell_beta    0.005
+unit_cell_gamma   0.005
+"""
+
 class RietveldPhases:
    r"""
       Used to group together methods for calculating powder profiles
@@ -179,7 +193,8 @@ class RietveldPhases:
    def empty_x(self):
       RietveldPhases.x = np.empty(0,dtype=RietveldPhases.custom_dtype)
 
-   def __init__(self,fn_cif,input_string_or_file_name,d_min,d_max, 
+   def __init__(self,fn_cif,d_min,d_max, 
+      input_string_or_file_name=default_input_string,
       I_max=None,delta_theta = 0.5,Intensity_Cutoff=0.01):
 
       self.load_cif(fn_cif)

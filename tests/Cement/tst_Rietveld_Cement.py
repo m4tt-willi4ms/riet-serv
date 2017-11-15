@@ -19,69 +19,6 @@ from cctbx.eltbx import wavelengths
 from libtbx import test_utils
 import libtbx.load_env
 
-input_strings = ["""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           3
-unit_cell_a    0.01
-unit_cell_b    0.01
-unit_cell_c    0.01
-unit_cell_alpha   0.005
-unit_cell_beta    0.005
-unit_cell_gamma   0.005
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.000001 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           2
-""",
-"""\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           2
-"""]
-
 global_input_string = """\
 Bkgd:          3
 two_theta_0       0.      -0.5  0.5
@@ -157,9 +94,6 @@ def exercise_Rietveld_Refinery_Cement():
    print "cifs: \n" 
    for p in cifs:
       print p
-   print "\nInput String: \n"
-   for i,p in enumerate(input_strings):
-      print "Phase " + str(i+1) + ": \n" + p
    print "Global Input String: \n" + global_input_string
    print "Minimizer Input String: \n" + minimizer_input_string
    print "Fine Minimizer Input String: \n" + fine_minimizer_input_string
@@ -173,10 +107,10 @@ def exercise_Rietveld_Refinery_Cement():
    RietveldPhases.global_params_from_string(global_input_string,
       tst_two_theta,tst_y)
 
-   for cif, input_string in zip(cifs,input_strings):
+   for cif in cifs:
    #    tt0 = time.time()
       Rt.append(RietveldPhases(r"data//cifs//Cement/" 
-         +cif,input_string,d_min,d_max, \
+         +cif,d_min,d_max, \
          I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
