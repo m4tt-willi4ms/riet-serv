@@ -136,19 +136,19 @@ class RietveldRefinery:
       if self.store_intermediate_state:
          self.Weighted_Squared_Errors_state = \
          (self.y - self.TotalProfile_state)**2/self.y
-         try:
-            json.dump(self.TotalProfile().tolist(), 
-               codecs.open("current_profile.json", 'w', encoding='utf-8'), 
-               separators=(',', ':'), 
-               # sort_keys=True, 
-               indent=4)
-            json.dump(self.x.tolist(), 
-               codecs.open("xparams.json", 'w', encoding='utf-8'), 
-               separators=(',', ':'), 
-               # sort_keys=True, 
-               indent=4)
-         except IOError:
-            pass
+         # try:
+         #    json.dump(self.TotalProfile().tolist(), 
+         #       codecs.open("current_profile.json", 'w', encoding='utf-8'), 
+         #       separators=(',', ':'), 
+         #       # sort_keys=True, 
+         #       indent=4)
+         #    json.dump(self.x.tolist(), 
+         #       codecs.open("xparams.json", 'w', encoding='utf-8'), 
+         #       separators=(',', ':'), 
+         #       # sort_keys=True, 
+         #       indent=4)
+         # except IOError:
+         #    pass
       else:
          return (self.y - self.TotalProfile_state)**2/self.y
       return self.Weighted_Squared_Errors_state
