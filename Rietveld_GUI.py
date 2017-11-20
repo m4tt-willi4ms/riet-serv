@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import \
 from matplotlib import style
 import matplotlib.animation as animation
 import ttk
+import tkFont
 from multiprocessing import Process
 # from threading import Thread
 
@@ -161,7 +162,17 @@ class RietveldGUI(tk.Tk):
 
       s = ttk.Style()
       s.theme_use('clam')
-      s.configure('ButtonText.TButton', font=('Verdana', 11))
+      # s.configure('ButtonText.TButton', font=('Verdana', 11))
+
+      font_dict = {'family': 'Helvetica', 'size': 11}
+      # k=v for (k,v) in font_dict.items()
+      # dict_2 = {k: v for (k,v) in font_dict.items()}
+      DEFAULT_FONT = tkFont.Font(**font_dict)
+      tkFont.nametofont("TkDefaultFont").configure(**font_dict)
+      tkFont.nametofont('TkHeadingFont').configure(**font_dict)
+      tkFont.nametofont('TkMenuFont').configure(**font_dict)
+      # default_font.configure(**font_dict)
+      self.option_add("*Font",tkFont.nametofont("TkDefaultFont"))
 
       # s.theme_create( "yummy", parent="alt", settings={
       #   "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
@@ -226,11 +237,11 @@ class RietveldGUI(tk.Tk):
       self.filePaths = tkFileDialog.askopenfilenames(
          initialdir = "./data/cifs")
       # iconEntry.insert(0,fileName)
-      for filePath in self.filePaths:
+      for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
          self.paramframe.nb.add(
             RefinementParameterSet(self.paramframe.nb,self.paramframe), 
-            text=cif_file_name)
+            text=str(i+1))
          Rt.append(RietveldPhases(filePath, d_min,d_max, 
             input_string_or_file_name = default_input_string, I_max = y_max, 
             delta_theta=1.5,Intensity_Cutoff = 0.005))
@@ -283,13 +294,7 @@ class RietveldGUI(tk.Tk):
       self.paramframe = LoadFrame(self.container,self)
       self.paramframe.grid(row=0,column=0,columnspan=2) 
 
-      self.RefineButton = ttk.Button(self.container, text='Refine', 
-         style='ButtonText.TButton', command=self.refine, takefocus=False)
-      self.RefineButton.grid(row=1,column=0, padx=10, pady=10,sticky='n')
 
-      self.CancelButton = ttk.Button(self.container, text='Cancel', 
-         style='ButtonText.TButton', command=self.cancel, takefocus=False)
-      self.CancelButton.grid(row=1,column=1, padx=10, pady=10,sticky='n')
 
       updateplotdata()
 
@@ -477,7 +482,7 @@ class Dropdown_Int_List(tk.Frame):
 
 class RefinementParameterSet(tk.Frame):
    def __init__(self, parent, controller, *args, **kwargs):
-      tk.Frame.__init__(self, parent)
+      tk.Frame.__init__(self, parent,padx=10,pady=10)
 
       # self.canvas = tk.Canvas(self, width=600,height=400,
       #    scrollregion=(0,0,600,800))
@@ -488,27 +493,47 @@ class RefinementParameterSet(tk.Frame):
 
       # self.canvas['yscrollcommand'] = self.scrollY.set
 
-      self.globalLabelFrame = tk.LabelFrame(self,text="Global Parameters",
-         padx=10,pady=10)#, width=100, height=100)
-      self.globalLabelFrame.pack()#grid(row=0,column=0)
+      # self.globalLabelFrame = tk.LabelFrame(self,text="Global Parameters",
+      #    padx=10,pady=10)#, width=100, height=100)
+      # self.globalLabelFrame.pack()#grid(row=0,column=0)
 
-      RefinementParameterPolynomControl(self.globalLabelFrame,self,
-         text="Background",default_order=2,default_round=1).grid(row=0,column=0,
-         sticky='w')
-      RefinementParameterControl(self.globalLabelFrame,self,
-         RietveldPhases.two_theta_0_index,text="Two theta offset") \
-         .grid(row=1,column=0,sticky='w')
+      # RefinementParameterPolynomControl(self.globalLabelFrame,self,
+      #    text="Background",default_order=2,default_round=1).grid(row=0,column=0,
+      #    sticky='w')
+      # RefinementParameterControl(self.globalLabelFrame,self,
+      #    RietveldPhases.two_theta_0_index,text="Two theta offset") \
+      #    .grid(row=1,column=0,sticky='w')
 
-      self.phaseLabelFrame = tk.LabelFrame(self,text="Phase Parameters",
-         padx=10,pady=10)#, width=100, height=100)
-      self.phaseLabelFrame.pack()
+      # self.phaseLabelFrame = tk.LabelFrame(self,text="Phase Parameters",
+      #    padx=10,pady=10)#, width=100, height=100)
+      # self.phaseLabelFrame.pack()
 
-      RefinementParameterPolynomControl(self.phaseLabelFrame,self,
-         text="eta",default_order=1,default_round=3).grid(row=0,column=0,
-         sticky='w')
-      RefinementParameterControl(self.phaseLabelFrame,self,
+      RefinementParameterControl(self,parent,
+         defaultphase.Amplitude_index,text="Amplitude",default_round=2) \
+         .grid(row=0,column=0,sticky='w')
+
+      RefinementParameterControl(self,parent,
          defaultphase.W_index,text="Caglioti W",default_round=2) \
          .grid(row=1,column=0,sticky='w')
+
+      RefinementParameterPolynomControl(self,parent,
+         text="eta",default_order=1,default_round=3).grid(row=2,column=0,
+         sticky='w')
+
+      RefinementParameterControl(self,parent,
+         defaultphase.V_index,text="Caglioti V",default_round=2) \
+         .grid(row=3,column=0,sticky='w')
+
+
+      RefinementParameterControl(self,parent,
+         defaultphase.U_index,text="Caglioti U",default_round=2) \
+         .grid(row=4,column=0,sticky='w')
+
+      RefinementParameterControl(self,parent,
+         defaultphase.unit_cell_indices[0],text="Lattice Parameters",
+         default_round=2).grid(row=5,column=0,sticky='w')
+
+
 
       # RefinementParameterControl(self.phaseLabelFrame,self,
       #    text="Amplitude").pack()
@@ -536,13 +561,36 @@ class LoadFrame(tk.Frame):
       #    command=self.getCifs)
       # self.loadCifButton.grid(row=1,column=2,padx=10,pady=10)
 
-      if isLoaded:
-         self.nb = ttk.Notebook(self,
-            height=400,width=400)
-         self.nb.enable_traversal()
-         self.nb.add(RefinementParameterSet(self.nb,self),text="All")
-         self.nb.pack(padx=10,pady=10)
+      self.globalnb = ttk.Notebook(self,
+               height=100,width=450)
+      self.globalFrame = tk.Frame(self.globalnb,
+         padx=10,pady=10)#, width=100, height=100)
+      # self.globalLabelFrame.p#grid(row=0,column=0)
+
+      RefinementParameterPolynomControl(self.globalFrame,self,
+         text="Background",default_order=2,default_round=1).grid(row=0,column=0,
+         sticky='w')
+      RefinementParameterControl(self.globalFrame,self,
+         RietveldPhases.two_theta_0_index,text="Two theta offset") \
+         .grid(row=1,column=0,sticky='w')
+      
+      self.globalnb.add(self.globalFrame,text="Global Parameters")
+      self.globalnb.grid(row=0,column=0,columnspan=2,padx=10,pady=10)
+
+      self.nb = ttk.Notebook(self,
+         height=300,width=450)
+      self.nb.enable_traversal()
+      self.nb.add(RefinementParameterSet(self.nb,self),text="Phases: All")
+      self.nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
       # self.nb.grid(row=2,column=1,columnspan=2)
+
+      self.RefineButton = ttk.Button(self, text='Refine', 
+         command=self.refine, takefocus=False)
+      self.RefineButton.grid(row=2,column=0, padx=10, pady=10)
+
+      self.CancelButton = ttk.Button(self, text='Cancel', 
+         command=self.cancel, takefocus=False)
+      self.CancelButton.grid(row=2,column=1, padx=10, pady=10)
 
       # self.canvas = FigureCanvasTkAgg(fig,self)
       # self.canvas.get_tk_widget().grid(row=3,column=1,columnspan=2,
@@ -553,7 +601,21 @@ class LoadFrame(tk.Frame):
       # parent.grid_columnconfigure(0, weight=1)
       # parent.grid_columnconfigure(4, weight=1)
 
+   def refine(self):
+      
+      # p = Process(target=RR.minimize_Amplitude_Bkgd_Offset)
+      # p.start()
+      # anim = animation.FuncAnimation(fig,animate,interval=500)
+      # p.join()
+      # updateplotprofile(RR.TotalProfile())
+      t = Process(target=animation.FuncAnimation, args=(fig,animate))
+      t.start()
+      RR.minimize_Amplitude_Bkgd_Offset()
+      # updateplotprofile(RR.TotalProfile())
+      t.join()
 
+   def cancel(self):
+      pass
 
 
    # def getProfile(self):
@@ -587,7 +649,7 @@ class PlotFrame(tk.Frame):
 
       global canvas 
       canvas = FigureCanvasTkAgg(fig,self)
-      canvas.get_tk_widget().pack(padx=20, pady=20)
+      canvas.get_tk_widget().pack(pady=10)
 
       toolbar = NavigationToolbar2TkAgg(canvas,self)
       toolbar.update()
