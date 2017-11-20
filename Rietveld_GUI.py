@@ -5,11 +5,16 @@ from __future__ import division
 # import sys
 import numpy as np
 import time
-import matplotlib as plt
-plt.use("TkAgg")
+import matplotlib
+matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import \
    FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib import style
+from  matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+from matplotlib import style, use
+# use("TkAgg")
+style.use("ggplot")
+
 import matplotlib.animation as animation
 import ttk
 import tkFont
@@ -34,8 +39,11 @@ import tkFileDialog
 
 LARGE_FONT = ("Verdana", 11)
 
-style.use("ggplot")
-fig = plt.figure.Figure(dpi=100)
+
+fig = Figure(dpi=100)
+# fig, ax = plt.subplots(nrows=3,ncols=1,sharex=True,dpi=100)
+# xdata, ydata = [], []
+# ln, = plt.plot([], [], 'ro', animated=True)
 # fig.suptitle(plottitle)
 canvas = None
 ROI_mask = None
@@ -76,7 +84,6 @@ RR = None
 x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
 
 max_refinement_rounds = 5
-isLoaded = False
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
 
@@ -109,11 +116,11 @@ epsilon     1e-13
 """
 
 def animate(i):
-   # profile_ys = json.load(
-   #    codecs.open("current_profile.json", 'r', encoding='utf-8'))
-   # for x,y in zip(two_thetas,profile_ys):
-   #    print x,y
-   # subplot1.clear()
+   profile_ys = json.load(
+      codecs.open("current_profile.json", 'r', encoding='utf-8'))
+   for x,y in zip(two_thetas,profile_ys):
+      print x,y
+   subplot1.clear()
    print "here"
    subplot1.axes.lines[0].set_ydata(RR.TotalProfile_state)
    # subplot2.axes.lines[0].set_ydata(RR.TotalProfile_state[ROI_mask])
@@ -208,7 +215,7 @@ class RietveldGUI(tk.Tk):
       #    frame.grid(row=0, column=0, sticky="nsew")
 
 
-
+      self.numPhases=0
 
 
       self.plotframe = PlotFrame(self.container,self)
@@ -216,6 +223,7 @@ class RietveldGUI(tk.Tk):
 
       # temp. to allow for auto-loading of profile
       self.getProfile()
+      self.getCifs()
 
       # frame = LoadFrame(container,self)
       # self.frames[LoadFrame] = frame
@@ -234,27 +242,30 @@ class RietveldGUI(tk.Tk):
    #    frame.tkraise
 
    def getCifs(self):
-      self.filePaths = tkFileDialog.askopenfilenames(
-         initialdir = "./data/cifs")
+      # self.filePaths = tkFileDialog.askopenfilenames(
+      #    initialdir = "./data/cifs")
+      self.filePaths = [r".\data\cifs\Cement\1540705-Alite.cif"]
       # iconEntry.insert(0,fileName)
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
+         if self.numPhases == 0:
+            self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
+               self.paramframe),text="Phases: All")
          self.paramframe.nb.add(
             RefinementParameterSet(self.paramframe.nb,self.paramframe), 
             text=str(i+1))
          Rt.append(RietveldPhases(filePath, d_min,d_max, 
             input_string_or_file_name = default_input_string, I_max = y_max, 
             delta_theta=1.5,Intensity_Cutoff = 0.005))
+         self.numPhases += 1
       # RietveldPhases.empty_x()
       # RietveldPhases.global_params_from_string(global_input_string,
       #    two_thetas,ys)
       global RR
       RR = RietveldRefinery(Rt,minimizer_input_string,
       store_intermediate_state=True, show_plots=False)
-      global anim
-      
 
-      updateplotprofile(RR.TotalProfile())
+      updateplotprofile()
 
 
    def getProfile(self):
@@ -292,27 +303,9 @@ class RietveldGUI(tk.Tk):
          d_min,d_max, input_string_or_file_name=default_input_string)
 
       self.paramframe = LoadFrame(self.container,self)
-      self.paramframe.grid(row=0,column=0,columnspan=2) 
-
-
+      self.paramframe.grid(row=0,column=0) 
 
       updateplotdata()
-
-   def refine(self):
-      
-      # p = Process(target=RR.minimize_Amplitude_Bkgd_Offset)
-      # p.start()
-      # anim = animation.FuncAnimation(fig,animate,interval=500)
-      # p.join()
-      # updateplotprofile(RR.TotalProfile())
-      t = Process(target=animation.FuncAnimation, args=(fig,animate))
-      t.start()
-      RR.minimize_Amplitude_Bkgd_Offset()
-      # updateplotprofile(RR.TotalProfile())
-      t.join()
-
-   def cancel(self):
-      pass
 
    def exit(self):
       self.destroy()
@@ -414,11 +407,10 @@ class RefinementParameterPolynomControl(tk.Frame):
 
          if self.text == "Background":
             RR = RietveldRefinery(Rt,minimizer_input_string, \
-               use_bkgd_mask=False,bkgd_delta_theta=0.05,
-               store_intermediate_state=False, show_plots=False)
+               use_bkgd_mask=False,
+               store_intermediate_state=True, show_plots=False)
             RR.minimize_Bkgd()
-            profile = RR.TotalProfile()
-            updateplotprofile(profile)
+            updateplotprofile()
 
       if self.state.get() == 0:
          self.order_dropdownlist.grid_remove()
@@ -434,17 +426,20 @@ class RefinementParameterPolynomControl(tk.Frame):
                # subplot3.axes.lines[-1].remove()
             canvas.show()
 
-def updateplotprofile(profile):
+def updateplotprofile():
    if len(subplot1.axes.lines) is not 0:
       for x in (subplot1,subplot2,subplot3):
          for line in x.axes.lines:
             line.remove()
-   subplot1.plot(two_thetas,profile,
+   print RR.TotalProfile_state
+   print RR.TotalProfile()
+   subplot1.plot(two_thetas,RR.TotalProfile_state,
       label=r'$I_{\rm calc}$',color='blue')
    subplot1.legend(bbox_to_anchor=(.8,.7))
-   subplot2.plot(two_thetas[ROI_mask],profile[ROI_mask],color='blue')
+   subplot2.plot(two_thetas[ROI_mask],RR.TotalProfile_state[ROI_mask],
+      color='blue')
    if RR is not None:
-      subplot3.plot(two_thetas,RR.Weighted_Squared_Errors(),
+      subplot3.plot(two_thetas,RR.Weighted_Squared_Errors_state,
          label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='green')
    subplot3.set_xlabel(r'$2\,\theta$')
    subplot3.set_ylabel(r"$\frac{1}{{\rm I}} \, (I-I_{\rm calc})^2$")
@@ -580,7 +575,7 @@ class LoadFrame(tk.Frame):
       self.nb = ttk.Notebook(self,
          height=300,width=450)
       self.nb.enable_traversal()
-      self.nb.add(RefinementParameterSet(self.nb,self),text="Phases: All")
+      # 
       self.nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
       # self.nb.grid(row=2,column=1,columnspan=2)
 
@@ -608,14 +603,22 @@ class LoadFrame(tk.Frame):
       # anim = animation.FuncAnimation(fig,animate,interval=500)
       # p.join()
       # updateplotprofile(RR.TotalProfile())
-      t = Process(target=animation.FuncAnimation, args=(fig,animate))
-      t.start()
+      # t = Process(target=animation.FuncAnimation, args=(fig,animate))
+      # t.start()
+      plt.ion()
+      updateplotprofile()
       RR.minimize_Amplitude_Bkgd_Offset()
+      plt.ioff()
+      plt.show()
       # updateplotprofile(RR.TotalProfile())
-      t.join()
+      # t.join()
 
    def cancel(self):
-      pass
+      self.numPhases = 0
+      Rt = []
+      for tab in self.nb.tabs():
+         self.nb.hide(tab)
+         self.nb.forget(tab)
 
 
    # def getProfile(self):
@@ -645,7 +648,7 @@ class LoadFrame(tk.Frame):
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
-      tk.Frame.__init__(self,parent,*args,**kwargs)
+      tk.Frame.__init__(self,parent,padx=10,pady=10,*args,**kwargs)
 
       global canvas 
       canvas = FigureCanvasTkAgg(fig,self)

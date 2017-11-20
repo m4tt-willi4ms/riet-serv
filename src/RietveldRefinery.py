@@ -56,6 +56,8 @@ class RietveldRefinery:
 
       self.sum_y = np.sum(self.y)
 
+      self.Update_state()
+
    def params_from_file(self,filename):
       """
          Reads in a set of optimization parameters from a file
@@ -238,6 +240,8 @@ class RietveldRefinery:
       sys.stdout.flush()
       if self.show_plots:
          self.update_plot()
+      elif self.store_intermediate_state:
+         self.Update_state()
 
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
