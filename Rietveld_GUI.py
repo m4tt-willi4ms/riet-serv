@@ -143,11 +143,21 @@ class RietveldGUI(tk.Tk):
       self.menu = tk.Menu(self)
       self.config(menu=self.menu)
       
-      self.subMenu = tk.Menu(self.menu,tearoff=False)
-      self.menu.add_cascade(label="File", menu=self.subMenu)
-      self.subMenu.add_command(label="Load Profile...", command=self.getProfile)
-      self.subMenu.add_command(label="Load .cifs...", command=self.getCifs)
-      self.subMenu.add_command(label="Exit", command=self.exit)
+      self.FileMenu = tk.Menu(self.menu,tearoff=False)
+
+      self.menu.add_cascade(label="File", menu=self.FileMenu)
+      self.FileMenu.add_command(label="Load Profile...",command=self.getProfile)
+      self.FileMenu.add_command(label="Load .cifs...", command=self.getCifs)
+      self.FileMenu.add_command(label="Exit", command=self.exit)
+
+      self.EditMenu = tk.Menu(self.menu,tearoff=False)
+      self.menu.add_cascade(label="Edit", menu=self.EditMenu)
+      self.EditMenu.add_command(label="Preferences")
+
+      self.HelpMenu = tk.Menu(self.menu,tearoff=False)
+      self.menu.add_cascade(label="Help", menu=self.HelpMenu)
+      self.HelpMenu.add_command(label="Tutorial")
+      self.HelpMenu.add_command(label="About")
 
       s = ttk.Style()
       s.theme_use('clam')
@@ -193,6 +203,9 @@ class RietveldGUI(tk.Tk):
       self.plotframe = PlotFrame(self.container,self)
       self.plotframe.grid(row=0,column=2,rowspan=2)
 
+      # temp. to allow for auto-loading of profile
+      self.getProfile()
+
       # frame = LoadFrame(container,self)
       # self.frames[LoadFrame] = frame
       # frame.grid(row=0, column=0, sticky="nsew")  
@@ -234,8 +247,9 @@ class RietveldGUI(tk.Tk):
 
 
    def getProfile(self):
-      self.fileName = tkFileDialog.askopenfilename(
-         initialdir = "./data/profiles")
+      # self.fileName = tkFileDialog.askopenfilename(
+      #    initialdir = "./data/profiles")
+      self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
       # iconEntry.insert(0,fileName)
 
       global two_thetas, ys
