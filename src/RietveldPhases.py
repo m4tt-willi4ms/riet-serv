@@ -88,6 +88,7 @@ class RietveldPhases:
       ('values','f8'), \
       ('l_limits','f8'), \
       ('u_limits','f8') \
+      # ('round','i4')
       ])
 
    x = np.empty(0,dtype=custom_dtype)

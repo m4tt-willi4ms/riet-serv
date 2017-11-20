@@ -153,7 +153,7 @@ class RietveldGUI(tk.Tk):
 
       self.EditMenu = tk.Menu(self.menu,tearoff=False)
       self.menu.add_cascade(label="Edit", menu=self.EditMenu)
-      self.EditMenu.add_command(label="Preferences")
+      self.EditMenu.add_command(label="Refinement Options")
 
       self.HelpMenu = tk.Menu(self.menu,tearoff=False)
       self.menu.add_cascade(label="Help", menu=self.HelpMenu)
