@@ -91,53 +91,17 @@ class RietveldRefinery:
             self.epsilon = float(line.split()[1])
 
    def TotalProfile(self):
-      # np.set_printoptions(threshold=None)
-      # print RietveldPhases.Background_Polynomial(self.two_theta)
-      # for i in xrange(0,len(self.Phase_list)):
-      #    print i 
-      #    t0 = time.time()
-      #    print self.Phase_list[i].Phase_Profile(self.two_theta)
-      #    t1 = time.time()
-      #    print "Time elapsed, phase " + str(i) +": " + str(t1-t0)
-      # print np.sum(self.Phase_list[i].Phase_Profile(self.two_theta) \
-      #    for i in xrange(0,len(self.Phase_list)))
       if self.use_bkgd_mask:
-         if self.store_intermediate_state:
-            self.TotalProfile_state = \
-               RietveldPhases.Background_Polynomial(self.two_theta)
-         else:
-            return RietveldPhases.Background_Polynomial(self.two_theta)
+         return RietveldPhases.Background_Polynomial(self.two_theta)
       else:
-         # t0 = time.time()
-         # print RietveldPhases.Background_Polynomial(self.two_theta) \
-         #    + np.sum( self.Phase_list[i].Phase_Profile(self.two_theta) \
-         #       for i in xrange(0,len(self.Phase_list)))
-         # t1 = time.time()
-         # print "TotalProfile Time: " + str(t1-t0)
-         # print map(lambda x: np.amax(self.Phase_list[x].Phase_Profile()), 
-         #       range(0,len(self.Phase_list)))
-         # print np.sum( x \
-         #       for x in self.Profile_generator())
-         if self.store_intermediate_state:
-            self.TotalProfile_state = \
-               RietveldPhases.Background_Polynomial(self.two_theta) \
-               + np.sum( x for x in self.Phase_Profiles())
-            # + np.sum(map(lambda x: self.Phase_list[x].Phase_Profile(), 
-            #    range(0,len(self.Phase_list))))
-         else: 
-            return RietveldPhases.Background_Polynomial(self.two_theta) \
-               + np.sum( x for x in self.Phase_Profiles())
-      return self.TotalProfile_state
+         return RietveldPhases.Background_Polynomial(self.two_theta) \
+            + np.sum( x for x in self.Phase_Profiles())
 
    def Phase_Profiles(self):
       for i in xrange(0,len(self.Phase_list)):
          yield self.Phase_list[i].Phase_Profile()
 
    def Weighted_Squared_Errors(self):
-      self.TotalProfile_state = self.TotalProfile()
-      if self.store_intermediate_state:
-         self.Weighted_Squared_Errors_state = \
-         (self.y - self.TotalProfile_state)**2/self.y
          # try:
          #    json.dump(self.TotalProfile().tolist(), 
          #       codecs.open("current_profile.json", 'w', encoding='utf-8'), 
@@ -151,9 +115,7 @@ class RietveldRefinery:
          #       indent=4)
          # except IOError:
          #    pass
-      else:
-         return (self.y - self.TotalProfile_state)**2/self.y
-      return self.Weighted_Squared_Errors_state
+      return (self.y - self.TotalProfile_state)**2/self.y
 
    def Relative_Differences(self):
       return (self.TotalProfile_state-self.y)/self.y
@@ -169,7 +131,7 @@ class RietveldRefinery:
       # print self.mask
       self.x['values'][self.mask] = x
       self.Update_state()
-      return np.sum(self.Weighted_Squared_Errors())
+      return np.sum(self.Weighted_Squared_Errors_state)
 
    def Weighted_Sum_of_Squares_Grad(self,x):
       self.x['values'][self.mask] = x

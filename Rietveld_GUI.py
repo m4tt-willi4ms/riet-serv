@@ -19,7 +19,7 @@ import matplotlib.animation as animation
 import ttk
 import tkFont
 from multiprocessing import Process
-# from threading import Thread
+from threading import Thread
 
 import json,codecs
 
@@ -171,7 +171,7 @@ class RietveldGUI(tk.Tk):
       s.theme_use('clam')
       # s.configure('ButtonText.TButton', font=('Verdana', 11))
 
-      font_dict = {'family': 'Helvetica', 'size': 11}
+      font_dict = {'family': 'Helvetica', 'size': 10}
       # k=v for (k,v) in font_dict.items()
       # dict_2 = {k: v for (k,v) in font_dict.items()}
       DEFAULT_FONT = tkFont.Font(**font_dict)
@@ -401,6 +401,7 @@ class RefinementParameterPolynomControl(tk.Frame):
       self.checkbutton_clicked()
 
    def checkbutton_clicked(self):
+      global RR
       if self.state.get() == 1:
          self.order_dropdownlist.grid()
          self.round_dropdownlist.grid()
@@ -426,13 +427,17 @@ class RefinementParameterPolynomControl(tk.Frame):
                # subplot3.axes.lines[-1].remove()
             canvas.show()
 
+def startthread(func):
+   # print "here"
+   t = Thread(target=func)
+   t.start()
+   return t
+
 def updateplotprofile():
    if len(subplot1.axes.lines) is not 0:
       for x in (subplot1,subplot2,subplot3):
          for line in x.axes.lines:
             line.remove()
-   print RR.TotalProfile_state
-   print RR.TotalProfile()
    subplot1.plot(two_thetas,RR.TotalProfile_state,
       label=r'$I_{\rm calc}$',color='blue')
    subplot1.legend(bbox_to_anchor=(.8,.7))
@@ -443,7 +448,7 @@ def updateplotprofile():
          label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='green')
    subplot3.set_xlabel(r'$2\,\theta$')
    subplot3.set_ylabel(r"$\frac{1}{{\rm I}} \, (I-I_{\rm calc})^2$")
-   canvas.show()
+   canvas.draw()
 
 class Dropdown_Int_List(tk.Frame):
    def __init__(self, parent, controller, text="", default_int=2, min_int=0,
@@ -605,20 +610,29 @@ class LoadFrame(tk.Frame):
       # updateplotprofile(RR.TotalProfile())
       # t = Process(target=animation.FuncAnimation, args=(fig,animate))
       # t.start()
-      plt.ion()
-      updateplotprofile()
-      RR.minimize_Amplitude_Bkgd_Offset()
-      plt.ioff()
-      plt.show()
+      # plt.ion()
+      # updateplotprofile()
+      t = startthread(RR.minimize_Amplitude_Bkgd_Offset)
+      while t.isAlive():
+         updateplotprofile()
+         time.sleep(.5)
+      # plt.ioff()
+      # plt.show()
       # updateplotprofile(RR.TotalProfile())
       # t.join()
 
    def cancel(self):
       self.numPhases = 0
       Rt = []
+      RR = None
       for tab in self.nb.tabs():
          self.nb.hide(tab)
          self.nb.forget(tab)
+      if len(subplot1.axes.lines) is not 0:
+         for x in (subplot1,subplot2,subplot3):
+            for line in x.axes.lines:
+               line.remove()
+         canvas.draw()
 
 
    # def getProfile(self):
@@ -648,7 +662,7 @@ class LoadFrame(tk.Frame):
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
-      tk.Frame.__init__(self,parent,padx=10,pady=10,*args,**kwargs)
+      tk.Frame.__init__(self,parent,padx=20,pady=10,*args,**kwargs)
 
       global canvas 
       canvas = FigureCanvasTkAgg(fig,self)
