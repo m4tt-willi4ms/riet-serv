@@ -192,6 +192,7 @@ class RietveldGUI(tk.Tk):
       # s.theme_create( "MyStyle", parent="alt", settings={
       #   "TNotebook": {"configure": {"tabmargins": [2, 5, 2, 0] } },
       #   "TNotebook.Tab": {"configure": {"padding": [100, 100] },}})
+      # s.theme_use("MyStyle")
 
       s.layout("Tab",
       [('Notebook.tab', {'sticky': 'nswe', 'children':
@@ -205,56 +206,29 @@ class RietveldGUI(tk.Tk):
 
       s.configure("Button",borderwidth=0)
 
-      # s.theme_use("MyStyle")
-
-      # self.frames = {}
-
-      # for fm in (Example,LoadFrame):
-      #    frame = fm(container,self)
-      #    self.frames[fm] = frame
-      #    frame.grid(row=0, column=0, sticky="nsew")
-
-
       self.numPhases=0
 
-
-      self.plotframe = PlotFrame(self.container,self)
-      self.plotframe.grid(row=0,column=2,rowspan=2)
+      self.plotframe = PlotFrame(self.container,self,padx=10)
+      self.plotframe.grid(row=0,column=1)
 
       # temp. to allow for auto-loading of profile
-      # self.getProfile()
-      # self.getCifs()
-
-      # frame = LoadFrame(container,self)
-      # self.frames[LoadFrame] = frame
-      # frame.grid(row=0, column=0, sticky="nsew")  
-
-      # frame2 = Example(container,self)
-      # self.frames[LoadFrame] = frame2
-      # frame2.grid(row=0, column=0, sticky="nsew")         
-
-      # self.show_frame(LoadFrame)
-
-      # self.plotframe.tkraise()
-
-   # def show_frame(self, cont):
-   #    frame = self.frames[cont]
-   #    frame.tkraise
+      self.getProfile()
+      self.getCifs()
 
    def getCifs(self):
-      self.filePaths = tkFileDialog.askopenfilenames(
-         initialdir = "./data/cifs")
-      # self.filePaths = [r".\data\cifs\Cement\1540705-Alite.cif"]
+      # self.filePaths = tkFileDialog.askopenfilenames(
+      #    initialdir = "./data/cifs")
+      self.filePaths = [r".\data\cifs\Cement\1540705-Alite.cif"]
       # iconEntry.insert(0,fileName)
       global Rt
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
-         if self.numPhases == 0:
-            self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
-               self.paramframe),text="Phases: All")
          Rt.append(RietveldPhases(filePath, d_min,d_max, 
             input_string_or_file_name = default_input_string, I_max = y_max, 
             delta_theta=1.5,Intensity_Cutoff = 0.005))
+         if self.numPhases == 0:
+            self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
+               self.paramframe,index=0,change_all=True),text="Phases: All")
          self.paramframe.nb.add(
             RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
             text=str(i+1))
@@ -270,10 +244,11 @@ class RietveldGUI(tk.Tk):
 
 
    def getProfile(self):
-      self.fileName = tkFileDialog.askopenfilename(
-         initialdir = "./data/profiles")
-      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
-      # iconEntry.insert(0,fileName)
+      # self.fileName = tkFileDialog.askopenfilename(
+      #    initialdir = "./data/profiles")
+      self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      self.winfo_toplevel().title("Rietveld Refinement (" + 
+         os.path.split(self.fileName)[1]+")")
 
       global two_thetas, ys
       two_thetas = []
@@ -303,7 +278,7 @@ class RietveldGUI(tk.Tk):
       # defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
       #    d_min,d_max, input_string_or_file_name=default_input_string)
 
-      self.paramframe = LoadFrame(self.container,self)
+      self.paramframe = LoadFrame(self.container,self,padx=10,pady=10)
       self.paramframe.grid(row=0,column=0) 
 
       updateplotdata()
@@ -325,19 +300,35 @@ def updateplotdata():
 class VarLabelEntry(tk.Frame):
    def __init__(self,parent,text,x_label,index,*args, **kwargs):
       tk.Frame.__init__(self,parent)
+      self.x_label = x_label
+      self.index = index
 
       self.value = tk.StringVar(value=str(RietveldPhases.x[x_label]
                [index]))
       self.label = tk.Label(self,text=text)
-      self.entry = tk.Entry(self,textvariable=self.value, width=8)
+      vcmd = self.register(self.callback)
+      self.entry = tk.Entry(self,textvariable=self.value, width=8,
+         validate="focusout",validatecommand=vcmd)
+      # self.value.trace("w",self.callback)
       self.label.grid(row=0,column=0)
       self.entry.grid(row=0,column=1)
 
+   def callback(self):
+      tmp = self.value.get()
+      try:
+         RietveldPhases.x[self.x_label][self.index] = tmp
+      except(ValueError):
+         self.value.set(tmp)
+         return False
+      return True
+
 class RefinementParameterControl(tk.Frame):
    def __init__(self, parent, controller, index, text="", 
-      default_round=1,*args, **kwargs):
+      default_round=1,change_all=False,*args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.parent = parent
+      self.change_all = change_all
+      self.index = index
 
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
@@ -375,6 +366,10 @@ class RefinementParameterControl(tk.Frame):
          self.l_limit.grid_remove()
          self.u_limit.grid_remove()
          self.round_dropdownlist.grid_remove()
+      # if self.change_all:
+      #    global Rt
+      #    for phase in Rt:
+      #       RietveldPhases.x['values'][index] = 0
 
 class RefinementParameterPolynomControl(tk.Frame):
    def __init__(self, parent, controller, 
@@ -480,22 +475,21 @@ class Dropdown_Int_List(tk.Frame):
 
 
 class RefinementParameterSet(tk.Frame):
-   def __init__(self, parent, controller, index=None, *args, **kwargs):
+   def __init__(self, parent, controller, index=None, change_all=False,
+       *args, **kwargs):
       tk.Frame.__init__(self, parent, padx=10,pady=10)
-      print index
 
       if index is not None:
-         defaultphase = Rt[index]
+         phase = Rt[index]
       else:
-         defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
-            d_min,d_max, input_string_or_file_name=default_input_string)
+         phase = Rt[0]
 
       RefinementParameterControl(self,parent,
-         defaultphase.Amplitude_index,text="Amplitude",default_round=2) \
-         .grid(row=0,column=0,sticky='w')
+         phase.Amplitude_index,text="Amplitude",change_all=change_all
+         ,default_round=2).grid(row=0,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
-         defaultphase.W_index,text="Caglioti W",default_round=2) \
+         phase.W_index,text="Caglioti W",default_round=2) \
          .grid(row=1,column=0,sticky='w')
 
       RefinementParameterPolynomControl(self,parent,
@@ -503,15 +497,15 @@ class RefinementParameterSet(tk.Frame):
          sticky='w')
 
       RefinementParameterControl(self,parent,
-         defaultphase.V_index,text="Caglioti V",default_round=2) \
+         phase.V_index,text="Caglioti V",default_round=2) \
          .grid(row=3,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
-         defaultphase.U_index,text="Caglioti U",default_round=2) \
+         phase.U_index,text="Caglioti U",default_round=2) \
          .grid(row=4,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
-         defaultphase.unit_cell_indices[0],text="Lattice Parameters",
+         phase.unit_cell_indices[0],text="Lattice Parameters",
          default_round=2).grid(row=5,column=0,sticky='w')
 
 class LoadFrame(tk.Frame):
@@ -552,6 +546,7 @@ class LoadFrame(tk.Frame):
       self.CancelButton.grid(row=2,column=1, padx=10, pady=10)
 
    def refine(self):
+      print RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       global RR
       t = startthread(RR.minimize_Amplitude_Bkgd_Offset)
       fig.suptitle("Progress: minimize_Amplitude_Bkgd_Offset")
@@ -585,15 +580,15 @@ class LoadFrame(tk.Frame):
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
-      tk.Frame.__init__(self,parent,padx=20,pady=10,*args,**kwargs)
+      tk.Frame.__init__(self,parent,*args,**kwargs)
 
       global canvas 
       canvas = FigureCanvasTkAgg(fig,self)
-      canvas.get_tk_widget().pack(pady=10)
+      canvas.get_tk_widget().pack()
 
       toolbar = NavigationToolbar2TkAgg(canvas,self)
       toolbar.update()
-      canvas._tkcanvas.pack(side='top')
+      canvas._tkcanvas.pack(side='top',pady=10)
       # self.canvas.show()
 
 

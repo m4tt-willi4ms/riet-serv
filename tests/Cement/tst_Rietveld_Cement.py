@@ -34,10 +34,10 @@ epsilon     1e-13
 """
 
 minimizer_input_string = """\
-factr       1e8
+factr       1e7
 iprint      -1
 maxiter     150
-m           10
+m           15
 pgtol       1e-5
 epsilon     1e-13
 """
@@ -71,7 +71,7 @@ with open(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye") as file:
       tst_y.append(float(ztmp)**2)
 tst_two_theta = np.array(tst_two_theta)
 # mask = np.ones(len(tst_two_theta),dtype=bool)
-mask = tst_two_theta > 20 
+mask = tst_two_theta > 22
 # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
 #    tst_two_theta>34.3))
 # mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
@@ -116,7 +116,7 @@ def exercise_Rietveld_Refinery_Cement():
    #    tt0 = time.time()
       Rt.append(RietveldPhases(r"data//cifs//Cement/" 
          +cif,d_min,d_max, \
-         I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
+         I_max = tst_y_max, delta_theta=1.,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 
@@ -148,7 +148,7 @@ def exercise_Rietveld_Refinery_Cement():
    # RR.display(RR.minimize_Amplitude)
    RR.display(RR.minimize_Amplitude_Offset)
    # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
-   # RR.display(RR.minimize_unit_cell)
+   RR.display(RR.minimize_unit_cell)
    # RR.display(RR.minimize_First_n_Phases)
    # RR.display(RR.minimize_First_n_Phases,n=3)
    # RR.display(RR.minimize_Amplitude_Offset_W)
