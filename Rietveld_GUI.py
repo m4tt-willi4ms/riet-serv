@@ -222,8 +222,8 @@ class RietveldGUI(tk.Tk):
       self.plotframe.grid(row=0,column=2,rowspan=2)
 
       # temp. to allow for auto-loading of profile
-      self.getProfile()
-      self.getCifs()
+      # self.getProfile()
+      # self.getCifs()
 
       # frame = LoadFrame(container,self)
       # self.frames[LoadFrame] = frame
@@ -242,21 +242,22 @@ class RietveldGUI(tk.Tk):
    #    frame.tkraise
 
    def getCifs(self):
-      # self.filePaths = tkFileDialog.askopenfilenames(
-      #    initialdir = "./data/cifs")
-      self.filePaths = [r".\data\cifs\Cement\1540705-Alite.cif"]
+      self.filePaths = tkFileDialog.askopenfilenames(
+         initialdir = "./data/cifs")
+      # self.filePaths = [r".\data\cifs\Cement\1540705-Alite.cif"]
       # iconEntry.insert(0,fileName)
+      global Rt
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
          if self.numPhases == 0:
             self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
                self.paramframe),text="Phases: All")
-         self.paramframe.nb.add(
-            RefinementParameterSet(self.paramframe.nb,self.paramframe), 
-            text=str(i+1))
          Rt.append(RietveldPhases(filePath, d_min,d_max, 
             input_string_or_file_name = default_input_string, I_max = y_max, 
             delta_theta=1.5,Intensity_Cutoff = 0.005))
+         self.paramframe.nb.add(
+            RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
+            text=str(i+1))
          self.numPhases += 1
       # RietveldPhases.empty_x()
       # RietveldPhases.global_params_from_string(global_input_string,
@@ -269,12 +270,14 @@ class RietveldGUI(tk.Tk):
 
 
    def getProfile(self):
-      # self.fileName = tkFileDialog.askopenfilename(
-      #    initialdir = "./data/profiles")
-      self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      self.fileName = tkFileDialog.askopenfilename(
+         initialdir = "./data/profiles")
+      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
       # iconEntry.insert(0,fileName)
 
       global two_thetas, ys
+      two_thetas = []
+      ys = []
       with open(self.fileName) as file:
          for line in file.readlines()[1:]:
             two_thetatmp, ytmp, ztmp = line.split()
@@ -295,12 +298,10 @@ class RietveldGUI(tk.Tk):
 
       RietveldPhases.global_params_from_string(global_input_string,
          two_thetas,ys)
-      global isLoaded
-      isLoaded = True
 
-      global defaultphase
-      defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
-         d_min,d_max, input_string_or_file_name=default_input_string)
+      # global defaultphase
+      # defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
+      #    d_min,d_max, input_string_or_file_name=default_input_string)
 
       self.paramframe = LoadFrame(self.container,self)
       self.paramframe.grid(row=0,column=0) 
@@ -336,6 +337,7 @@ class RefinementParameterControl(tk.Frame):
    def __init__(self, parent, controller, index, text="", 
       default_round=1,*args, **kwargs):
       tk.Frame.__init__(self, parent)
+      self.parent = parent
 
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
@@ -422,9 +424,6 @@ class RefinementParameterPolynomControl(tk.Frame):
                for x in (subplot1,subplot2,subplot3):
                   for line in x.axes.lines:
                      line.remove()
-               # subplot1.axes.lines[-1].remove()
-               # subplot2.axes.lines[-1].remove()
-               # subplot3.axes.lines[-1].remove()
             canvas.show()
 
 def startthread(func):
@@ -447,7 +446,7 @@ def updateplotprofile():
       subplot3.plot(two_thetas,RR.Weighted_Squared_Errors_state,
          label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='green')
    subplot3.set_xlabel(r'$2\,\theta$')
-   subplot3.set_ylabel(r"$\frac{1}{{\rm I}} \, (I-I_{\rm calc})^2$")
+   subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{I}$")
    canvas.draw()
 
 class Dropdown_Int_List(tk.Frame):
@@ -481,32 +480,15 @@ class Dropdown_Int_List(tk.Frame):
 
 
 class RefinementParameterSet(tk.Frame):
-   def __init__(self, parent, controller, *args, **kwargs):
-      tk.Frame.__init__(self, parent,padx=10,pady=10)
+   def __init__(self, parent, controller, index=None, *args, **kwargs):
+      tk.Frame.__init__(self, parent, padx=10,pady=10)
+      print index
 
-      # self.canvas = tk.Canvas(self, width=600,height=400,
-      #    scrollregion=(0,0,600,800))
-
-      # self.scrollY = tk.Scrollbar(self, orient=tk.VERTICAL,
-      #    command=self.canvas.yview)
-      # self.scrollY.grid(row=0,column=1,sticky=tk.N+tk.S)
-
-      # self.canvas['yscrollcommand'] = self.scrollY.set
-
-      # self.globalLabelFrame = tk.LabelFrame(self,text="Global Parameters",
-      #    padx=10,pady=10)#, width=100, height=100)
-      # self.globalLabelFrame.pack()#grid(row=0,column=0)
-
-      # RefinementParameterPolynomControl(self.globalLabelFrame,self,
-      #    text="Background",default_order=2,default_round=1).grid(row=0,column=0,
-      #    sticky='w')
-      # RefinementParameterControl(self.globalLabelFrame,self,
-      #    RietveldPhases.two_theta_0_index,text="Two theta offset") \
-      #    .grid(row=1,column=0,sticky='w')
-
-      # self.phaseLabelFrame = tk.LabelFrame(self,text="Phase Parameters",
-      #    padx=10,pady=10)#, width=100, height=100)
-      # self.phaseLabelFrame.pack()
+      if index is not None:
+         defaultphase = Rt[index]
+      else:
+         defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
+            d_min,d_max, input_string_or_file_name=default_input_string)
 
       RefinementParameterControl(self,parent,
          defaultphase.Amplitude_index,text="Amplitude",default_round=2) \
@@ -524,7 +506,6 @@ class RefinementParameterSet(tk.Frame):
          defaultphase.V_index,text="Caglioti V",default_round=2) \
          .grid(row=3,column=0,sticky='w')
 
-
       RefinementParameterControl(self,parent,
          defaultphase.U_index,text="Caglioti U",default_round=2) \
          .grid(row=4,column=0,sticky='w')
@@ -533,34 +514,12 @@ class RefinementParameterSet(tk.Frame):
          defaultphase.unit_cell_indices[0],text="Lattice Parameters",
          default_round=2).grid(row=5,column=0,sticky='w')
 
-
-
-      # RefinementParameterControl(self.phaseLabelFrame,self,
-      #    text="Amplitude").pack()
-
-class Example(tk.Frame):
-   def __init__(self, parent,controller):
-      tk.Frame.__init__(self, parent)
-      self.RPControl = RefinementParameterControl(self, controller,
-         style='ButtonText.TButton')
-      self.RPControl.pack(side="top", fill="both", expand=True)
-
 class LoadFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       # controller.minsize(width=400,height=400)
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
-      # self.loadProfileButton = ttk.Button(parent, text=' Load Profile... ', 
-      #    style='ButtonText.TButton', 
-      #    command=self.getProfile)
-      # self.loadProfileButton.grid(row=1,column=1,padx=10,pady=10)
-      # self.controller = controller
-
-      # self.loadCifButton = ttk.Button(parent, text=' Load .cif Files... ', 
-      #    style='ButtonText.TButton', 
-      #    command=self.getCifs)
-      # self.loadCifButton.grid(row=1,column=2,padx=10,pady=10)
-
+      self.controller = controller
       self.globalnb = ttk.Notebook(self,
                height=100,width=450)
       self.globalFrame = tk.Frame(self.globalnb,
@@ -592,39 +551,27 @@ class LoadFrame(tk.Frame):
          command=self.cancel, takefocus=False)
       self.CancelButton.grid(row=2,column=1, padx=10, pady=10)
 
-      # self.canvas = FigureCanvasTkAgg(fig,self)
-      # self.canvas.get_tk_widget().grid(row=3,column=1,columnspan=2,
-      #    sticky='s')#, #fill=tk.BOTH,padx=20, pady=20)
-
-      # parent.grid_rowconfigure(0, weight=1)
-      # parent.grid_rowconfigure(4, weight=1)
-      # parent.grid_columnconfigure(0, weight=1)
-      # parent.grid_columnconfigure(4, weight=1)
-
    def refine(self):
-      
-      # p = Process(target=RR.minimize_Amplitude_Bkgd_Offset)
-      # p.start()
-      # anim = animation.FuncAnimation(fig,animate,interval=500)
-      # p.join()
-      # updateplotprofile(RR.TotalProfile())
-      # t = Process(target=animation.FuncAnimation, args=(fig,animate))
-      # t.start()
-      # plt.ion()
-      # updateplotprofile()
+      global RR
       t = startthread(RR.minimize_Amplitude_Bkgd_Offset)
+      fig.suptitle("Progress: minimize_Amplitude_Bkgd_Offset")
       while t.isAlive():
          updateplotprofile()
          time.sleep(.5)
-      # plt.ioff()
-      # plt.show()
-      # updateplotprofile(RR.TotalProfile())
-      # t.join()
+      fig.suptitle("Completed: minimize_Amplitude_Bkgd_Offset")
+      updateplotprofile()
+      t.join()
+      RR.display_parameters(RR.minimize_Amplitude_Bkgd_Offset)
+      RR.display_stats(RR.minimize_Amplitude_Bkgd_Offset)
 
    def cancel(self):
-      self.numPhases = 0
+      self.controller.numPhases = 0
+      global Rt, RR
       Rt = []
       RR = None
+      RietveldPhases.empty_x()
+      RietveldPhases.global_params_from_string(global_input_string,
+         two_thetas,ys)
       for tab in self.nb.tabs():
          self.nb.hide(tab)
          self.nb.forget(tab)
@@ -632,33 +579,9 @@ class LoadFrame(tk.Frame):
          for x in (subplot1,subplot2,subplot3):
             for line in x.axes.lines:
                line.remove()
+         fig.suptitle("")
+         subplot1.axes.legend_.remove()
          canvas.draw()
-
-
-   # def getProfile(self):
-   #    self.fileName = tkFileDialog.askopenfilename()
-   #    # iconEntry.insert(0,fileName)
-
-   #    with open(self.fileName) as file:
-   #       for line in file.readlines()[1:]:
-   #          two_thetatmp, ytmp, ztmp = line.split()
-   #          # two_thetatmp, ytmp = line.split()
-   #          if float(two_thetatmp) > 20:
-   #             two_thetas.append(float(two_thetatmp))
-   #             ys.append(float(ztmp)**2)
-
-   #    global d_min, d_max, tst_y_max
-   #    d_min = CU_wavelength/2/np.sin(np.pi/360*two_thetas[-1])
-   #    d_max = CU_wavelength/2/np.sin(np.pi/360*two_thetas[0])
-   #    tst_y_max = np.amax(tst_y)/len(cifs)
-
-   #    subplot1.clear()
-   #    subplot1.scatter(two_thetas,ys,label='Data',s=1, color='red')
-   #    subplot2.clear()
-   #    subplot2.scatter(two_thetas,ys,label='Data',s=1, color='red')
-
-   #    self.canvas.show()
-      
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
@@ -773,69 +696,69 @@ pgtol       1e-5
 epsilon     1e-13
 """
 
-tst_two_theta = []
-tst_y = []
+# tst_two_theta = []
+# tst_y = []
 
-is_Sim_data = True #: Should be False unless simulated data 
-   #: (e.g. "Jade-AL2O3-Sim.xye") is used
-display_plots = True #: Only use to see sample plots
-# with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
-# with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
-# with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-# os.path.dirname(__file__) + r
-with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
-   for line in file.readlines()[1:]:
-      two_thetatmp, ytmp, ztmp = line.split()
-      # two_thetatmp, ytmp = line.split()
-      # if float(two_thetatmp) < 15:
-      tst_two_theta.append(float(two_thetatmp))
-      tst_y.append(float(ztmp)**2)
-tst_two_theta = np.array(tst_two_theta)
-# mask = np.ones(len(tst_two_theta),dtype=bool)
-mask = tst_two_theta > 20 
-# mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
-#    tst_two_theta>34.3))
-# mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
-tst_two_theta = tst_two_theta[mask]
-tst_y = np.array(tst_y)[mask]
+# is_Sim_data = True #: Should be False unless simulated data 
+#    #: (e.g. "Jade-AL2O3-Sim.xye") is used
+# display_plots = True #: Only use to see sample plots
+# # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
+# # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
+# # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
+# # os.path.dirname(__file__) + r
+# with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
+#    for line in file.readlines()[1:]:
+#       two_thetatmp, ytmp, ztmp = line.split()
+#       # two_thetatmp, ytmp = line.split()
+#       # if float(two_thetatmp) < 15:
+#       tst_two_theta.append(float(two_thetatmp))
+#       tst_y.append(float(ztmp)**2)
+# tst_two_theta = np.array(tst_two_theta)
+# # mask = np.ones(len(tst_two_theta),dtype=bool)
+# mask = tst_two_theta > 20 
+# # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
+# #    tst_two_theta>34.3))
+# # mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
+# tst_two_theta = tst_two_theta[mask]
+# tst_y = np.array(tst_y)[mask]
 
-def exercise_Rietveld_Refinery_Cement():
-   # RietveldPhase.fromstring(input_string) 
-   cifs = [
-      "1540705-Alite.cif", 
-      "9012789-Belite.cif", 
-      "1200009-Ferrite.cif", 
-      "1000039-AluminateCubic.cif", 
-      "9014308-AluminateOrtho.cif", 
-      "9007569-Arcanite.cif",
-      "1011094-FreeLime.cif", 
-      "1000053-Periclase.cif", 
-      ]
-   Rt = []
+# def exercise_Rietveld_Refinery_Cement():
+#    # RietveldPhase.fromstring(input_string) 
+#    cifs = [
+#       "1540705-Alite.cif", 
+#       "9012789-Belite.cif", 
+#       "1200009-Ferrite.cif", 
+#       "1000039-AluminateCubic.cif", 
+#       "9014308-AluminateOrtho.cif", 
+#       "9007569-Arcanite.cif",
+#       "1011094-FreeLime.cif", 
+#       "1000053-Periclase.cif", 
+#       ]
+#    Rt = []
 
-   print "cifs: \n" 
-   for p in cifs:
-      print p
-   print "\nInput String: \n"
-   for i,p in enumerate(input_strings):
-      print "Phase " + str(i+1) + ": \n" + p
-   print "Global Input String: \n" + global_input_string
-   print "Minimizer Input String: \n" + minimizer_input_string
-   print "Fine Minimizer Input String: \n" + fine_minimizer_input_string
+#    print "cifs: \n" 
+#    for p in cifs:
+#       print p
+#    print "\nInput String: \n"
+#    for i,p in enumerate(input_strings):
+#       print "Phase " + str(i+1) + ": \n" + p
+#    print "Global Input String: \n" + global_input_string
+#    print "Minimizer Input String: \n" + minimizer_input_string
+#    print "Fine Minimizer Input String: \n" + fine_minimizer_input_string
 
 
-   CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-   d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
-   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
-   tst_y_max = np.amax(tst_y)/len(cifs)
+#    CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+#    d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
+#    d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
+#    tst_y_max = np.amax(tst_y)/len(cifs)
 
-   RietveldPhases.global_params_from_string(global_input_string,
-      tst_two_theta,tst_y)
+#    RietveldPhases.global_params_from_string(global_input_string,
+#       tst_two_theta,tst_y)
 
-   for cif, input_string in zip(cifs,input_strings):
-   #    tt0 = time.time()
-      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
-         I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
+#    for cif, input_string in zip(cifs,input_strings):
+#    #    tt0 = time.time()
+#       Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
+#          I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 

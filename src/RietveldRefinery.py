@@ -214,7 +214,7 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"Amp"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_Amplitude_Offset_unit_cell(self,display_plots = True):
       self.mask = np.logical_or(np.logical_or( \
@@ -265,7 +265,7 @@ class RietveldRefinery:
             np.logical_or(np.char.startswith(self.x['labels'],"two_"), \
                self.x['labels'] == "W"))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_Amplitude_Bkgd_Offset_W(self,display_plots = True):
       self.mask = np.logical_or( 
@@ -274,7 +274,7 @@ class RietveldRefinery:
                np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), 
                   self.x['labels'] == "W")))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_Bkgd(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Bkgd")
@@ -301,6 +301,14 @@ class RietveldRefinery:
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"), \
          np.char.startswith(self.x['labels'],"Bkgd"))
+      self.minimize()
+
+   def minimize_eta(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"eta")
+      self.minimize()
+
+   def minimize_W(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"W")
       self.minimize()
 
    def minimize_All(self,display_plots = True):

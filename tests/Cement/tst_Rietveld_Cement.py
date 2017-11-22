@@ -34,7 +34,7 @@ epsilon     1e-13
 """
 
 minimizer_input_string = """\
-factr       1e10
+factr       1e8
 iprint      -1
 maxiter     150
 m           10
@@ -45,7 +45,7 @@ epsilon     1e-13
 fine_minimizer_input_string = """\
 factr       1e2
 iprint      1
-maxiter     150
+maxiter     3
 m           15
 pgtol       1e-5
 epsilon     1e-13
@@ -61,7 +61,8 @@ display_plots = True #: Only use to see sample plots
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
 # os.path.dirname(__file__) + r
-with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
+with open(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye") as file:
+# with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
    for line in file.readlines()[1:]:
       two_thetatmp, ytmp, ztmp = line.split()
       # two_thetatmp, ytmp = line.split()
@@ -81,13 +82,17 @@ def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string) 
    cifs = [
       "1540705-Alite.cif", 
-      "9012789-Belite.cif", 
-      "1200009-Ferrite.cif", 
       "1000039-AluminateCubic.cif", 
       "9014308-AluminateOrtho.cif", 
+      "9004096-anhydrite.cif",
       "9007569-Arcanite.cif",
+      "9005521-bassanite.cif",
+      "9012789-Belite.cif", 
+      "9009667-calcite.cif",
+      "1200009-Ferrite.cif", 
       "1011094-FreeLime.cif", 
       "1000053-Periclase.cif", 
+      "9000113-portlandite.cif",
       ]
    Rt = []
 
@@ -143,13 +148,15 @@ def exercise_Rietveld_Refinery_Cement():
    # RR.display(RR.minimize_Amplitude)
    RR.display(RR.minimize_Amplitude_Offset)
    # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
-   RR.display(RR.minimize_unit_cell)
+   # RR.display(RR.minimize_unit_cell)
    # RR.display(RR.minimize_First_n_Phases)
    # RR.display(RR.minimize_First_n_Phases,n=3)
    # RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
    # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    # RR.display(RR.minimize_only_Alite)
+   RR.display(RR.minimize_W)
+   RR.display(RR.minimize_eta)
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
@@ -160,9 +167,9 @@ def exercise_Rietveld_Refinery_Cement():
    RR2 = RietveldRefinery(RR.Phase_list,
       fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
    RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
+   RR2.display(RR2.minimize_All)
+   RR2.display(RR2.minimize_All)
+   RR2.display(RR2.minimize_All)
 
 
 def run():
