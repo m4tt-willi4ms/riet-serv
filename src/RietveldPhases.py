@@ -693,10 +693,13 @@ class RietveldPhases:
       return result
 
    def peak_masks(self,delta_theta=None):
+      two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       if delta_theta is not None:
-         return np.abs(self.two_theta-self.two_theta_peaks) < delta_theta
+         return np.abs(self.two_theta-two_theta_0-self.two_theta_peaks) \
+            < delta_theta
       else:
-         return np.abs(self.two_theta-self.two_theta_peaks) < self.delta_theta
+         return np.abs(self.two_theta-two_theta_0 - self.two_theta_peaks) \
+            < self.delta_theta
 
    def bkgd_mask(self,two_theta,bkgd_delta_theta):
       return np.any(self.peak_masks(bkgd_delta_theta) \

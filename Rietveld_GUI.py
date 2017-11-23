@@ -31,8 +31,7 @@ from src.RietveldRefinery import RietveldRefinery
 
 from scitbx import lbfgsb
 from cctbx.eltbx import wavelengths
-from libtbx import test_utils
-import libtbx.load_env
+from cctbx.sgtbx import lattice_symmetry
 
 import Tkinter as tk
 import tkFileDialog
@@ -303,23 +302,47 @@ class VarLabelEntry(tk.Frame):
       self.x_label = x_label
       self.index = index
 
-      self.value = tk.StringVar(value=str(RietveldPhases.x[x_label]
-               [index]))
+      self.value = tk.StringVar()
+      self.value.set(str(RietveldPhases.x[x_label][index]))
       self.label = tk.Label(self,text=text)
-      vcmd = self.register(self.callback)
+
+      # valid percent substitutions (from the Tk entry man page)
+      # note: you only have to register the ones you need; this
+      # example registers them all for illustrative purposes
+      #
+      # %d = Type of action (1=insert, 0=delete, -1 for others)
+      # %i = index of char string to be inserted/deleted, or -1
+      # %P = value of the entry if the edit is allowed
+      # %s = value of entry prior to editing
+      # %S = the text string being inserted or deleted, if any
+      # %v = the type of validation that is currently set
+      # %V = the type of validation that triggered the callback
+      #      (key, focusin, focusout, forced)
+      # %W = the tk name of the widget
+
+      vcmd = (self.register(self.onValidate),
+         '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
       self.entry = tk.Entry(self,textvariable=self.value, width=8,
-         validate="focusout",validatecommand=vcmd)
+         validate="key",validatecommand=vcmd)
       # self.value.trace("w",self.callback)
       self.label.grid(row=0,column=0)
       self.entry.grid(row=0,column=1)
 
-   def callback(self):
-      tmp = self.value.get()
+   def onValidate(self, d, i, P, s, S, v, V, W):
+      tmp = s
       try:
-         RietveldPhases.x[self.x_label][self.index] = tmp
+         RietveldPhases.x[self.x_label][self.index] = float(P)
+         self.value.set(P)
       except(ValueError):
+         # self.entry.delete(0,END)
          self.value.set(tmp)
+         print self.value.get()
+         # self.entry.insert(0,self.value)
          return False
+      global RR
+      # if RR is not None:
+      #    updateplotprofile()
+      print self.value.get()
       return True
 
 class RefinementParameterControl(tk.Frame):
@@ -442,6 +465,11 @@ def updateplotprofile():
          label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='green')
    subplot3.set_xlabel(r'$2\,\theta$')
    subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{I}$")
+   print Rt[0].structure.space_group().crystal_system()
+   print Rt[0].structure.space_group().average_unit_cell(
+      Rt[0].unit_cell)
+   # print lattice_symmetry.group(Rt[0].unit_cell)
+   # print tmp.lattice_group_info()
    canvas.draw()
 
 class Dropdown_Int_List(tk.Frame):
