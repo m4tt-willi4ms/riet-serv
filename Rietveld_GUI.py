@@ -48,6 +48,7 @@ canvas = None
 ROI_mask = None
 ROI_center = 32
 ROI_delta_theta = 5
+x_mask = np.zeros(0,dtype=bool)
 
 subplot1 = fig.add_subplot(311) #plt.subplot(3,1,1)
       # plt.scatter(self.two_theta,self.y,label='Data',s=1, color='red')
@@ -301,9 +302,14 @@ class VarLabelEntry(tk.Frame):
       tk.Frame.__init__(self,parent)
       self.x_label = x_label
       self.index = index
+      self.change_all = parent.change_all
+      self.is_l_limits = self.x_label == "l_limits"
+      self.is_u_limits = self.x_label == "u_limits"
+      self.is_values = self.x_label == "values"
+      self.passable = ["","-",".","-."]
 
-      self.value = tk.StringVar()
-      self.value.set(str(RietveldPhases.x[x_label][index]))
+      # self.value = tk.StringVar()
+      # self.value.set(str(RietveldPhases.x[x_label][index]))
       self.label = tk.Label(self,text=text)
 
       # valid percent substitutions (from the Tk entry man page)
@@ -322,27 +328,39 @@ class VarLabelEntry(tk.Frame):
 
       vcmd = (self.register(self.onValidate),
          '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-      self.entry = tk.Entry(self,textvariable=self.value, width=8,
-         validate="key",validatecommand=vcmd)
-      # self.value.trace("w",self.callback)
+      self.entry = tk.Entry(self,width=8,validate="key",validatecommand=vcmd)
+      self.entry.insert(0,str(RietveldPhases.x[x_label][index]))
       self.label.grid(row=0,column=0)
       self.entry.grid(row=0,column=1)
 
    def onValidate(self, d, i, P, s, S, v, V, W):
-      tmp = s
       try:
-         RietveldPhases.x[self.x_label][self.index] = float(P)
-         self.value.set(P)
+         if all(P != x for x in self.passable):
+            val = float(P)
+            if self.is_l_limits:
+               if val <= RietveldPhases.x['u_limits'][self.index]:
+                  RietveldPhases.x[self.x_label][self.index] = val
+               else: 
+                  raise ValueError
+            elif self.is_u_limits:
+               if val >= RietveldPhases.x['l_limits'][self.index]:
+                  RietveldPhases.x[self.x_label][self.index] = val
+               else: 
+                  raise ValueError
+            elif self.is_values:
+               RietveldPhases.x[self.x_label][self.index] = val
+         else:
+            RietveldPhases.x[self.x_label][self.index] = 0
+         global RR
+
       except(ValueError):
-         # self.entry.delete(0,END)
-         self.value.set(tmp)
-         print self.value.get()
-         # self.entry.insert(0,self.value)
          return False
-      global RR
-      # if RR is not None:
-      #    updateplotprofile()
-      print self.value.get()
+      if self.change_all:
+         for Rp in Rt:
+            RietveldPhases.x[self.x_label]
+      if RR is not None:
+         RR.Update_state()
+         updateplotprofile()
       return True
 
 class RefinementParameterControl(tk.Frame):
@@ -466,8 +484,10 @@ def updateplotprofile():
    subplot3.set_xlabel(r'$2\,\theta$')
    subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{I}$")
    print Rt[0].structure.space_group().crystal_system()
-   print Rt[0].structure.space_group().average_unit_cell(
-      Rt[0].unit_cell)
+   print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
+   Rt[0].update_unit_cell()
+   print Rt[0].unit_cell
+   print Rt[0].structure.space_group().average_unit_cell(Rt[0].unit_cell)
    # print lattice_symmetry.group(Rt[0].unit_cell)
    # print tmp.lattice_group_info()
    canvas.draw()
@@ -533,7 +553,7 @@ class RefinementParameterSet(tk.Frame):
          .grid(row=4,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
-         phase.unit_cell_indices[0],text="Lattice Parameters",
+         phase.unit_cell_indices[3],text="Lattice Parameters",
          default_round=2).grid(row=5,column=0,sticky='w')
 
 class LoadFrame(tk.Frame):

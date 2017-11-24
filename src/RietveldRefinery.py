@@ -205,6 +205,10 @@ class RietveldRefinery:
       elif self.store_intermediate_state:
          self.Update_state()
 
+   def minimize_with_mask(self,mask):
+      self.mask = mask
+      self.minimize()
+
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
       self.minimize()

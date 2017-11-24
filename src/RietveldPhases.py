@@ -519,7 +519,7 @@ class RietveldPhases:
       # self.weighted_intensities.shape = (self.weighted_intensities.shape[0],1)
       self.tan_two_theta_peaks = np.tan(math.pi/360.0*self.two_theta_peaks)
       self.tan_two_theta_peaks.shape = (self.tan_two_theta_peaks.shape[0],1)
-      # self.masks = self.peak_masks()
+      self.masks = self.peak_masks()
 
       self.two_theta_masked = \
          np.broadcast_to(self.two_theta,
@@ -606,6 +606,7 @@ class RietveldPhases:
    #       *np.exp(-np.log(2)*two_thetabar_squared))
 
    def Phase_Profile(self):
+      self.Update_two_thetas()
       result = np.zeros((len(self.two_theta_peaks),len(self.two_theta)))
       two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
