@@ -363,9 +363,26 @@ class VarLabelEntry(tk.Frame):
          updateplotprofile()
       return True
 
+class RoundsBoxes(tk.Frame):
+   def __init__(self,parent,controller,default_round_start=1):
+      tk.Frame.__init__(self, parent)
+      self.RoundsLabel = tk.Label(self, text = "Rounds: ")
+      self.RoundsLabel.grid(row=0,column=0,sticky='e')
+
+      self.roundcheckbuttons = []
+      self.roundstates = []
+
+      for i in xrange(max_refinement_rounds):
+         self.roundstates.append(tk.IntVar())
+         if i >= default_round_start-1:
+            self.roundstates[i].set(1)
+         self.roundcheckbuttons.append(tk.Checkbutton(self,
+            variable = self.roundstates[i], text=str(i+1)))
+         self.roundcheckbuttons[i].grid(row=0,column=i+1)
+
 class RefinementParameterControl(tk.Frame):
    def __init__(self, parent, controller, index, text="", 
-      default_round=1,change_all=False,*args, **kwargs):
+      default_round_start=1,change_all=False,*args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.parent = parent
       self.change_all = change_all
@@ -373,40 +390,47 @@ class RefinementParameterControl(tk.Frame):
 
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
-         variable = self.state, text=text, *args, **kwargs)
+         variable = self.state, text=text)
       self.checkbutton.grid(row=0,column=0,sticky='w')
 
-      self.initial = VarLabelEntry(self,'Start at:', 'values', index)
-      self.initial.grid(row=0,column=1,sticky='e')
+      self.rounds = RoundsBoxes(self,parent,default_round_start)
+      self.rounds.grid(row=0,column=1,sticky='w')
+
+      # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
+      # self.initial.grid(row=0,column=1,sticky='e')
       
-      self.l_limit = VarLabelEntry(self,'Lower limit:', 'l_limits', index)
-      self.l_limit.grid(row=1,column=0,sticky='w')
+      # self.l_limit = VarLabelEntry(self,'Lower limit:', 'l_limits', index)
+      # self.l_limit.grid(row=1,column=0,sticky='w')
 
-      self.u_limit = VarLabelEntry(self,'Upper limit:', 'u_limits', index)
-      self.u_limit.grid(row=1,column=1,sticky='e')
+      # self.u_limit = VarLabelEntry(self,'Upper limit:', 'u_limits', index)
+      # self.u_limit.grid(row=1,column=1,sticky='e')
 
-      self.round_dropdownlist = Dropdown_Int_List(self, parent,
-         text="Round:", min_int=1, max_int=max_refinement_rounds, 
-         default_int=default_round)
-      self.round_dropdownlist.grid(row=0,column=2,rowspan=2,sticky='e')
+      # self.round_dropdownlist = Dropdown_Int_List(self, parent,
+      #    text="Round:", min_int=1, max_int=max_refinement_rounds, 
+      #    default_int=default_round)
+      # self.round_dropdownlist.grid(row=0,column=2,rowspan=2,sticky='e')
 
-      self.grid_columnconfigure(0,minsize=130)
-      self.grid_columnconfigure(1,minsize=120)
-      self.grid_columnconfigure(2,minsize=110)
+      
+
+      self.grid_columnconfigure(0,minsize=150)
+      # self.grid_columnconfigure(1,minsize=120)
+      # self.grid_columnconfigure(2,minsize=110)
 
       self.checkbutton_clicked()
 
    def checkbutton_clicked(self):
       if self.state.get() == 1:
-         self.initial.grid()
-         self.l_limit.grid()
-         self.u_limit.grid()
-         self.round_dropdownlist.grid()
+         self.rounds.grid()
+         # self.initial.grid()
+         # self.l_limit.grid()
+         # self.u_limit.grid()
+         # self.round_dropdownlist.grid()
       if self.state.get() == 0:
-         self.initial.grid_remove()
-         self.l_limit.grid_remove()
-         self.u_limit.grid_remove()
-         self.round_dropdownlist.grid_remove()
+         self.rounds.grid_remove()
+         # self.initial.grid_remove()
+         # self.l_limit.grid_remove()
+         # self.u_limit.grid_remove()
+         # self.round_dropdownlist.grid_remove()
       # if self.change_all:
       #    global Rt
       #    for phase in Rt:
@@ -414,27 +438,31 @@ class RefinementParameterControl(tk.Frame):
 
 class RefinementParameterPolynomControl(tk.Frame):
    def __init__(self, parent, controller, 
-      text="", default_order=2, default_round=1,*args, **kwargs):
+      text="", default_order=2, default_round_start=1,*args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.state = tk.IntVar()
       self.parent = parent
       self.text = text
 
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
-         text=text, variable = self.state,*args, **kwargs)
-      self.checkbutton.grid(row=0,column=0)
+         text=text, variable = self.state)
+      self.checkbutton.grid(row=0,column=0,sticky='w')
 
       self.order_dropdownlist = Dropdown_Int_List(self, parent,
          text="Order:", min_int=1, max_int=6, default_int=default_order)
       self.order_dropdownlist.grid(row=0,column=1)
 
-      self.round_dropdownlist = Dropdown_Int_List(self, parent,
-         text="Round:", min_int=1, max_int=max_refinement_rounds, 
-         default_int=default_round)
-      self.round_dropdownlist.grid(row=0,column=2)
+      self.rounds = RoundsBoxes(self,parent,default_round_start)
+      self.rounds.grid(row=0,column=2)
 
-      self.grid_columnconfigure(1,minsize=110)
-      self.grid_columnconfigure(2,minsize=110)
+      # self.round_dropdownlist = Dropdown_Int_List(self, parent,
+      #    text="Round:", min_int=1, max_int=max_refinement_rounds, 
+      #    default_int=default_round)
+      # self.round_dropdownlist.grid(row=0,column=2)
+
+      self.grid_columnconfigure(0,minsize=90)
+      # self.grid_columnconfigure(1,minsize=90)
+      # self.grid_columnconfigure(2,minsize=110)
 
       self.checkbutton_clicked()
 
@@ -442,7 +470,7 @@ class RefinementParameterPolynomControl(tk.Frame):
       global RR
       if self.state.get() == 1:
          self.order_dropdownlist.grid()
-         self.round_dropdownlist.grid()
+         self.rounds.grid()
 
          if self.text == "Background":
             RR = RietveldRefinery(Rt,minimizer_input_string, \
@@ -453,7 +481,7 @@ class RefinementParameterPolynomControl(tk.Frame):
 
       if self.state.get() == 0:
          self.order_dropdownlist.grid_remove()
-         self.round_dropdownlist.grid_remove()
+         self.rounds.grid_remove()
 
          if self.text == "Background":
             if len(subplot1.axes.lines) is not 0:
@@ -534,27 +562,27 @@ class RefinementParameterSet(tk.Frame):
 
       RefinementParameterControl(self,parent,
          phase.Amplitude_index,text="Amplitude",change_all=change_all
-         ,default_round=2).grid(row=0,column=0,sticky='w')
+         ,default_round_start=2).grid(row=0,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
-         phase.W_index,text="Caglioti W",default_round=2) \
+         phase.W_index,text="Caglioti W",default_round_start=2) \
          .grid(row=1,column=0,sticky='w')
 
       RefinementParameterPolynomControl(self,parent,
-         text="eta",default_order=1,default_round=3).grid(row=2,column=0,
+         text="eta",default_order=1,default_round_start=3).grid(row=2,column=0,
          sticky='w')
 
       RefinementParameterControl(self,parent,
-         phase.V_index,text="Caglioti V",default_round=2) \
+         phase.V_index,text="Caglioti V",default_round_start=2) \
          .grid(row=3,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
-         phase.U_index,text="Caglioti U",default_round=2) \
+         phase.U_index,text="Caglioti U",default_round_start=2) \
          .grid(row=4,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
          phase.unit_cell_indices[3],text="Lattice Parameters",
-         default_round=2).grid(row=5,column=0,sticky='w')
+         default_round_start=2).grid(row=5,column=0,sticky='w')
 
 class LoadFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
@@ -562,15 +590,14 @@ class LoadFrame(tk.Frame):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
       self.controller = controller
-      self.globalnb = ttk.Notebook(self,
-               height=100,width=450)
-      self.globalFrame = tk.Frame(self.globalnb,
-         padx=10,pady=10)#, width=100, height=100)
+      self.globalnb = ttk.Notebook(self,height=100,width=450)
+      self.globalFrame = tk.Frame(self.globalnb,padx=10,pady=10)
+      #, width=100, height=100)
       # self.globalLabelFrame.p#grid(row=0,column=0)
 
       RefinementParameterPolynomControl(self.globalFrame,self,
-         text="Background",default_order=2,default_round=1).grid(row=0,column=0,
-         sticky='w')
+         text="Background",default_order=2,default_round_start=1).grid(
+         row=0,column=0,sticky='w')
       RefinementParameterControl(self.globalFrame,self,
          RietveldPhases.two_theta_0_index,text="Two theta offset") \
          .grid(row=1,column=0,sticky='w')
