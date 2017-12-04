@@ -208,8 +208,8 @@ class RietveldGUI(tk.Tk):
 
       self.numPhases=0
 
-      self.plotframe = PlotFrame(self.container,self,padx=10)
-      self.plotframe.grid(row=0,column=1)
+      self.plotframe = PlotFrame(self.container,self,pady=10,padx=10)
+      self.plotframe.grid(row=0,column=1,sticky='ew')
 
       # temp. to allow for auto-loading of profile
       self.getProfile()
@@ -278,7 +278,7 @@ class RietveldGUI(tk.Tk):
       # defaultphase = RietveldPhases('.//data//cifs//1000032.cif',
       #    d_min,d_max, input_string_or_file_name=default_input_string)
 
-      self.paramframe = LoadFrame(self.container,self,padx=10,pady=10)
+      self.paramframe = LoadFrame(self.container,self,padx=10)#,pady=10)
       self.paramframe.grid(row=0,column=0) 
 
       updateplotdata()
@@ -436,6 +436,14 @@ class RefinementParameterControl(tk.Frame):
       #    for phase in Rt:
       #       RietveldPhases.x['values'][index] = 0
 
+class LatticeParameterControl(tk.Frame):
+   def __init__(self,parent,controller,index):
+      tk.Frame.__init__(self,parent)
+      self.index = index
+      self.crystal_system = Rt[index].structure.space_group().crystal_system()
+
+
+
 class RefinementParameterPolynomControl(tk.Frame):
    def __init__(self, parent, controller, 
       text="", default_order=2, default_round_start=1,*args, **kwargs):
@@ -474,7 +482,7 @@ class RefinementParameterPolynomControl(tk.Frame):
 
          if self.text == "Background":
             RR = RietveldRefinery(Rt,minimizer_input_string, \
-               use_bkgd_mask=False,
+               use_bkgd_mask=True,
                store_intermediate_state=True, show_plots=False)
             RR.minimize_Bkgd()
             updateplotprofile()
@@ -658,13 +666,15 @@ class PlotFrame(tk.Frame):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
       global canvas 
-      canvas = FigureCanvasTkAgg(fig,self)
-      canvas.get_tk_widget().pack()
+      canvas = FigureCanvasTkAgg(fig, master=self)
+      canvas.get_tk_widget().pack(side=tk.TOP)
+      # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
 
       toolbar = NavigationToolbar2TkAgg(canvas,self)
       toolbar.update()
-      canvas._tkcanvas.pack(side='top',pady=10)
-      # self.canvas.show()
+      # canvas._tkcanvas.pack()
+      # canvas._tkcanvas.grid()#row=0,column=0)#,sticky='n',pady=10)
+      # canvas.show()
 
 
 if __name__ == "__main__":

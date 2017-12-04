@@ -43,19 +43,21 @@ class RietveldRefinery:
       else:
          self.params_from_string(input_string)
 
-      if self.use_bkgd_mask:
-         bkgd_mask = np.invert(np.any( \
-            [self.Phase_list[i].bkgd_mask(self.two_theta, \
-               bkgd_delta_theta=self.bkgd_delta_theta) \
-               for i in xrange(0,len(self.Phase_list))] \
-               ,axis=0))
-         self.two_theta = self.two_theta[bkgd_mask]
-         self.y = self.y[bkgd_mask]
+      # if self.use_bkgd_mask:
+      #    bkgd_mask = np.invert(np.any( \
+      #       [self.Phase_list[i].bkgd_mask(self.two_theta, \
+      #          bkgd_delta_theta=self.bkgd_delta_theta) \
+      #          for i in xrange(0,len(self.Phase_list))] \
+      #          ,axis=0))
+      #    self.two_theta = self.two_theta[bkgd_mask]
+      #    self.y = self.y[bkgd_mask]
 
       self.del_mask = np.ones(len(self.x['values']),dtype = bool)
 
       self.sum_y = np.sum(self.y)
 
+      if self.use_bkgd_mask:
+         self.TotalProfile_state = self.TotalProfile()
       self.Update_state()
 
    def params_from_file(self,filename):
@@ -91,11 +93,12 @@ class RietveldRefinery:
             self.epsilon = float(line.split()[1])
 
    def TotalProfile(self):
-      if self.use_bkgd_mask:
-         return RietveldPhases.Background_Polynomial(self.two_theta)
-      else:
-         return RietveldPhases.Background_Polynomial(self.two_theta) \
-            + np.sum( x for x in self.Phase_Profiles())
+      # if self.use_bkgd_mask:
+      #    return RietveldPhases.Background_Polynomial(self.two_theta) \
+      #       + self.TotalProfile_state
+      # else:
+      return RietveldPhases.Background_Polynomial(self.two_theta) \
+         + np.sum( x for x in self.Phase_Profiles())
 
    def Phase_Profiles(self):
       for i in xrange(0,len(self.Phase_list)):
@@ -121,7 +124,8 @@ class RietveldRefinery:
       return (self.TotalProfile_state-self.y)/self.y
 
    def Update_state(self):
-      self.TotalProfile_state = self.TotalProfile()
+      if not self.use_bkgd_mask:
+         self.TotalProfile_state = self.TotalProfile()
       self.Relative_Differences_state = self.Relative_Differences()
       # self.Relative_Differences_state.shape = \
       #    (self.Relative_Differences_state.shape[0],1)
@@ -130,7 +134,8 @@ class RietveldRefinery:
    def Weighted_Sum_of_Squares(self,x):
       # print self.mask
       self.x['values'][self.mask] = x
-      self.Update_state()
+      if not self.use_bkgd_mask:
+         self.Update_state()
       return np.sum(self.Weighted_Squared_Errors_state)
 
    def Weighted_Sum_of_Squares_Grad(self,x):
@@ -160,6 +165,8 @@ class RietveldRefinery:
       self.t0 = time.time()
       self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
+      if self.use_bkgd_mask:
+         self.TotalProfile_state = self.TotalProfile()
       minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
          callback = self.callback, \
          fprime = self.Weighted_Sum_of_Squares_Grad, \
