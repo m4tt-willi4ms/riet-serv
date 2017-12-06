@@ -125,6 +125,10 @@ class RietveldPhases:
          cls.global_params_from_string(file.read())
 
    @classmethod
+   def create(cls,*args,**kwargs):
+            
+
+   @classmethod
    def global_params_from_string(cls,input_string,two_theta,I):
       cls.two_theta = two_theta
       cls.I = I

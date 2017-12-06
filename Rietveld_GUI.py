@@ -519,11 +519,11 @@ def updateplotprofile():
          label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='green')
    subplot3.set_xlabel(r'$2\,\theta$')
    subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{I}$")
-   print Rt[0].structure.space_group().crystal_system()
-   print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
-   Rt[0].update_unit_cell()
-   print Rt[0].unit_cell
-   print Rt[0].structure.space_group().average_unit_cell(Rt[0].unit_cell)
+   # print Rt[0].structure.space_group().crystal_system()
+   # print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
+   # Rt[0].update_unit_cell()
+   # print Rt[0].unit_cell
+   # print Rt[0].structure.space_group().average_unit_cell(Rt[0].unit_cell)
    # print lattice_symmetry.group(Rt[0].unit_cell)
    # print tmp.lattice_group_info()
    canvas.draw()
@@ -629,16 +629,18 @@ class LoadFrame(tk.Frame):
       self.CancelButton.grid(row=2,column=1, padx=10, pady=10)
 
    def refine(self):
+      print self.nb.select(self.nb.tabs()[0])
       print RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       global RR
+      RR.use_bkgd_mask = False
       t = startthread(RR.minimize_Amplitude_Bkgd_Offset)
       fig.suptitle("Progress: minimize_Amplitude_Bkgd_Offset")
       while t.isAlive():
          updateplotprofile()
-         time.sleep(.5)
+         time.sleep(1)
+      t.join()
       fig.suptitle("Completed: minimize_Amplitude_Bkgd_Offset")
       updateplotprofile()
-      t.join()
       RR.display_parameters(RR.minimize_Amplitude_Bkgd_Offset)
       RR.display_stats(RR.minimize_Amplitude_Bkgd_Offset)
 
