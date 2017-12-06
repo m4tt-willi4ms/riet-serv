@@ -23,16 +23,16 @@ from scitbx import lbfgsb
 default_input_string = """\
 U              0.00    0     0.1
 V              -0.00   -0.1   0
-W              0.01   0.0001     1
+W              0.001   0.0001     1
 Amplitude         0.1 0      inf
 eta:           2
-unit_cell_a    0.01
 unit_cell_b    0.01
-unit_cell_c    0.01
-unit_cell_alpha   0.005
-unit_cell_beta    0.005
-unit_cell_gamma   0.005
 """
+# unit_cell_a    0.01
+# unit_cell_c    0.01
+# unit_cell_alpha   0.005
+# unit_cell_beta    0.005
+# unit_cell_gamma   0.005
 
 class RietveldPhases:
    r"""
@@ -123,6 +123,10 @@ class RietveldPhases:
       """
       with open(filename) as file:
          cls.global_params_from_string(file.read())
+
+   @classmethod
+   def create(cls,*args,**kwargs):
+            
 
    @classmethod
    def global_params_from_string(cls,input_string,two_theta,I):
@@ -519,7 +523,7 @@ class RietveldPhases:
       # self.weighted_intensities.shape = (self.weighted_intensities.shape[0],1)
       self.tan_two_theta_peaks = np.tan(math.pi/360.0*self.two_theta_peaks)
       self.tan_two_theta_peaks.shape = (self.tan_two_theta_peaks.shape[0],1)
-      # self.masks = self.peak_masks()
+      self.masks = self.peak_masks()
 
       self.two_theta_masked = \
          np.broadcast_to(self.two_theta,
@@ -606,6 +610,7 @@ class RietveldPhases:
    #       *np.exp(-np.log(2)*two_thetabar_squared))
 
    def Phase_Profile(self):
+      self.Update_two_thetas()
       result = np.zeros((len(self.two_theta_peaks),len(self.two_theta)))
       two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
@@ -693,10 +698,13 @@ class RietveldPhases:
       return result
 
    def peak_masks(self,delta_theta=None):
+      two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
       if delta_theta is not None:
-         return np.abs(self.two_theta-self.two_theta_peaks) < delta_theta
+         return np.abs(self.two_theta-two_theta_0-self.two_theta_peaks) \
+            < delta_theta
       else:
-         return np.abs(self.two_theta-self.two_theta_peaks) < self.delta_theta
+         return np.abs(self.two_theta-two_theta_0 - self.two_theta_peaks) \
+            < self.delta_theta
 
    def bkgd_mask(self,two_theta,bkgd_delta_theta):
       return np.any(self.peak_masks(bkgd_delta_theta) \

@@ -34,10 +34,10 @@ epsilon     1e-13
 """
 
 minimizer_input_string = """\
-factr       1e10
+factr       1e7
 iprint      -1
 maxiter     150
-m           10
+m           15
 pgtol       1e-5
 epsilon     1e-13
 """
@@ -45,7 +45,7 @@ epsilon     1e-13
 fine_minimizer_input_string = """\
 factr       1e2
 iprint      1
-maxiter     150
+maxiter     3
 m           15
 pgtol       1e-5
 epsilon     1e-13
@@ -61,7 +61,8 @@ display_plots = True #: Only use to see sample plots
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
 # os.path.dirname(__file__) + r
-with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
+with open(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye") as file:
+# with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
    for line in file.readlines()[1:]:
       two_thetatmp, ytmp, ztmp = line.split()
       # two_thetatmp, ytmp = line.split()
@@ -70,7 +71,7 @@ with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
       tst_y.append(float(ztmp)**2)
 tst_two_theta = np.array(tst_two_theta)
 # mask = np.ones(len(tst_two_theta),dtype=bool)
-mask = tst_two_theta > 20 
+mask = tst_two_theta > 22
 # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
 #    tst_two_theta>34.3))
 # mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
@@ -81,13 +82,17 @@ def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string) 
    cifs = [
       "1540705-Alite.cif", 
-      "9012789-Belite.cif", 
-      "1200009-Ferrite.cif", 
       "1000039-AluminateCubic.cif", 
       "9014308-AluminateOrtho.cif", 
+      "9004096-anhydrite.cif",
       "9007569-Arcanite.cif",
+      "9005521-bassanite.cif",
+      "9012789-Belite.cif", 
+      "9009667-calcite.cif",
+      "1200009-Ferrite.cif", 
       "1011094-FreeLime.cif", 
       "1000053-Periclase.cif", 
+      "9000113-portlandite.cif",
       ]
    Rt = []
 
@@ -111,7 +116,7 @@ def exercise_Rietveld_Refinery_Cement():
    #    tt0 = time.time()
       Rt.append(RietveldPhases(r"data//cifs//Cement/" 
          +cif,d_min,d_max, \
-         I_max = tst_y_max, delta_theta=1.5,Intensity_Cutoff = 0.005))
+         I_max = tst_y_max, delta_theta=1.,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 
@@ -150,6 +155,8 @@ def exercise_Rietveld_Refinery_Cement():
    RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
    # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    # RR.display(RR.minimize_only_Alite)
+   RR.display(RR.minimize_W)
+   RR.display(RR.minimize_eta)
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
    # RR.display(RR.minimize_All)
@@ -160,9 +167,9 @@ def exercise_Rietveld_Refinery_Cement():
    RR2 = RietveldRefinery(RR.Phase_list,
       fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
    RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
-   # RR2.display(RR2.minimize_All)
+   RR2.display(RR2.minimize_All)
+   RR2.display(RR2.minimize_All)
+   RR2.display(RR2.minimize_All)
 
 
 def run():

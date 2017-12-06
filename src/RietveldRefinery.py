@@ -43,19 +43,21 @@ class RietveldRefinery:
       else:
          self.params_from_string(input_string)
 
-      if self.use_bkgd_mask:
-         bkgd_mask = np.invert(np.any( \
-            [self.Phase_list[i].bkgd_mask(self.two_theta, \
-               bkgd_delta_theta=self.bkgd_delta_theta) \
-               for i in xrange(0,len(self.Phase_list))] \
-               ,axis=0))
-         self.two_theta = self.two_theta[bkgd_mask]
-         self.y = self.y[bkgd_mask]
+      # if self.use_bkgd_mask:
+      #    bkgd_mask = np.invert(np.any( \
+      #       [self.Phase_list[i].bkgd_mask(self.two_theta, \
+      #          bkgd_delta_theta=self.bkgd_delta_theta) \
+      #          for i in xrange(0,len(self.Phase_list))] \
+      #          ,axis=0))
+      #    self.two_theta = self.two_theta[bkgd_mask]
+      #    self.y = self.y[bkgd_mask]
 
       self.del_mask = np.ones(len(self.x['values']),dtype = bool)
 
       self.sum_y = np.sum(self.y)
 
+      if self.use_bkgd_mask:
+         self.RawProfile_state = np.sum( x for x in self.Phase_Profiles())
       self.Update_state()
 
    def params_from_file(self,filename):
@@ -92,7 +94,8 @@ class RietveldRefinery:
 
    def TotalProfile(self):
       if self.use_bkgd_mask:
-         return RietveldPhases.Background_Polynomial(self.two_theta)
+         return RietveldPhases.Background_Polynomial(self.two_theta) \
+            + self.RawProfile_state
       else:
          return RietveldPhases.Background_Polynomial(self.two_theta) \
             + np.sum( x for x in self.Phase_Profiles())
@@ -121,6 +124,7 @@ class RietveldRefinery:
       return (self.TotalProfile_state-self.y)/self.y
 
    def Update_state(self):
+      # if not self.use_bkgd_mask:
       self.TotalProfile_state = self.TotalProfile()
       self.Relative_Differences_state = self.Relative_Differences()
       # self.Relative_Differences_state.shape = \
@@ -130,6 +134,7 @@ class RietveldRefinery:
    def Weighted_Sum_of_Squares(self,x):
       # print self.mask
       self.x['values'][self.mask] = x
+      # if not self.use_bkgd_mask:
       self.Update_state()
       return np.sum(self.Weighted_Squared_Errors_state)
 
@@ -160,6 +165,8 @@ class RietveldRefinery:
       self.t0 = time.time()
       self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
+      if self.use_bkgd_mask:
+         self.TotalProfile_state = self.TotalProfile()
       minimizer(self.Weighted_Sum_of_Squares,self.x['values'][self.mask],
          callback = self.callback, \
          fprime = self.Weighted_Sum_of_Squares_Grad, \
@@ -205,6 +212,10 @@ class RietveldRefinery:
       elif self.store_intermediate_state:
          self.Update_state()
 
+   def minimize_with_mask(self,mask):
+      self.mask = mask
+      self.minimize()
+
    def minimize_Amplitude(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Amp")
       self.minimize()
@@ -214,7 +225,7 @@ class RietveldRefinery:
          np.char.startswith(self.x['labels'],"Amp"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_Amplitude_Offset_unit_cell(self,display_plots = True):
       self.mask = np.logical_or(np.logical_or( \
@@ -265,7 +276,7 @@ class RietveldRefinery:
             np.logical_or(np.char.startswith(self.x['labels'],"two_"), \
                self.x['labels'] == "W"))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_Amplitude_Bkgd_Offset_W(self,display_plots = True):
       self.mask = np.logical_or( 
@@ -274,7 +285,7 @@ class RietveldRefinery:
                np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), 
                   self.x['labels'] == "W")))
       self.minimize()
-      self.Update_Phase_list()
+      # self.Update_Phase_list()
 
    def minimize_Bkgd(self,display_plots = True):
       self.mask = np.char.startswith(self.x['labels'],"Bkgd")
@@ -301,6 +312,14 @@ class RietveldRefinery:
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"), \
          np.char.startswith(self.x['labels'],"Bkgd"))
+      self.minimize()
+
+   def minimize_eta(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"eta")
+      self.minimize()
+
+   def minimize_W(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"W")
       self.minimize()
 
    def minimize_All(self,display_plots = True):
