@@ -81,16 +81,13 @@ ys = []
 Rt = []
 RR = None
 
-x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
-
-max_refinement_rounds = 5
-
-CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-
-global_input_string = """\
-Bkgd:          3
-two_theta_0       0.      -0.5  0.5
-"""
+x_defaults = {}
+x_defaults['two_theta_0'] = np.array([('two_theta_0',0.0,-0.5,0.5)],
+   dtype=RietveldPhases.custom_dtype);
+x_defaults['U'] = np.array([('U',0.0,0,0.1)],
+   dtype=RietveldPhases.custom_dtype);
+x_defaults['V'] = np.array([('V',-0.00,-0.1,0)],
+   dtype=RietveldPhases.custom_dtype);
 
 default_input_string = """\
 U              0.00    0     0.1
@@ -105,6 +102,17 @@ unit_cell_alpha   0.005
 unit_cell_beta    0.005
 unit_cell_gamma   0.005
 """
+x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
+
+max_refinement_rounds = 5
+
+CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+
+global_input_string = """\
+Bkgd:          3
+two_theta_0       0.      -0.5  0.5
+"""
+
 
 minimizer_input_string = """\
 factr       1e10
