@@ -1,12 +1,10 @@
 from __future__ import division
 import os, random, math
 import time
-import sys, subprocess
+import sys
 import numpy as np
-import numdifftools as ndt
 from scipy.optimize import approx_fprime
 import matplotlib.pyplot as plt
-import multiprocessing
 
 import paths
 
@@ -29,7 +27,7 @@ custom_dtype = np.dtype([ \
       ])
 
 default_bkgd_order = 3
-default_two_theta_0 = np.array([('two_theta_0',0.0,-0.5,0.5)],
+default_two_theta_0 = np.array([('two_theta_0',0.0,-0.2,0.2)],
    dtype=custom_dtype)
 
 default_U = np.array([('U',0.00,0,0.1)],dtype=custom_dtype)
@@ -103,6 +101,7 @@ class RietveldPhases:
       elif order < 1:
          order = 1
       cls.bkgd = np.hstack((x for x in cls.bkgd_param_gen(order)))
+      return cls.bkgd
 
    @classmethod
    def bkgd_param_gen(cls,order=default_bkgd_order):
@@ -127,7 +126,7 @@ class RietveldPhases:
             elif number_of_columns == 3:
                two_thetatmp, Itmp, sigmatmp = line.split()
             two_theta.append(float(two_thetatmp))
-            I.append(float(Itmp))
+            I.append(float(sigmatmp)**2)
       cls.two_theta = np.array(two_theta)
       cls.I = np.array(I)
 
@@ -179,14 +178,15 @@ class RietveldPhases:
    @classmethod
    def assemble_global_x(cls):
       cls.global_x = np.hstack((x for x in cls.global_param_gen()))
-      # params = (cls.two_theta_0, (x for x in cls.bkgd_param_gen()))
-      # print params
 
    @classmethod
-   def update_global_x(cls):
-      cls.global_x = np.hstack((x for x in self.global_param_gen()))
-      params = (cls.two_theta_0, (x for x in cls.bkgd_param_gen()))
-      print params
+   def update_global_x(cls,global_x):
+      cls.two_theta_0 = global_x[0]
+      cls.bkgd = global_x[1:1+cls.bkgd.shape[0]]
+
+   @classmethod
+   def update_global_x_no_bkgd(cls,global_x_no_bkgd):
+      cls.two_theta_0 = global_x[0]
 
    @classmethod
    def global_param_gen(cls):
@@ -224,12 +224,10 @@ class RietveldPhases:
       self.load_cif(fn_cif)
       self.lattice_parameters = self.set_lattice_parameters()
 
-      # self.params = [self.U,self.V,self.W,self.Amplitude,
-      #    self.eta,self.lattice_parameters]
-
-      # self.dict = {"W": self.W}
-
       self.compute_relative_intensities()
+
+      self.Amplitude['values'] = self.Amplitude['values']* \
+         self.I_max/np.amax(self.phase_profile())
 
    def phase_param_gen(self):
       yield self.U
@@ -275,6 +273,7 @@ class RietveldPhases:
 
    def assemble_phase_x(self):
       self.phase_x = np.hstack((x for x in self.phase_param_gen()))
+      self.phase_mask = np.array(len(self.phase_x),dtype=bool)
 
    def update_params(self):
       # n =0 
@@ -578,45 +577,46 @@ class RietveldPhases:
       #    *np.exp(-np.log(2)*two_thetabar_squared))
       return np.sum(result,axis=0)
 
-   # def Phase_Profile_x(self,x,mask):
-   #    RietveldPhases.x['values'][mask] = x
-   #    if self.recompute_peak_positions:
-   #       self.update_unit_cell()
-   #    # print sys._getframe(1).f_code.co_name
-   #    return self.Phase_Profile()
+   def phase_profile_x(self,x,mask):
+      self.phase_x['values'][mask] = x
+      if self.recompute_peak_positions:
+         self.update_unit_cell()
+      # print sys._getframe(1).f_code.co_name
+      return self.phase_profile()
 
-   # def Phase_Profile_Grad(self, mask, epsilon=1e-6):
-   #    result = np.zeros((len(RietveldPhases.x[mask]),
-   #       len(RietveldPhases.two_theta)))
-   #    # ppgrad = ndt.Gradient(self.Phase_Profile_x,step=epsilon,
-   #    #    check_num_steps=False, num_steps=1, order=2, step_nom=1)
-   #    epsilons = epsilon*np.identity(len(RietveldPhases.x[mask]))
-   #    # xs = np.broadcast_to(RietveldPhases.x['values'][mask],
-   #    #    (len(RietveldPhases.x['values'][mask]),
-   #    #       len(RietveldPhases.x['values'][mask])))
-   #    # masks = mask*np.broadcast_to(mask,
-   #    #    (len(RietveldPhases.x[mask]),len(RietveldPhases.x)))
-   #       # len(RietveldPhases.x),dtype=bool)
-   #    # print mask
-   #    # print masks
-   #    # np.broadcast_to(mask,
-   #    #    (len(RietveldPhases.x['values'][mask]),
-   #    #       len(RietveldPhases.x['values'])))
-   #    for i,eps in enumerate(epsilons):
-   #       # print eps
-   #       # print (self.Phase_Profile_x(RietveldPhases.x['values'][mask]+eps,mask)
-   #       #    -self.Phase_Profile_x(RietveldPhases.x['values'][mask]-eps,mask)) \
-   #       #    / 2/epsilon
-   #       result[i,:] = (self.Phase_Profile_x(
-   #          RietveldPhases.x['values'][mask]+eps,mask)
-   #          -self.Phase_Profile_x(RietveldPhases.x['values'][mask]-eps,mask)) \
-   #          / 2/epsilon
-   #       # print result
-   #    # print np.sum(result,axis=0)
-   #    # print RietveldPhases.x['values'][mask]
-   #    # print RietveldPhases.x['values'][mask]+epsilons
-   #    # print RietveldPhases.x['values'][mask]-epsilons
-   #    return result
+   def phase_profile_grad(self, epsilon=1e-6):
+      result = np.zeros((len(self.phase_x[self.phase_mask]),
+         len(RietveldPhases.two_theta)))
+      # ppgrad = ndt.Gradient(self.Phase_Profile_x,step=epsilon,
+      #    check_num_steps=False, num_steps=1, order=2, step_nom=1)
+      epsilons = epsilon*np.identity(len(self.phase_x[self.phase_mask]))
+      # xs = np.broadcast_to(RietveldPhases.x['values'][mask],
+      #    (len(RietveldPhases.x['values'][mask]),
+      #       len(RietveldPhases.x['values'][mask])))
+      # masks = mask*np.broadcast_to(mask,
+      #    (len(RietveldPhases.x[mask]),len(RietveldPhases.x)))
+         # len(RietveldPhases.x),dtype=bool)
+      # print mask
+      # print masks
+      # np.broadcast_to(mask,
+      #    (len(RietveldPhases.x['values'][mask]),
+      #       len(RietveldPhases.x['values'])))
+      for i,eps in enumerate(epsilons):
+         # print eps
+         # print (self.Phase_Profile_x(RietveldPhases.x['values'][mask]+eps,mask)
+         #    -self.Phase_Profile_x(RietveldPhases.x['values'][mask]-eps,mask)) \
+         #    / 2/epsilon
+         result[i,:] = (self.phase_profile_x(
+            self.phase_x['values'][self.phase_mask]+eps)
+            -self.phase_profile_x(self.phase_x['values'][self.phase_mask]
+               -eps)) \
+            / 2/epsilon
+         # print result
+      # print np.sum(result,axis=0)
+      # print RietveldPhases.x['values'][mask]
+      # print RietveldPhases.x['values'][mask]+epsilons
+      # print RietveldPhases.x['values'][mask]-epsilons
+      return result
 
    # def PseudoVoigtProfile(self,index):
    #    result = np.zeros(len(self.two_theta[self.masks[index]]))
