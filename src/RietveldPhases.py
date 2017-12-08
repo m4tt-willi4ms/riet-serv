@@ -89,6 +89,7 @@ class RietveldPhases:
 
    two_theta_0 = default_two_theta_0 #: Initially set to zero
    bkgd = None #: Initialized to None
+
    max_order = 5
 
    lambdas=["CUA1","CUA2"] #: Default values
@@ -115,14 +116,16 @@ class RietveldPhases:
          n+=1
 
    @classmethod
-   def set_profile(cls,filename):
+   def set_profile(cls,filename,number_of_columns=3):
       two_theta = []
       I = []
       with open(filename) as file:
          for line in file.readlines():#[4:]:
-            # two_thetatmp, ytmp, ztmp = line.split()
-            two_thetatmp, Itmp = line.split()
+            if number_of_columns == 2:
+               two_thetatmp, Itmp = line.split()
             # if float(two_thetatmp) < 15:
+            elif number_of_columns == 3:
+               two_thetatmp, Itmp, sigmatmp = line.split()
             two_theta.append(float(two_thetatmp))
             I.append(float(Itmp))
       cls.two_theta = np.array(two_theta)
@@ -175,8 +178,20 @@ class RietveldPhases:
 
    @classmethod
    def assemble_global_x(cls):
+      cls.global_x = np.hstack((x for x in cls.global_param_gen()))
+      # params = (cls.two_theta_0, (x for x in cls.bkgd_param_gen()))
+      # print params
+
+   @classmethod
+   def update_global_x(cls):
+      cls.global_x = np.hstack((x for x in self.global_param_gen()))
       params = (cls.two_theta_0, (x for x in cls.bkgd_param_gen()))
       print params
+
+   @classmethod
+   def global_param_gen(cls):
+      yield cls.two_theta_0
+      yield cls.bkgd
 
    def __init__(self,fn_cif,
       I_max=None,
@@ -209,49 +224,76 @@ class RietveldPhases:
       self.load_cif(fn_cif)
       self.lattice_parameters = self.set_lattice_parameters()
 
+      # self.params = [self.U,self.V,self.W,self.Amplitude,
+      #    self.eta,self.lattice_parameters]
 
-      #: check whether the unit cell is being refined
-      # if np.any(self.get_unit_cell_parameters_mask()):
-      #    self.refine_unit_cell = True
-      # else: self.refine_unit_cell = False
+      # self.dict = {"W": self.W}
 
       self.compute_relative_intensities()
 
-      # print "two_theta_peaks_max: " + str(self.two_theta_peaks \
-      #    [self.weighted_intensities.argmax()])
-      # print "I_max: " + str(self.I_max)
-
-      # print "Phase Profile Max (Before): " + \
-      #    str(np.amax(self.Phase_Profile(self.two_theta_peaks[:,0])))
-      # print "x (Before): " + str(RietveldPhases.x['values'] \
-      #    [self.Amplitude_index]) 
-      # RietveldPhases.x['values'][self.Amplitude_index] =  \
-      #    RietveldPhases.x['values'][self.Amplitude_index] * \
-      #       self.I_max/np.amax(self.Phase_Profile())
-      # print "Phase Profile Max (After): " + \
-      #    str(np.amax(self.Phase_Profile(self.two_theta_peaks[:,0])))
-      # print "x (After): " + str(RietveldPhases.x['values'] \
-      #    [self.Amplitude_index])
+   def phase_param_gen(self):
+      yield self.U
+      yield self.V
+      yield self.W
+      yield self.Amplitude
+      yield self.eta
+      yield self.lattice_parameters
 
    def assemble_lattice_params(self):
+      crystal_system = self.structure.space_group().crystal_system()
+      uc_params = self.unit_cell.parameters()
       if crystal_system == "Triclinic":
          mask = [True,True,True,True,True,True]
       elif crystal_system == "Monoclinic":
          mask = [True,True,True]
          for i in xrange(3,6):
-            if np.isclose(self.unit_cell.parameters()[i], 90):
+            if np.isclose(uc_params[i], 90):
                mask.append(False)
             else: mask.append(True)
+      elif crystal_system == "Orthorhombic":
+         mask = [True,True,True,False,False,False]
+      elif crystal_system == "Tetragonal":
+         mask = [True]
+         for i in xrange(1,3):
+            if np.isclose(uc_params[i],uc_params[0]):
+               mask.append(False)
+            else: mask.append(True)
+         mask.append([False,False,False])
+      elif crystal_system == "Trigonal":
+         if np.isclose(uc_params[3],uc_params[4]) and \
+            np.isclose(uc_params[3],uc_params[5]):
+            mask = [True,False,False,True,False,False]
+         else: mask = [True,False,True,False,False,False]
+      elif crystal_system == "Hexagonal":
+         mask = [True,False,True,False,False,False]
+      elif crystal_system == "Cubic":
+         mask = [True,False,False,False,False,False]
+
       assert len(mask) == 6
       return np.array([x for x in self.unit_cell_parameter_gen(mask)],
             dtype=custom_dtype)
 
-   def assemble_params(self):
-      params = (self.U,self.V,self.W,self.Amplitude)
-      self.phase_x = np.stack(params)
+   def assemble_phase_x(self):
+      self.phase_x = np.hstack((x for x in self.phase_param_gen()))
 
+   def update_params(self):
+      # n =0 
+      # for x in self.params:
+      #    print x
+      #    x = self.phase_x[n:n+x.shape[0]]
+      #    print x
+      #    n += x.shape[0]
+      # self.W = self.phase_x[2]
+      # for x in self.dict.values():
+      #    print x
+      
       self.U = self.phase_x[0]
       self.V = self.phase_x[1]
+      self.W = self.phase_x[2]
+      self.Amplitude = self.phase_x[3]
+      self.eta = self.phase_x[4:4+self.eta.shape[0]]
+      self.lattice_parameters = self.phase_x[4+self.eta.shape[0]:
+         4+self.eta.shape[0]+self.lattice_parameters.shape[0]]
 
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
@@ -301,21 +343,21 @@ class RietveldPhases:
          
       """
       mask = [True,True,True,True,True,True]
-      return np.array([x for x in self.unit_cell_parameter_gen(mask)],
-            dtype=custom_dtype)
+      return  np.array(
+         [x for x in self.unit_cell_parameter_gen(mask)],dtype=custom_dtype)
 
-   def update_unit_cell(self):
-      if self.refine_unit_cell:
-         unit_cell_parameters = list(self.unit_cell.parameters()) #self.get_unit_cell_parameters()
-         for (i,param) in enumerate(unit_cell_parameters):
-            if self.unit_cell_indices[i] != 0:
-               unit_cell_parameters[i] = \
-                  self.x['values'][self.unit_cell_indices[i]]
+   # def update_unit_cell(self):
+   #    if self.refine_unit_cell:
+   #       unit_cell_parameters = list(self.unit_cell.parameters()) #self.get_unit_cell_parameters()
+   #       for (i,param) in enumerate(unit_cell_parameters):
+   #          if self.unit_cell_indices[i] != 0:
+   #             unit_cell_parameters[i] = \
+   #                self.x['values'][self.unit_cell_indices[i]]
 
-         # print unit_cell_parameters
-         self.unit_cell = uctbx.unit_cell(tuple(unit_cell_parameters))
-         # self.Update_two_thetas()
-         self.Compute_Relative_Intensities()
+   #       # print unit_cell_parameters
+   #       self.unit_cell = uctbx.unit_cell(tuple(unit_cell_parameters))
+   #       # self.Update_two_thetas()
+   #       self.Compute_Relative_Intensities()
 
    def compute_relative_intensities(self,lammbda="CUA1",anomalous_flag = True):
       r"""Returns squared structure factors, weighted by the multiplicity of 
@@ -400,25 +442,8 @@ class RietveldPhases:
       self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2 
 
    def update_two_thetas(self):
-      self.d_spacings = self.f_miller_set.d_spacings().data().as_numpy_array() 
-      # self.relative_intensities = f_calc_sq * f_calc_mult.as_double() \
-      #    .as_numpy_array() #: weight intensities by the corresponding
-         #: multiplicity
-      # print "Volume: " + str(self.unit_cell.volume())
-
-      # Drop any peaks below the Intensity Cutoff
-      # rel_I_max_calc = np.amax(self.relative_intensities)
-      # print self.d_spacings.shape
-      # print self.d_max.shape
-      # print self.rel_I_max_calc.shape
-      # print self.relative_intensities.shape
-      # if self.relative_intensities.shape[0] != 0:
-      #    mask = np.logical_and( \
-      #       self.relative_intensities 
-      #          > self.Intensity_Cutoff*self.rel_I_max_calc,
-      #       self.d_spacings < self.d_max)
-      self.d_spacings = self.d_spacings[self.d_mask]
-      #    self.relative_intensities = self.relative_intensities[mask]
+      self.d_spacings = self.f_miller_set.d_spacings().data().as_numpy_array() \
+         [self.d_mask] 
 
       two_thetas = np.zeros((2,len(self.d_spacings)))
       # factors = np.zeros((2,len(self.d_spacings)))

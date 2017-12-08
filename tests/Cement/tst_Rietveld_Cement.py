@@ -19,67 +19,70 @@ from cctbx.eltbx import wavelengths
 from libtbx import test_utils
 import libtbx.load_env
 
-global_input_string = """\
-Bkgd:          3
-two_theta_0       0.      -0.5  0.5
-"""
+# global_input_string = """\
+# Bkgd:          3
+# two_theta_0       0.      -0.5  0.5
+# """
 
-bkgd_minimizer_input_string = """\
-factr       1e10
-iprint      -1
-maxiter     150
-m           10
-pgtol       1e-5
-epsilon     1e-13
-"""
+# bkgd_minimizer_input_string = """\
+# factr       1e10
+# iprint      -1
+# maxiter     150
+# m           10
+# pgtol       1e-5
+# epsilon     1e-13
+# """
 
-minimizer_input_string = """\
-factr       1e7
-iprint      -1
-maxiter     150
-m           15
-pgtol       1e-5
-epsilon     1e-13
-"""
+# minimizer_input_string = """\
+# factr       1e7
+# iprint      -1
+# maxiter     150
+# m           15
+# pgtol       1e-5
+# epsilon     1e-13
+# """
 
-fine_minimizer_input_string = """\
-factr       1e2
-iprint      1
-maxiter     3
-m           15
-pgtol       1e-5
-epsilon     1e-13
-"""
+# fine_minimizer_input_string = """\
+# factr       1e2
+# iprint      1
+# maxiter     3
+# m           15
+# pgtol       1e-5
+# epsilon     1e-13
+# """
 
-tst_two_theta = []
-tst_y = []
+# tst_two_theta = []
+# tst_y = []
 
-is_Sim_data = True #: Should be False unless simulated data 
-   #: (e.g. "Jade-AL2O3-Sim.xye") is used
-display_plots = True #: Only use to see sample plots
-# with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
-# with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
-# with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-# os.path.dirname(__file__) + r
-with open(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye") as file:
-# with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
-   for line in file.readlines()[1:]:
-      two_thetatmp, ytmp, ztmp = line.split()
-      # two_thetatmp, ytmp = line.split()
-      # if float(two_thetatmp) < 15:
-      tst_two_theta.append(float(two_thetatmp))
-      tst_y.append(float(ztmp)**2)
-tst_two_theta = np.array(tst_two_theta)
-# mask = np.ones(len(tst_two_theta),dtype=bool)
-mask = tst_two_theta > 22
-# mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
-#    tst_two_theta>34.3))
-# mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
-tst_two_theta = tst_two_theta[mask]
-tst_y = np.array(tst_y)[mask]
+# is_Sim_data = True #: Should be False unless simulated data 
+#    #: (e.g. "Jade-AL2O3-Sim.xye") is used
+# display_plots = True #: Only use to see sample plots
+# # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
+# # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
+# # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
+# # os.path.dirname(__file__) + r
+# with open(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye") as file:
+# # with open(r"data//profiles//cement_15_03_11_0028.xye") as file:
+#    for line in file.readlines()[1:]:
+#       two_thetatmp, ytmp, ztmp = line.split()
+#       # two_thetatmp, ytmp = line.split()
+#       # if float(two_thetatmp) < 15:
+#       tst_two_theta.append(float(two_thetatmp))
+#       tst_y.append(float(ztmp)**2)
+# tst_two_theta = np.array(tst_two_theta)
+# # mask = np.ones(len(tst_two_theta),dtype=bool)
+# mask = tst_two_theta > 22
+# # mask = np.logical_and(tst_two_theta >25,np.logical_or(tst_two_theta<33.75,
+# #    tst_two_theta>34.3))
+# # mask = np.logical_or(tst_two_theta<33.75,tst_two_theta>34.3)
+# tst_two_theta = tst_two_theta[mask]
+# tst_y = np.array(tst_y)[mask]
 
 def exercise_Rietveld_Refinery_Cement():
    # RietveldPhase.fromstring(input_string) 
+
+   RietveldPhases.set_profile(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye")
+
    cifs = [
       "1540705-Alite.cif", 
       "1000039-AluminateCubic.cif", 
@@ -99,24 +102,19 @@ def exercise_Rietveld_Refinery_Cement():
    print "cifs: \n" 
    for p in cifs:
       print p
-   print "Global Input String: \n" + global_input_string
-   print "Minimizer Input String: \n" + minimizer_input_string
-   print "Fine Minimizer Input String: \n" + fine_minimizer_input_string
 
+   # CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+   # d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
+   # d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
+   # tst_y_max = np.amax(tst_y)/len(cifs)
 
-   CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-   d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
-   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
-   tst_y_max = np.amax(tst_y)/len(cifs)
-
-   RietveldPhases.global_params_from_string(global_input_string,
-      tst_two_theta,tst_y)
+   # RietveldPhases.global_params_from_string(global_input_string,
+   #    tst_two_theta,tst_y)
 
    for cif in cifs:
    #    tt0 = time.time()
       Rt.append(RietveldPhases(r"data//cifs//Cement/" 
-         +cif,d_min,d_max, \
-         I_max = tst_y_max, delta_theta=1.,Intensity_Cutoff = 0.005))
+         +cif, delta_theta=1.,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 
@@ -131,45 +129,45 @@ def exercise_Rietveld_Refinery_Cement():
    #    print Rp.two_theta_peaks.shape[0]
    #    numpeaks += Rp.two_theta_peaks.shape[0]
    # print numpeaks
+   RietveldPhases.set_bkgd_order(2)
 
    # First fit the background
-   RR = RietveldRefinery(Rt,bkgd_minimizer_input_string, \
-      use_bkgd_mask=False,bkgd_delta_theta=0.05,
-      store_intermediate_state=True, show_plots=True)
-   RR.display(RR.minimize_Bkgd)
+   RR = RietveldRefinery(Rt,bkgd_refine=True,
+      factr=1e10, store_intermediate_state=False, show_plots=True)
+   RR.display(RR.minimize_bkgd)
 
-   #Now use the full dataset
-   RR = RietveldRefinery(Rt,minimizer_input_string,
-      store_intermediate_state=True, show_plots=True)
+   # #Now use the full dataset
+   # RR = RietveldRefinery(Rt,minimizer_input_string,
+   #    store_intermediate_state=True, show_plots=True)
 
-   # RR.display(RR.minimize_Bkgd)
-   # RR.display(RR.minimize_Bkgd_Offset)
-   # RR.display(RR.minimize_Amplitude)
-   # RR.display(RR.minimize_Amplitude)
-   RR.display(RR.minimize_Amplitude_Offset)
-   # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
-   RR.display(RR.minimize_unit_cell)
-   # RR.display(RR.minimize_First_n_Phases)
-   # RR.display(RR.minimize_First_n_Phases,n=3)
-   # RR.display(RR.minimize_Amplitude_Offset_W)
-   RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
-   # RR.display(RR.minimize_only_Alite)
-   RR.display(RR.minimize_W)
-   RR.display(RR.minimize_eta)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
-   # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_Bkgd)
+   # # RR.display(RR.minimize_Bkgd_Offset)
+   # # RR.display(RR.minimize_Amplitude)
+   # # RR.display(RR.minimize_Amplitude)
+   # RR.display(RR.minimize_Amplitude_Offset)
+   # # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
+   # RR.display(RR.minimize_unit_cell)
+   # # RR.display(RR.minimize_First_n_Phases)
+   # # RR.display(RR.minimize_First_n_Phases,n=3)
+   # # RR.display(RR.minimize_Amplitude_Offset_W)
+   # RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
+   # # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
+   # # RR.display(RR.minimize_only_Alite)
+   # RR.display(RR.minimize_W)
+   # RR.display(RR.minimize_eta)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
+   # # RR.display(RR.minimize_All)
 
-   #For fine-tuning
-   RR2 = RietveldRefinery(RR.Phase_list,
-      fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
+   # #For fine-tuning
+   # RR2 = RietveldRefinery(RR.Phase_list,
+   #    fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
 
 
 def run():
