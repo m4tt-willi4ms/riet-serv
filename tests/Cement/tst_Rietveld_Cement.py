@@ -8,22 +8,23 @@ from src.RietveldRefinery import RietveldRefinery
 
 def exercise_Rietveld_Refinery_Cement():
 
-   RietveldPhases.set_profile(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye")
+   RietveldPhases.set_profile(r"data//profiles//17_11_15_0004_CEMI425R_d6.xye",
+      min_two_theta=22)
    RietveldPhases.set_bkgd_order(3)
 
    cifs = [
       "1540705-Alite.cif", 
-      "1000039-AluminateCubic.cif", 
-      "9014308-AluminateOrtho.cif", 
-      "9004096-anhydrite.cif",
-      "9007569-Arcanite.cif",
-      "9005521-bassanite.cif",
-      "9012789-Belite.cif", 
-      "9009667-calcite.cif",
-      "1200009-Ferrite.cif", 
-      "1011094-FreeLime.cif", 
-      "1000053-Periclase.cif", 
-      "9000113-portlandite.cif",
+      # "1000039-AluminateCubic.cif", 
+      # "9014308-AluminateOrtho.cif", 
+      # "9004096-anhydrite.cif",
+      # "9007569-Arcanite.cif",
+      # "9005521-bassanite.cif",
+      # "9012789-Belite.cif", 
+      # "9009667-calcite.cif",
+      # "1200009-Ferrite.cif", 
+      # "1011094-FreeLime.cif", 
+      # "1000053-Periclase.cif", 
+      # "9000113-portlandite.cif",
       ]
 
    print "cifs: \n" 
@@ -45,7 +46,6 @@ def exercise_Rietveld_Refinery_Cement():
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt, store_intermediate_state=False, show_plots=True)
-
    # RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Bkgd_Offset)
    # RR.display(RR.minimize_Amplitude)

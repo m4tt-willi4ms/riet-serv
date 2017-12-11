@@ -28,7 +28,6 @@ class RietveldRefinery:
 
    def __init__(self,phase_list, \
       bkgd_refine=False,
-      bkgd_delta_theta=0.5,
       store_intermediate_state=False,
       show_plots=False,
       factr=default_factr,
@@ -46,7 +45,6 @@ class RietveldRefinery:
       self.two_theta = RietveldPhases.two_theta
       self.y = RietveldPhases.I
       self.bkgd_refine = bkgd_refine
-      self.bkgd_delta_theta = bkgd_delta_theta
       self.store_intermediate_state = store_intermediate_state
       self.show_plots = show_plots
       self.factr = factr
@@ -93,9 +91,12 @@ class RietveldRefinery:
 
       n=len(RietveldPhases.global_x)
       self.phase_masks = []
+      self.global_and_phase_masks = []
       for phase in self.phase_list:
          self.phase_masks.append(np.isin(np.array(xrange(len(self.x))),
             np.array(xrange(n,n+len(phase.phase_x)))))
+         self.global_and_phase_masks.append(np.logical_or(
+            self.global_mask_no_bkgd,self.phase_masks[-1]))
          n+=len(phase.phase_x)
 
       self.update_state()
@@ -154,10 +155,11 @@ class RietveldRefinery:
    def update_state(self):
       # if not self.bkgd_refine:
       RietveldPhases.update_global_x(self.x[self.global_mask])
-      for i in xrange(len(self.phase_list)):
-         self.phase_list[i].phase_x = self.x[self.phase_masks[i]]
-         self.phase_list[i].update_params()
-            # self.x[self.phase_masks[i]][self.mask[self.phase_masks[i]]])
+      if not self.bkgd_refine:
+         for i in xrange(len(self.phase_list)):
+            self.phase_list[i].phase_x = self.x[self.phase_masks[i]]
+            self.phase_list[i].update_params()
+               # self.x[self.phase_masks[i]][self.mask[self.phase_masks[i]]])
       self.total_profile_state = self.total_profile()
       self.relative_differences_state = self.relative_differences()
       # self.Relative_Differences_state.shape = \
@@ -180,23 +182,23 @@ class RietveldRefinery:
       if np.any(bkgd_mask):
          result[bkgd_mask] = \
             np.sum(2*np.multiply(
-               RietveldPhases.two_theta_powers[:len(bkgd_mask)],
+               RietveldPhases.two_theta_powers[:len(RietveldPhases.bkgd)],
                self.relative_differences_state),axis=1)
-
-      global_mask = np.logical_and(self.mask,
-         self.global_mask_no_bkgd)[self.mask]
-      if np.any(global_mask):
-         result[global_mask] = np.sum(2*np.multiply(self.phase_list[i].
-               phase_profile_grad(mask, epsilon=self.epsilon),
-               self.relative_differences_state),axis=1)
+      # print "here"
+      # global_mask = np.logical_and(self.mask,
+      #    self.global_mask_no_bkgd)[self.mask]
+      # if np.any(global_mask):
+      #    result[global_mask] = np.sum(2*np.multiply(self.phase_list[i].
+      #          phase_profile_grad(mask, epsilon=self.epsilon),
+      #          self.relative_differences_state),axis=1)
 
       for i in xrange(0,len(self.phase_list)):
-         mask = np.logical_and(self.mask,np.logical_or(
-            self.global_mask_no_bkgd,self.phase_masks[i])
-            )
-         if np.any(mask):
-            result[mask[self.mask]] += np.sum(2*np.multiply(self.phase_list[i].
-               phase_profile_grad(mask, epsilon=self.epsilon),
+         mask = np.logical_and(self.mask,self.global_and_phase_masks[i]) 
+         if np.any(mask[self.global_and_phase_masks[i]]):
+            result[mask[self.mask]] += \
+               np.sum(2*np.multiply(self.phase_list[i].
+               phase_profile_grad(mask[self.global_and_phase_masks[i]], 
+                  epsilon=self.epsilon),
                self.relative_differences_state),axis=1)
       return result
 
@@ -204,12 +206,12 @@ class RietveldRefinery:
       self.t0 = time.time()
       # self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
-      if self.bkgd_refine:
-         self.total_profile_state = self.total_profile()
+      # if self.bkgd_refine:
+      #    self.raw_profile_state = self.total_profile()
       minimizer(self.weighted_sum_of_squares,self.x['values'][self.mask],
          callback = self.callback, \
-         # fprime = self.weighted_sum_of_squares_grad, \
-         approx_grad = True,
+         fprime = self.weighted_sum_of_squares_grad, \
+         # approx_grad = True,
          factr = self.factr,
          iprint = self.iprint,
          m = self.m,
@@ -322,7 +324,7 @@ class RietveldRefinery:
       self.mask = np.logical_or( 
          np.char.startswith(self.x['labels'],"Amp"), 
             np.logical_or(np.char.startswith(self.x['labels'],"two_"), 
-               np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), 
+               np.logical_or(np.char.startswith(self.x['labels'],"bkgd"), 
                   self.x['labels'] == "W")))
       self.minimize()
       # self.Update_Phase_list()
@@ -333,7 +335,7 @@ class RietveldRefinery:
 
    def minimize_Bkgd_Offset(self,display_plots = True):
       self.mask = np.logical_or(
-         np.char.startswith(self.x['labels'],"Bkgd"),
+         np.char.startswith(self.x['labels'],"bkgd"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
 
@@ -344,14 +346,14 @@ class RietveldRefinery:
    def minimize_Amplitude_Bkgd_Offset(self,display_plots = True):
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"), \
-            np.logical_or(np.char.startswith(self.x['labels'],"Bkgd"), \
+            np.logical_or(np.char.startswith(self.x['labels'],"bkgd"), \
                np.char.startswith(self.x['labels'],"two_")))
       self.minimize()
 
    def minimize_Amplitude_Bkgd(self,display_plots = True):
       self.mask = np.logical_or( \
          np.char.startswith(self.x['labels'],"Amp"), \
-         np.char.startswith(self.x['labels'],"Bkgd"))
+         np.char.startswith(self.x['labels'],"bkgd"))
       self.minimize()
 
    def minimize_eta(self,display_plots = True):
@@ -378,7 +380,7 @@ class RietveldRefinery:
       # autohide=False)
 
       if self.show_plots:
-         self.total_profile_state = self.total_profile()
+         # self.total_profile_state = self.total_profile()
          self.show_multiplot("Progress: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
@@ -395,7 +397,7 @@ class RietveldRefinery:
 
 
       if ((not self.store_intermediate_state) and self.show_plots):
-         self.total_profile_state = self.total_profile()
+         # self.total_profile_state = self.total_profile()
          self.show_multiplot("After: " + fn.__name__, \
          two_theta_roi=32.5, \
          delta_theta=3, \
@@ -494,7 +496,7 @@ class RietveldRefinery:
 
       subplot3 = self.fig.add_subplot(313) #plt.subplot(3,1,3)
       self.residuals, = subplot3.plot(self.two_theta,
-         self.weighted_squared_errors(),'bo',ms=2)
+         self.weighted_squared_errors_state,'bo',ms=2)
       plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
       plt.xlabel(r'$2\,\theta$')
 
