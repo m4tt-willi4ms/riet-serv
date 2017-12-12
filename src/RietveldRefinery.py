@@ -11,12 +11,12 @@ import json,codecs
 
 from RietveldPhases import RietveldPhases
 
-default_factr = 1e7
+default_factr = 1e10
 default_iprint = 1
 default_maxiter = 150
 default_m = 15
 default_pgtol = 1e-5
-default_epsilon = 1e-8
+default_epsilon = 1e-13
 
 class RietveldRefinery:
    """
@@ -109,25 +109,25 @@ class RietveldRefinery:
          return RietveldPhases.background_polynomial() \
             + np.sum( x for x in self.phase_profiles())
 
-   def update_xs(self):
-      if np.any(self.mask[self.global_mask_no_bkgd]):
-         RietveldPhases.update_global_x_no_bkgd(
-            self.x[self.global_mask_no_bkgd])
-      if np.any(self.mask[self.bkgd_mask]):
-         RietveldPhases.update_bkgd(self.x[self.bkgd_mask])
-      for i in xrange(len(phase_list)):
-         if np.any(self.mask[self.phase_masks[i]]):
-            self.phase_list[i].update_phase_x(self.x[self.phase_masks[i]])
+   # def update_xs(self):
+   #    if np.any(self.mask[self.global_mask_no_bkgd]):
+   #       RietveldPhases.update_global_x_no_bkgd(
+   #          self.x[self.global_mask_no_bkgd])
+   #    if np.any(self.mask[self.bkgd_mask]):
+   #       RietveldPhases.update_bkgd(self.x[self.bkgd_mask])
+   #    for i in xrange(len(phase_list)):
+   #       if np.any(self.mask[self.phase_masks[i]]):
+   #          self.phase_list[i].update_phase_x(self.x[self.phase_masks[i]])
 
-   def total_profile_x(self,x):
-      self.x['values'][self.mask] = x
-      self.update_state()
-      if self.bkgd_refine:
-         return RietveldPhases.background_polynomial() \
-            + self.raw_profile_state
-      else:
-         return RietveldPhases.background_polynomial() \
-            + np.sum( x for x in self.phase_profiles())
+   # def total_profile_x(self,x):
+   #    self.x['values'][self.mask] = x
+   #    self.update_state()
+   #    if self.bkgd_refine:
+   #       return RietveldPhases.background_polynomial() \
+   #          + self.raw_profile_state
+   #    else:
+   #       return RietveldPhases.background_polynomial() \
+   #          + np.sum( x for x in self.phase_profiles())
 
    def phase_profiles(self):
       for i in xrange(0,len(self.phase_list)):
@@ -154,13 +154,15 @@ class RietveldRefinery:
 
    def update_state(self):
       # if not self.bkgd_refine:
-      RietveldPhases.update_global_x(self.x[self.global_mask])
+      RietveldPhases.update_global_x(self.x[self.global_mask],
+         self.mask[self.global_mask])
       if not self.bkgd_refine:
          for i in xrange(len(self.phase_list)):
-            self.phase_list[i].phase_x = self.x[self.phase_masks[i]]
-            self.phase_list[i].update_params()
+            self.phase_list[i].update_params(self.x[self.phase_masks[i]],
+               self.mask[self.phase_masks[i]])
                # self.x[self.phase_masks[i]][self.mask[self.phase_masks[i]]])
       self.total_profile_state = self.total_profile()
+      # print "profile: " + str(self.phase_list[0].phase_x[3])
       self.relative_differences_state = self.relative_differences()
       # self.Relative_Differences_state.shape = \
       #    (self.Relative_Differences_state.shape[0],1)
@@ -184,28 +186,27 @@ class RietveldRefinery:
             np.sum(2*np.multiply(
                RietveldPhases.two_theta_powers[:len(RietveldPhases.bkgd)],
                self.relative_differences_state),axis=1)
-      # print "here"
-      # global_mask = np.logical_and(self.mask,
-      #    self.global_mask_no_bkgd)[self.mask]
-      # if np.any(global_mask):
-      #    result[global_mask] = np.sum(2*np.multiply(self.phase_list[i].
-      #          phase_profile_grad(mask, epsilon=self.epsilon),
-      #          self.relative_differences_state),axis=1)
 
       for i in xrange(0,len(self.phase_list)):
-         mask = np.logical_and(self.mask,self.global_and_phase_masks[i]) 
-         if np.any(mask[self.global_and_phase_masks[i]]):
+         mask = self.global_and_phase_refine_masks[i]
+         if np.any(mask):
             result[mask[self.mask]] += \
                np.sum(2*np.multiply(self.phase_list[i].
-               phase_profile_grad(mask[self.global_and_phase_masks[i]], 
+               phase_profile_grad(mask[self.global_and_phase_masks[i]],
                   epsilon=self.epsilon),
                self.relative_differences_state),axis=1)
+      # print "post-grad: " + str(self.phase_list[0].phase_x[3])
       return result
 
    def minimize(self):
       self.t0 = time.time()
       # self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
+
+      self.global_and_phase_refine_masks = []
+      for i in xrange(len(self.phase_list)):
+         self.global_and_phase_refine_masks.append(
+            np.logical_and(self.mask,self.global_and_phase_masks[i]))
       # if self.bkgd_refine:
       #    self.raw_profile_state = self.total_profile()
       minimizer(self.weighted_sum_of_squares,self.x['values'][self.mask],
@@ -253,6 +254,7 @@ class RietveldRefinery:
          self.update_plot()
       elif self.store_intermediate_state:
          self.update_state()
+      # print self.x[self.mask]
 
    def minimize_with_mask(self,mask):
       self.mask = mask
