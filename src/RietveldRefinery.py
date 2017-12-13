@@ -11,7 +11,7 @@ import json,codecs
 
 from RietveldPhases import RietveldPhases
 
-default_factr = 1e10
+default_factr = 1e3
 default_iprint = 1
 default_maxiter = 150
 default_m = 15
@@ -83,7 +83,6 @@ class RietveldRefinery:
          np.hstack((x.phase_x for x in self.phase_list))))
 
       self.mask = np.zeros(len(self.x),dtype=bool)
-
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
       self.bkgd_mask = np.char.startswith(self.x['labels'],"bkgd")
@@ -428,10 +427,10 @@ class RietveldRefinery:
          print label + " = " + str(value) + " (" + str(l) + ", " + str(u) + ")"
 
    def display_stats(self,fn=None):
-      self.mask = np.ones(len(self.x),dtype=bool)
-      WSS = self.weighted_sum_of_squares(self.x['values'])
+      # self.mask = np.ones(len(self.x),dtype=bool)
+      WSS = np.sum(self.weighted_squared_errors_state)
       R_wp = np.sqrt(WSS/self.sum_y)
-      R_e = np.sqrt((len(self.two_theta)-len(self.x))/self.sum_y)
+      R_e = np.sqrt((len(self.two_theta)-len(self.x[self.mask]))/self.sum_y)
       if fn is not None:
          print "\nTime taken to run " + fn.__name__ + ": " \
             + str(round(self.t1-self.t0,3)) + " seconds"

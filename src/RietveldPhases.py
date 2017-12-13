@@ -30,6 +30,7 @@ custom_dtype = np.dtype([ \
 default_bkgd_order = 3
 default_two_theta_0 = np.array([('two_theta_0',0.0,-0.2,0.2)],
    dtype=custom_dtype)
+default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 
 default_U = np.array([('U',0.00,0,0.1)],dtype=custom_dtype)
 default_V = np.array([('V',-0.00,-0.1,0)],dtype=custom_dtype)
@@ -86,10 +87,13 @@ class RietveldPhases:
       Testing out the notes functionality in numpydocs
    """
 
-   two_theta_0 = default_two_theta_0 #: Initially set to zero
+   custom_dtype = custom_dtype
+
+   two_theta_0 = default_two_theta_0
+   vertical_offset = default_vertical_offset
    bkgd = None #: Initialized to None
 
-   max_order = 5
+   max_polynom_order = 5
 
    lambdas=["CUA1","CUA2"] #: Default values
    K_alpha_factors = [1,0.48]  #: Default values
@@ -97,8 +101,8 @@ class RietveldPhases:
    @classmethod
    def set_bkgd_order(cls,order):
       assert isinstance(order,int) == True
-      if order > cls.max_order:
-         order = cls.max_order
+      if order > cls.max_polynom_order:
+         order = cls.max_polynom_order
       elif order < 1:
          order = 1
       cls.bkgd = np.hstack((x for x in cls.bkgd_param_gen(order)))
@@ -108,11 +112,11 @@ class RietveldPhases:
    def bkgd_param_gen(cls,order=default_bkgd_order):
       n=0
       while n < order:
-         if cls.bkgd == None:
-            yield np.array([('bkgd_'+str(n),0.0,-float('inf'),float('inf'))],
-               dtype=custom_dtype)
-         else:
-            yield cls.bkgd[n]
+         # if cls.bkgd == None:
+         yield np.array([('bkgd_'+str(n),0.0,-float('inf'),float('inf'))],
+            dtype=custom_dtype)
+         # else:
+         #    yield cls.bkgd[n]
          n+=1
 
    @classmethod
@@ -148,7 +152,9 @@ class RietveldPhases:
       cls.d_max = CU_wavelength/2/np.sin(np.pi/360*cls.two_theta[0])
 
       cls.two_theta_powers = np.power(cls.two_theta,np.array(
-         xrange(0,cls.max_order)).reshape(cls.max_order,1))
+         xrange(0,cls.max_polynom_order)).reshape(cls.max_polynom_order,1))
+
+      cls.set_bkgd_order(default_bkgd_order)
 
    @classmethod
    def background_polynomial(cls):
@@ -191,7 +197,7 @@ class RietveldPhases:
    def assemble_global_x(cls):
       cls.global_x = np.hstack((x for x in cls.global_param_gen()))
       cls.global_x_no_bkgd_mask = np.invert(
-         np.char.startswith(RietveldPhases.global_x['labels'],'bkgd'))
+         np.char.startswith(cls.global_x['labels'],'bkgd'))
       
       cls.two_theta_0 = cls.global_x[0]
       cls.bkgd = cls.global_x[1:1+cls.bkgd.shape[0]]
@@ -504,8 +510,8 @@ class RietveldPhases:
       self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2 
 
    def set_eta_order(self,order):
-      if order > RietveldPhases.max_order:
-         order = RietveldPhases.max_order
+      if order > RietveldPhases.max_polynom_order:
+         order = RietveldPhases.max_polynom_order
       elif order <1:
          order = 1
       return np.hstack((x for x in self.eta_param_gen(order)))
@@ -550,19 +556,27 @@ class RietveldPhases:
       # Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
       eta_vals = np.broadcast_to(self.eta_polynomial(), \
          (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+
+      if RietveldPhases.vertical_offset:
+         two_theta_0_vals = None
+      else:
+         two_theta_0_vals = np.broadcast_to(
+            RietveldPhases.two_theta_0['values'],
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
+
       omegaUVW_squareds = np.abs(
           self.U['values']*self.tan_two_theta_peaks_sq_masked
          +self.V['values']*self.tan_two_theta_peaks_masked 
          +self.W['values'])
       two_thetabar_squared = (self.two_theta_masked 
-            -RietveldPhases.two_theta_0['values']
-            -self.two_theta_peaks_masked)**2 \
+            -two_theta_0_vals-self.two_theta_peaks_masked)**2 \
             /omegaUVW_squareds
       result[self.masks] = self.Amplitude['values'] \
          *self.weighted_intensities_masked \
          *self.LP_factors_masked \
          *(eta_vals/(1+two_thetabar_squared) \
             +(1-eta_vals)*np.exp(-np.log(2)*two_thetabar_squared))
+
       # for i in xrange(0,len(self.two_theta_peaks)):
       #    two_thetabar_squared = (self.two_theta[self.masks[i]] -two_theta_0 
       #       -self.two_theta_peaks[i])**2 \
