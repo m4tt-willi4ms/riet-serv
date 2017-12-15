@@ -48,7 +48,7 @@ def exercise_Rietveld_Refinery_Cement():
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt, 
-      factr=1e3,store_intermediate_state=False, show_plots=True)
+      factr=1e8,store_intermediate_state=False, show_plots=True)
    # RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Bkgd_Offset)
    # RR.display(RR.minimize_Amplitude)
@@ -71,12 +71,12 @@ def exercise_Rietveld_Refinery_Cement():
    # # RR.display(RR.minimize_All)
 
    #For fine-tuning
-   RR2 = RietveldRefinery(RR.Phase_list, maxiter=10,
-      fine_minimizer_input_string,store_intermediate_state=True,show_plots=True)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
-   RR2.display(RR2.minimize_All)
+   # RR2 = RietveldRefinery(RR.phase_list, maxiter=10,
+   #    store_intermediate_state=False,show_plots=True)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
+   # RR2.display(RR2.minimize_All)
 
 
 def run():

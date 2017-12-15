@@ -46,8 +46,8 @@ fig = Figure(dpi=100)
 # fig.suptitle(plottitle)
 canvas = None
 ROI_mask = None
-ROI_center = 28
-ROI_delta_theta = 2
+ROI_center = 40
+ROI_delta_theta = 5
 x_mask = np.zeros(0,dtype=bool)
 
 subplot1 = fig.add_subplot(311) #plt.subplot(3,1,1)
@@ -227,20 +227,19 @@ class RietveldGUI(tk.Tk):
    def getCifs(self):
       # self.filePaths = tkFileDialog.askopenfilenames(
       #    initialdir = "./data/cifs")
-      # self.filePaths = [r".\data\cifs\Cement\1540705-Alite.cif",
+      # self.filePaths = [
       # r".\data\cifs\Cement\1540705-Alite.cif", 
-
       # r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
       # r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
-      # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      # # r".\data\cifs\Cement\9004096-anhydrite.cif",
       # r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # r".\data\cifs\Cement\9005521-bassanite.cif",
+      # # r".\data\cifs\Cement\9005521-bassanite.cif",
       # r".\data\cifs\Cement\9012789-Belite.cif", 
-      # r".\data\cifs\Cement\9009667-calcite.cif",
+      # # r".\data\cifs\Cement\9009667-calcite.cif",
       # r".\data\cifs\Cement\1200009-Ferrite.cif", 
       # r".\data\cifs\Cement\1011094-FreeLime.cif", 
       # r".\data\cifs\Cement\1000053-Periclase.cif", 
-      # r".\data\cifs\Cement\9000113-portlandite.cif",
+      # # r".\data\cifs\Cement\9000113-portlandite.cif",
       # ]
       self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
@@ -249,10 +248,10 @@ class RietveldGUI(tk.Tk):
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
          Rt.append(RietveldPhases(filePath, 
-            delta_theta=1.5,Intensity_Cutoff=0.005))
+            delta_theta=1.5,Intensity_Cutoff=0.01))
          if self.numPhases == 0:
             self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
-               self.paramframe,index=0,change_all=True),text="Phases: All")
+               self.paramframe,change_all=True),text="Phases: All")
          self.paramframe.nb.add(
             RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
             text=str(i+1))
@@ -271,6 +270,7 @@ class RietveldGUI(tk.Tk):
       # self.fileName = tkFileDialog.askopenfilename(
       #    initialdir = "./data/profiles")
       # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
       self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" + 
          os.path.split(self.fileName)[1]+")")
@@ -297,7 +297,7 @@ class RietveldGUI(tk.Tk):
       # RietveldPhases.global_params_from_string(global_input_string,
       #    two_thetas,ys)
 
-      RietveldPhases.set_profile(self.fileName)#, min_two_theta=25)
+      RietveldPhases.set_profile(self.fileName, min_two_theta=25)
       global ROI_mask
       ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
 
@@ -480,9 +480,9 @@ class RefinementParameterRadioControl(tk.Frame):
       self.radioframe = tk.Frame(self) 
       self.radiovar = tk.IntVar()
       tk.Radiobutton(self.radioframe,text="Angular",variable=self.radiovar,
-         value=1).pack()
+         value=1,command=self.radiobutton_switched).pack()
       tk.Radiobutton(self.radioframe,text="Vertical",variable=self.radiovar,
-         value=2).pack()
+         value=2,command=self.radiobutton_switched).pack()
       self.radioframe.grid(row=0,column=1)
       self.radiovar.set(1)
 
@@ -532,6 +532,13 @@ class RefinementParameterRadioControl(tk.Frame):
       #    for phase in Rt:
       #       RietveldPhases.x['values'][index] = 0
 
+   def radiobutton_switched(self):
+      if self.radiovar.get() == 1:
+         RietveldPhases.set_vertical_offset(False)
+      elif self.radiovar.get() == 2:
+         RietveldPhases.set_vertical_offset(True)
+      RietveldPhases.two_theta_0['values'] = 0
+
 class LatticeParameterControl(tk.Frame):
    def __init__(self,parent,controller,index):
       tk.Frame.__init__(self,parent)
@@ -554,7 +561,7 @@ class RefinementParameterPolynomControl(tk.Frame):
       self.checkbutton.grid(row=0,column=0,sticky='w')
 
       self.order_dropdownlist = Dropdown_Int_List(self, parent,
-         text="Order:", min_int=1, max_int=6, default_int=default_order)
+         text="Order:", min_int=0, max_int=6, default_int=default_order)
       self.order_dropdownlist.grid(row=0,column=1)
 
       self.rounds = RoundsBoxes(self,parent,default_round_start)
@@ -614,9 +621,16 @@ def updateplotprofile():
    if RR is not None:
       subplot3.plot(RietveldPhases.two_theta,
          RR.weighted_squared_errors_state,
-         label=r'$\frac{1}{I} \, (I-I_{\rm calc})^2$',color='green')
-   subplot3.set_xlabel(r'$2\,\theta$')
-   subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{I}$")
+         label=r'$\frac{1}{\sigma^2} \, (I-I_{\rm calc})^2$',color='green')
+   # subplot3.set_xlabel(r'$2\,\theta$')
+   # subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{\sigma^2}$")
+
+   subplot1.axes.relim()
+   subplot1.axes.autoscale_view()
+   subplot2.axes.relim()
+   subplot2.axes.autoscale_view()
+   subplot3.axes.relim()
+   subplot3.axes.autoscale_view()
    # print Rt[0].structure.space_group().crystal_system()
    # print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
    # Rt[0].update_unit_cell()
@@ -652,8 +666,16 @@ class Dropdown_Int_List(tk.Frame):
       self.grid_columnconfigure(1,minsize=50)
 
    def order_selected(self,tmp):
-      print self.order.get()
-      RietveldPhases.set_bkgd_order(int(self.order.get()))
+      # print self.order.get()
+      if np.char.startswith(self.parent.parameter['labels'][0],"eta"):
+         global Rt
+         if self.parent.parent.index is not None:
+            Rt[self.parent.parent.index].set_eta_order(int(self.order.get())+1)
+         else:
+            for i in xrange(len(Rt)):
+               Rt[i].set_eta_order(int(self.order.get())+1)
+      elif np.char.startswith(self.parent.parameter['labels'][0],"bkgd"):
+         RietveldPhases.set_bkgd_order(int(self.order.get())+1)
       self.parent.checkbutton_clicked()
       self.orderMenu.selection_clear()
 
@@ -662,44 +684,50 @@ class RefinementParameterSet(tk.Frame):
    def __init__(self, parent, controller, index=None, change_all=False,
        *args, **kwargs):
       tk.Frame.__init__(self, parent, padx=10,pady=10)
+      self.index = index
+
+      global Rt
 
       if index is not None:
          phase = Rt[index]
+         tk.Label(self,text=os.path.split(
+            controller.controller.filePaths[index])[1]) \
+            .grid(row=0,column=0,columnspan=2,sticky='w')     
       else:
+         tk.Label(self,text="").grid(row=0,column=0,columnspan=2,
+            sticky='n')     
          phase = Rt[0]
 
-      self.param_dict = {}
-
-      self.param_dict['Amplitude'] = RefinementParameterControl(self,parent,
+      RefinementParameterControl(self,parent,
          phase.Amplitude,text="Amplitude",change_all=change_all
-         ,default_round_start=2)
-      self.param_dict['Amplitude'].grid(row=0,column=0,sticky='w')
+         ,default_round_start=2).grid(row=1,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
          phase.W,text="Caglioti W",default_round_start=2) \
-         .grid(row=1,column=0,sticky='w')
+         .grid(row=2,column=0,sticky='w')
 
       RefinementParameterPolynomControl(self,parent, phase.eta,
-         text="eta",default_order=1,default_round_start=3).grid(row=2,column=0,
+         text="eta",default_order=1,default_round_start=3).grid(row=3,column=0,
          sticky='w')
 
       RefinementParameterControl(self,parent,
          phase.V,text="Caglioti V",default_round_start=2) \
-         .grid(row=3,column=0,sticky='w')
-
-      RefinementParameterControl(self,parent,
-         phase.U,text="Caglioti U",default_round_start=2) \
          .grid(row=4,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
+         phase.U,text="Caglioti U",default_round_start=2) \
+         .grid(row=5,column=0,sticky='w')
+
+      RefinementParameterControl(self,parent,
          phase.lattice_parameters[3],text="Lattice Parameters",
-         default_round_start=2).grid(row=5,column=0,sticky='w')
+         default_round_start=2).grid(row=6,column=0,sticky='w')
 
 class LoadFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       # controller.minsize(width=400,height=400)
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
+      self.parent = parent
       self.controller = controller
       self.globalnb = ttk.Notebook(self,height=100,width=450)
       self.globalFrame = tk.Frame(self.globalnb,padx=10,pady=10)
@@ -733,35 +761,49 @@ class LoadFrame(tk.Frame):
       self.CancelButton.grid(row=2,column=1, padx=10, pady=10)
 
    def refine(self):
-      global RR
-      RR.bkgd_refine = False
-      RR.mask = np.zeros(len(RR.x),dtype=bool)
+      global RR, Rt
+      RR = RietveldRefinery(Rt,factr=1e5,iprint=1000)
       # RR.mask[0] = True
-      for i,tab in enumerate(self.nb.tabs()):
+
+      for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
+         .children.values():
+            if isinstance(rp,RefinementParameterControl) or \
+               isinstance(rp,RefinementParameterPolynomControl):
+               if rp.state.get() == 1:
+                  for i in xrange(len(Rt)):
+                     RR.mask = np.logical_or(RR.mask,
+                        np.logical_and(RR.phase_masks[i],
+                        np.char.startswith(RR.x['labels'],
+                           rp.parameter['labels'][0][0:3])))
+
+      for i,tab in enumerate(self.nb.tabs()[1:]):
          for rp in self.nb.children[tab.split('.')[-1]].children.values():
-            if rp.state.get() == 1:
-               RR.mask = np.logical_or(RR.mask,
-                  np.logical_and(RR.phase_masks[i],
-                  np.char.startswith(RR.x['labels'],
-                     rp.parameter['labels'][0][0:3])))
+            if isinstance(rp,RefinementParameterControl) or \
+               isinstance(rp,RefinementParameterPolynomControl):
+               if rp.state.get() == 1:
+                  RR.mask = np.logical_or(RR.mask,
+                     np.logical_and(RR.phase_masks[i-1],
+                     np.char.startswith(RR.x['labels'],
+                        rp.parameter['labels'][0][0:3])))
+      
       for rp in self.globalnb.children[self.globalnb.tabs()[0].split('.')[-1]] \
          .children.values():
          if rp.state.get() == 1:
             RR.mask = np.logical_or(RR.mask,
                np.logical_and(RR.global_mask,np.char.startswith(RR.x['labels'],
                   rp.parameter['labels'][0][0:3])))
-      # print '\n'
+      # print RR.mask# print '\n'
             # if RR.x[RR.phase_masks[i]]['labels'] == k:
 
          # print self.nb.children[tab.split('.')[-1]]. \
          #    param_dict['Amplitude'].state.get()
       t = startthread(RR.minimize)#Amplitude_Bkgd_Offset)
-      fig.suptitle("In Progress: minimize")#mplitude_Bkgd_Offset")
+      fig.suptitle("In Progress...")#mplitude_Bkgd_Offset")
       while t.isAlive():
          updateplotprofile()
-         time.sleep(1)
+         time.sleep(0.5)
       t.join()
-      fig.suptitle("Completed: minimize")#mplitude_Bkgd_Offset")
+      fig.suptitle("Optimization Complete")#mplitude_Bkgd_Offset")
       updateplotprofile()
       RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
       RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)

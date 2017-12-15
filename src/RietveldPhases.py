@@ -1,7 +1,7 @@
 from __future__ import division
 import os, random, math
 import time
-# import inspect
+import inspect
 import sys
 import numpy as np
 from scipy.optimize import approx_fprime
@@ -92,6 +92,7 @@ class RietveldPhases:
    two_theta_0 = default_two_theta_0
    vertical_offset = default_vertical_offset
    bkgd = None #: Initialized to None
+   two_theta = None
 
    max_polynom_order = 5
 
@@ -107,6 +108,12 @@ class RietveldPhases:
          order = 1
       cls.bkgd = np.hstack((x for x in cls.bkgd_param_gen(order)))
       return cls.bkgd
+
+   @classmethod
+   def set_vertical_offset(cls,value):
+      assert type(value) == bool
+      cls.vertical_offset = value
+      cls.cos_theta = -360/np.pi*np.cos(cls.two_theta/2)
 
    @classmethod
    def bkgd_param_gen(cls,order=default_bkgd_order):
@@ -126,20 +133,28 @@ class RietveldPhases:
       max_two_theta=180):
       two_theta = []
       I = []
+      sigma = []
       with open(filename) as file:
          for line in file.readlines():#[4:]:
             if number_of_columns == 2:
                two_thetatmp, Itmp = line.split()
             # if float(two_thetatmp) < 15:
-               I.append(Itmp)
+               I.append(float(Itmp))
+               sigma.append(np.sqrt(float(Itmp)))
             elif number_of_columns == 3:
                two_thetatmp, Itmp, sigmatmp = line.split()
-               I.append(float(sigmatmp)**2)
+               # I.append(float(sigmatmp)**2)
+               I.append(float(Itmp))
+               sigma.append(float(sigmatmp))
             two_theta.append(float(two_thetatmp))
       cls.two_theta = np.array(two_theta) 
       cls.I = np.array(I)
+      cls.sigma = np.array(sigma)
 
       cls.I = cls.I \
+         [np.logical_and(cls.two_theta > min_two_theta,
+            cls.two_theta < max_two_theta)]
+      cls.sigma = cls.sigma \
          [np.logical_and(cls.two_theta > min_two_theta,
             cls.two_theta < max_two_theta)]
       cls.two_theta = cls.two_theta \
@@ -189,9 +204,11 @@ class RietveldPhases:
          :param two_theta: list of :math:`2\theta` positions
 
       """
-      return (1+np.cos(math.pi/180*RietveldPhases.two_theta)**2) \
-         /np.sin(math.pi/360*RietveldPhases.two_theta) \
-         /np.sin(math.pi/180*RietveldPhases.two_theta)
+      two_theta = RietveldPhases.two_theta \
+         - RietveldPhases.two_theta_0['values']
+      return (1+np.cos(math.pi/180*two_theta)**2) \
+         /np.sin(math.pi/360*two_theta) \
+         /np.sin(math.pi/180*two_theta)
 
    @classmethod
    def assemble_global_x(cls):
@@ -406,10 +423,13 @@ class RietveldPhases:
       self.structure.set_inelastic_form_factors( \
          photon=wavelengths.characteristic(lammbda),table="sasaki")
 
+
       f_calc =  self.structure.structure_factors(d_min=RietveldPhases.d_min, \
          anomalous_flag=anomalous_flag).f_calc().sort()
 
+      self.crystal_density = self.structure.crystal_density()
       unit_cell_volume = self.unit_cell.volume()
+
       f_calc_sq = f_calc.as_intensity_array().sort().data() \
          /unit_cell_volume/unit_cell_volume
       f_calc_mult = f_calc.multiplicities().sort().data()
@@ -496,7 +516,7 @@ class RietveldPhases:
          np.broadcast_to(self.two_theta,
             (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
       self.LP_factors_masked = \
-         np.broadcast_to(self.LP_factors,
+         np.broadcast_to(RietveldPhases.LP_intensity_scaling(),
             (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
       self.weighted_intensities_masked = \
          np.broadcast_to(self.weighted_intensities,
@@ -514,7 +534,8 @@ class RietveldPhases:
          order = RietveldPhases.max_polynom_order
       elif order <1:
          order = 1
-      return np.hstack((x for x in self.eta_param_gen(order)))
+      self.eta = np.hstack((x for x in self.eta_param_gen(order)))
+      return self.eta
 
    def eta_param_gen(self,order):
       n=0
@@ -558,7 +579,9 @@ class RietveldPhases:
          (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
 
       if RietveldPhases.vertical_offset:
-         two_theta_0_vals = None
+         two_theta_0_vals = np.broadcast_to(RietveldPhases.cos_theta*
+            RietveldPhases.two_theta_0['values'],
+            (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
       else:
          two_theta_0_vals = np.broadcast_to(
             RietveldPhases.two_theta_0['values'],
@@ -571,12 +594,14 @@ class RietveldPhases:
       two_thetabar_squared = (self.two_theta_masked 
             -two_theta_0_vals-self.two_theta_peaks_masked)**2 \
             /omegaUVW_squareds
+
       result[self.masks] = self.Amplitude['values'] \
          *self.weighted_intensities_masked \
          *self.LP_factors_masked \
          *(eta_vals/(1+two_thetabar_squared) \
             +(1-eta_vals)*np.exp(-np.log(2)*two_thetabar_squared))
-
+      # print result[self.masks]
+      # print np.sum(result,axis=0)
       # for i in xrange(0,len(self.two_theta_peaks)):
       #    two_thetabar_squared = (self.two_theta[self.masks[i]] -two_theta_0 
       #       -self.two_theta_peaks[i])**2 \
@@ -586,10 +611,11 @@ class RietveldPhases:
       #       self.LP_factors[self.masks[i]]* \
       #    (eta/(1 +two_thetabar_squared) +(1-eta) \
       #    *np.exp(-np.log(2)*two_thetabar_squared))
-      return np.sum(result,axis=0)
+      # print "here"
+      self.phase_profile_state = np.sum(result,axis=0)
+      return self.phase_profile_state
 
-   def phase_profile_x(self,x,mask):
-      # print "x: " + str(x)
+   def update_global_and_phase_x(self,x,mask):
       self.global_and_phase_x['values'][mask] = x
       RietveldPhases.global_x['values'][RietveldPhases.global_x_no_bkgd_mask] \
          =self.global_and_phase_x['values'][self.global_mask_no_bkgd] 
@@ -602,11 +628,13 @@ class RietveldPhases:
       # print str(RietveldPhases.global_x['values'][RietveldPhases.global_x_no_bkgd_mask])
       self.phase_x['values'] = \
          self.global_and_phase_x['values'][self.phase_mask]
+
+   def phase_profile_x(self,x,mask):
+      self.update_global_and_phase_x(x,mask)
+      # print "x: " + str(x)
       # self.global_and_phase_x['values'][mask] = x
       # self.update_params(global_and_phase=True)
       # print "eps: " + str(self.phase_x[3])
-      if self.recompute_peak_positions:
-         self.update_unit_cell()
       # print sys._getframe(1).f_code.co_name
       return self.phase_profile()
 
@@ -616,15 +644,23 @@ class RietveldPhases:
       epsilons = epsilon*np.identity(num_params)
       self.global_and_phase_x = np.hstack((RietveldPhases.global_x
          [RietveldPhases.global_x_no_bkgd_mask], self.phase_x))
+      self.prev_state = np.copy(self.phase_profile_state)
 
       for i,eps in enumerate(epsilons):
          # print eps
+         self.update_global_and_phase_x(
+               self.global_and_phase_x['values'][mask]+eps,mask)
          result[i,:] = (
-             self.phase_profile_x(self.global_and_phase_x['values'][mask]+eps,
-               mask)
-            -self.phase_profile_x(self.global_and_phase_x['values'][mask]-eps,
-               mask)
+             # self.phase_profile_x(self.global_and_phase_x['values'][mask]+eps,
+             #   mask)
+             self.phase_profile()
+             -self.prev_state
+            # -self.phase_profile_x(self.global_and_phase_x['values'][mask]-eps,
+            #    mask)
             )/epsilon
+         self.update_global_and_phase_x(
+               self.global_and_phase_x['values'][mask]-eps,mask)
+
       # print np.sum(result,axis=1)
       return result
 
