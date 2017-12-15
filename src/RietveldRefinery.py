@@ -35,6 +35,7 @@ class RietveldRefinery:
       m=default_m,
       pgtol=default_pgtol,
       epsilon=default_epsilon,
+      input_weights=None,
       ):
       """
          Given some list of phases, an instance of the refinery is initialized
@@ -82,6 +83,12 @@ class RietveldRefinery:
          np.hstack((x.phase_x for x in self.phase_list))))
 
       self.mask = np.zeros(len(self.x),dtype=bool)
+
+      self.composition_by_volume = np.zeros(len(self.phase_list))
+      if input_weights is not None:
+         self.composition_by_weight = input_weights
+      else: self.composition_by_weight = np.zeros(len(self.phase_list))
+
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
       self.bkgd_mask = np.char.startswith(self.x['labels'],"bkgd")
@@ -223,6 +230,26 @@ class RietveldRefinery:
             self.x['u_limits'][self.mask]))
       self.t1 = time.time()
       print "\n"
+
+      if not self.bkgd_refine:
+         Amplitudes = self.x['values'] \
+            [np.char.startswith(self.x['labels'],"Amp")]
+         total = np.sum(Amplitudes) 
+         weight_moments = []
+         # print "\n"
+         for i,val in np.ndenumerate(Amplitudes):
+            weight_moments.append(val*self.phase_list[i[0]].crystal_density)
+            self.composition_by_volume[i] = val/total*100
+            # print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
+
+         weight_moments = np.array(weight_moments)
+         weight_total = np.sum(np.array(weight_moments))
+         # print "\nBy weight:"
+         for i,val in np.ndenumerate(weight_moments):
+            self.composition_by_weight[i] = val/weight_total*100
+            # print "Phase " + str(i[0]+1) + ": " + \
+            #    str(val/weight_total*100)  + " %"
+         # print "\n"
 
    def update_phase_list(self):
       Amp_mask = np.char.startswith(self.x['labels'],"Amp")
@@ -437,21 +464,15 @@ class RietveldRefinery:
       print "Goodness-of-Fit: " + str(R_wp/R_e)
 
       if not self.bkgd_refine:
-         Amplitudes = self.x['values'] \
-            [np.char.startswith(self.x['labels'],"Amp")]
-         total = np.sum(Amplitudes) 
-         weight_moments = []
          print "\n"
-         for i,val in np.ndenumerate(Amplitudes):
-            weight_moments.append(val*self.phase_list[i[0]].crystal_density)
-            print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
+         for i in xrange(len(self.phase_list)):
+            print "Phase " + str(i+1) + ": " \
+               + str(self.composition_by_volume[i]) + " %"
 
-         weight_moments = np.array(weight_moments)
-         weight_total = np.sum(np.array(weight_moments))
          print "\nBy weight:"
-         for i,val in np.ndenumerate(weight_moments):
-            print "Phase " + str(i[0]+1) + ": " + \
-               str(val/weight_total*100)  + " %"
+         for i in xrange(len(self.phase_list)):
+            print "Phase " + str(i+1) + ": " \
+               + str(self.composition_by_weight[i]) + " %"
          print "\n"
 
    def show_plot(self,plottitle,scale_factor=1,autohide=True):

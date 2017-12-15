@@ -46,8 +46,8 @@ fig = Figure(dpi=100)
 # fig.suptitle(plottitle)
 canvas = None
 ROI_mask = None
-ROI_center = 40
-ROI_delta_theta = 5
+ROI_center = 32
+ROI_delta_theta = 3
 x_mask = np.zeros(0,dtype=bool)
 
 subplot1 = fig.add_subplot(311) #plt.subplot(3,1,1)
@@ -227,27 +227,28 @@ class RietveldGUI(tk.Tk):
    def getCifs(self):
       # self.filePaths = tkFileDialog.askopenfilenames(
       #    initialdir = "./data/cifs")
-      # self.filePaths = [
-      # r".\data\cifs\Cement\1540705-Alite.cif", 
-      # r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
-      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
-      # # r".\data\cifs\Cement\9004096-anhydrite.cif",
-      # r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # # r".\data\cifs\Cement\9005521-bassanite.cif",
-      # r".\data\cifs\Cement\9012789-Belite.cif", 
-      # # r".\data\cifs\Cement\9009667-calcite.cif",
-      # r".\data\cifs\Cement\1200009-Ferrite.cif", 
-      # r".\data\cifs\Cement\1011094-FreeLime.cif", 
-      # r".\data\cifs\Cement\1000053-Periclase.cif", 
-      # # r".\data\cifs\Cement\9000113-portlandite.cif",
-      # ]
-      self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
+      self.filePaths = [
+      r".\data\cifs\Cement\1540705-Alite.cif", 
+      r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
+      r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
+      r".\data\cifs\Cement\9004096-anhydrite.cif",
+      r".\data\cifs\Cement\9007569-Arcanite.cif",
+      r".\data\cifs\Cement\9005521-bassanite.cif",
+      r".\data\cifs\Cement\9012789-Belite.cif", 
+      r".\data\cifs\Cement\9009667-calcite.cif",
+      r".\data\cifs\Cement\1200009-Ferrite.cif", 
+      r".\data\cifs\Cement\1011094-FreeLime.cif", 
+      r".\data\cifs\Cement\1000053-Periclase.cif", 
+      r".\data\cifs\Cement\9000113-portlandite.cif",
+      ]
+      # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
       # iconEntry.insert(0,fileName)
       global Rt
+      I_max = np.max(RietveldPhases.I)
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
-         Rt.append(RietveldPhases(filePath, 
+         Rt.append(RietveldPhases(filePath, I_max=I_max/len(self.filePaths),
             delta_theta=1.5,Intensity_Cutoff=0.01))
          if self.numPhases == 0:
             self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
@@ -270,8 +271,8 @@ class RietveldGUI(tk.Tk):
       # self.fileName = tkFileDialog.askopenfilename(
       #    initialdir = "./data/profiles")
       # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
-      # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
-      self.fileName = r".\\data\\profiles\\d5_05005.xye"
+      self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
+      # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" + 
          os.path.split(self.fileName)[1]+")")
 
@@ -297,7 +298,7 @@ class RietveldGUI(tk.Tk):
       # RietveldPhases.global_params_from_string(global_input_string,
       #    two_thetas,ys)
 
-      RietveldPhases.set_profile(self.fileName, min_two_theta=25)
+      RietveldPhases.set_profile(self.fileName)#, min_two_theta=25)
       global ROI_mask
       ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
 
@@ -608,7 +609,7 @@ def startthread(func):
    t.start()
    return t
 
-def updateplotprofile():
+def updateplotprofile(update_view=False):
    if len(subplot1.axes.lines) is not 0:
       for x in (subplot1,subplot2,subplot3):
          for line in x.axes.lines:
@@ -625,12 +626,14 @@ def updateplotprofile():
    # subplot3.set_xlabel(r'$2\,\theta$')
    # subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{\sigma^2}$")
 
-   subplot1.axes.relim()
-   subplot1.axes.autoscale_view()
-   subplot2.axes.relim()
-   subplot2.axes.autoscale_view()
-   subplot3.axes.relim()
-   subplot3.axes.autoscale_view()
+   if update_view:
+      subplot1.axes.relim()
+      subplot1.axes.autoscale_view()
+      subplot2.axes.relim()
+      subplot2.axes.autoscale_view()
+      subplot3.axes.relim()
+      subplot3.axes.autoscale_view()
+
    # print Rt[0].structure.space_group().crystal_system()
    # print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
    # Rt[0].update_unit_cell()
@@ -762,7 +765,8 @@ class LoadFrame(tk.Frame):
 
    def refine(self):
       global RR, Rt
-      RR = RietveldRefinery(Rt,factr=1e5,iprint=1000)
+      RR = RietveldRefinery(Rt,input_weights=RR.composition_by_weight,
+         factr=1e7,iprint=1000)
       # RR.mask[0] = True
 
       for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
@@ -771,20 +775,24 @@ class LoadFrame(tk.Frame):
                isinstance(rp,RefinementParameterPolynomControl):
                if rp.state.get() == 1:
                   for i in xrange(len(Rt)):
-                     RR.mask = np.logical_or(RR.mask,
-                        np.logical_and(RR.phase_masks[i],
-                        np.char.startswith(RR.x['labels'],
-                           rp.parameter['labels'][0][0:3])))
+                     if RR.composition_by_weight[i] > 10 or \
+                           rp.parameter['labels'][0][0:3] == "Amp":
+                        RR.mask = np.logical_or(RR.mask,
+                           np.logical_and(RR.phase_masks[i],
+                           np.char.startswith(RR.x['labels'],
+                              rp.parameter['labels'][0][0:3])))
 
       for i,tab in enumerate(self.nb.tabs()[1:]):
          for rp in self.nb.children[tab.split('.')[-1]].children.values():
             if isinstance(rp,RefinementParameterControl) or \
                isinstance(rp,RefinementParameterPolynomControl):
                if rp.state.get() == 1:
-                  RR.mask = np.logical_or(RR.mask,
-                     np.logical_and(RR.phase_masks[i-1],
-                     np.char.startswith(RR.x['labels'],
-                        rp.parameter['labels'][0][0:3])))
+                  if RR.composition_by_weight[i] > 10 or \
+                        rp.parameter['labels'][0][0:3] == "Amp":
+                     RR.mask = np.logical_or(RR.mask,
+                        np.logical_and(RR.phase_masks[i-1],
+                        np.char.startswith(RR.x['labels'],
+                           rp.parameter['labels'][0][0:3])))
       
       for rp in self.globalnb.children[self.globalnb.tabs()[0].split('.')[-1]] \
          .children.values():
@@ -804,7 +812,8 @@ class LoadFrame(tk.Frame):
          time.sleep(0.5)
       t.join()
       fig.suptitle("Optimization Complete")#mplitude_Bkgd_Offset")
-      updateplotprofile()
+      updateplotprofile(update_view=True)
+      
       RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
       RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
 

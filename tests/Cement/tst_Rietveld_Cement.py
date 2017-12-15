@@ -48,19 +48,19 @@ def exercise_Rietveld_Refinery_Cement():
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt, 
-      factr=1e8,store_intermediate_state=False, show_plots=True)
+      factr=1e6,store_intermediate_state=False, show_plots=True)
    # RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Bkgd_Offset)
    # RR.display(RR.minimize_Amplitude)
    # RR.display(RR.minimize_Amplitude)
-   RR.display(RR.minimize_Amplitude_Offset)
+   # RR.display(RR.minimize_Amplitude_Offset)
    # # RR.display(RR.minimize_Amplitude_Offset_unit_cell)
    # RR.display(RR.minimize_unit_cell)
    # # RR.display(RR.minimize_First_n_Phases)
+   RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    # # RR.display(RR.minimize_First_n_Phases,n=3)
    # RR.display(RR.minimize_Amplitude_Offset_W)
    RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
-   # RR.display(RR.minimize_Amplitude_Bkgd_Offset)
    # # RR.display(RR.minimize_only_Alite)
    # RR.display(RR.minimize_W)
    # RR.display(RR.minimize_eta)
