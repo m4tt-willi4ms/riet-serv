@@ -10,10 +10,8 @@ Al2O3_output.log
 Untitled.ipynb
 jadex.xye.import
 setpaths.py
-1507774.cif
 16_01_07_0010_Aspirin_HighRez.xye
 16_03_09_0015_Silver Behenate with Baffle and Anti_Scatter Slit_highrez.xye
-7050897.cif
 doc/Makefile
 doc/_build/
 doc/make.bat
@@ -26,3 +24,5 @@ tests/Cement/Cement1.sln
 tests/9007634.cif
 tests/Cement/build/
 tests/Cement/dist/
+build/
+dist/

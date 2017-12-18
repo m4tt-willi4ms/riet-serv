@@ -24,6 +24,6 @@ setup(
         }
     },
     data_files =  matplotlibdata_files,
-    console = [{'script': 'tst_Rietveld_Cement.py'}]
+    console = [{'script': 'tests/Cement/tst_Rietveld_Cement.py'}]
 )
 # setup(console=['tst_Rietveld_Cement.py'])

@@ -78,16 +78,16 @@ def exercise_RietveldPhases():
       tst_two_theta,tst_y)
    for cif,input_string in zip(cifs,input_strings):
       Rt.append(RietveldPhases(r"..//data//cifs//" + cif,
-         input_string,d_min,d_max, delta_theta = 2.0,Intensity_Cutoff = 0.005))
+         d_min,d_max, delta_theta = 2.0,Intensity_Cutoff = 0.005))
 
    #Testing Read-in from input_string
    assert np.isclose(Rt[0].x['values'][Rt[0].U_index], 0.0)
    assert Rt[0].x['labels'][Rt[0].U_index] == 'U'
-   assert np.isclose(Rt[1].x['values'][Rt[1].U_index], 0.2)
+   assert np.isclose(Rt[1].x['values'][Rt[1].U_index], 0.00)
    assert Rt[1].x['labels'][Rt[1].U_index] == 'U'
    assert np.isclose(Rt[0].x['values'][Rt[0].V_index], 0.0)
    assert Rt[0].x['labels'][Rt[0].V_index] == 'V'
-   assert np.isclose(Rt[0].x['values'][Rt[0].W_index],  0.0006)
+   assert np.isclose(Rt[0].x['values'][Rt[0].W_index],  0.01)
    # assert np.isclose(Rt[0].x['values'][Rt[0].Amplitude_index],  1)
    assert np.isclose(RietveldPhases.x['values'] \
       [RietveldPhases.two_theta_0_index] , np.array([0.001]))
