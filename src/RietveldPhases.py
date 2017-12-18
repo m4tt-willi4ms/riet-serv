@@ -34,7 +34,7 @@ default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 
 default_U = np.array([('U',0.00,0,0.1)],dtype=custom_dtype)
 default_V = np.array([('V',-0.00,-0.1,0)],dtype=custom_dtype)
-default_W = np.array([('W',0.004,0.0001,1)],dtype=custom_dtype)
+default_W = np.array([('W',0.007,0.0001,1)],dtype=custom_dtype)
 default_Amplitude = np.array([('Amplitude',0.1,0,float('inf'))],
    dtype=custom_dtype)
 default_eta_order = 2
@@ -311,6 +311,8 @@ class RietveldPhases:
             dtype=custom_dtype)
 
    def assemble_phase_x(self):
+      if self.recompute_peak_positions:
+         self.assemble_lattice_params()
       self.phase_x = np.hstack((x for x in self.phase_param_gen()))
       global_x_no_bkgd = RietveldPhases.global_x \
          [RietveldPhases.global_x_no_bkgd_mask]

@@ -529,7 +529,7 @@ class RietveldRefinery:
       subplot3 = self.fig.add_subplot(313) #plt.subplot(3,1,3)
       self.residuals, = subplot3.plot(RietveldPhases.two_theta,
          self.weighted_squared_errors_state,'bo',ms=2)
-      plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
+      plt.ylabel(r"$(\Delta I/\sigma)^2$")
       plt.xlabel(r'$2\,\theta$')
 
       self.fig.canvas.draw()

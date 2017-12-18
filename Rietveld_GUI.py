@@ -89,39 +89,11 @@ x_defaults['U'] = np.array([('U',0.0,0,0.1)],
 x_defaults['V'] = np.array([('V',-0.00,-0.1,0)],
    dtype=RietveldPhases.custom_dtype);
 
-default_input_string = """\
-U              0.00    0     0.1
-V              -0.00   -0.1   0
-W              0.01   0.0001     1
-Amplitude         0.1 0      inf
-eta:           3
-unit_cell_a    0.01
-unit_cell_b    0.01
-unit_cell_c    0.01
-unit_cell_alpha   0.005
-unit_cell_beta    0.005
-unit_cell_gamma   0.005
-"""
 x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
 
 max_refinement_rounds = 5
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-
-global_input_string = """\
-Bkgd:          3
-two_theta_0       0.      -0.5  0.5
-"""
-
-
-minimizer_input_string = """\
-factr       1e10
-iprint      -1
-maxiter     150
-m           10
-pgtol       1e-5
-epsilon     1e-13
-"""
 
 def animate(i):
    profile_ys = json.load(
@@ -245,24 +217,24 @@ class RietveldGUI(tk.Tk):
 
       # iconEntry.insert(0,fileName)
       global Rt
-      I_max = np.max(RietveldPhases.I)
+      # I_max = np.max(RietveldPhases.I)
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
-         Rt.append(RietveldPhases(filePath, I_max=I_max/len(self.filePaths),
+         Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
             delta_theta=1.5,Intensity_Cutoff=0.01))
          if self.numPhases == 0:
             self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
                self.paramframe,change_all=True),text="Phases: All")
          self.paramframe.nb.add(
             RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
-            text=str(i+1))
+            text=str(i+1)+" ")
          self.numPhases += 1
       # RietveldPhases.empty_x()
       # RietveldPhases.global_params_from_string(global_input_string,
       #    two_thetas,ys)
       global RR
-      RR = RietveldRefinery(Rt,minimizer_input_string,
-      store_intermediate_state=True, show_plots=False)
+      RR = RietveldRefinery(Rt,
+         store_intermediate_state=False, show_plots=False)
 
       updateplotprofile()
 
@@ -695,10 +667,10 @@ class RefinementParameterSet(tk.Frame):
          phase = Rt[index]
          tk.Label(self,text=os.path.split(
             controller.controller.filePaths[index])[1]) \
-            .grid(row=0,column=0,columnspan=2,sticky='w')     
+            .grid(row=0,column=0,sticky='w',)     
       else:
          tk.Label(self,text="").grid(row=0,column=0,columnspan=2,
-            sticky='n')     
+            sticky='n')
          phase = Rt[0]
 
       RefinementParameterControl(self,parent,
@@ -725,6 +697,8 @@ class RefinementParameterSet(tk.Frame):
          phase.lattice_parameters[3],text="Lattice Parameters",
          default_round_start=2).grid(row=6,column=0,sticky='w')
 
+      self.grid_columnconfigure(0,minsize=286)
+
 class LoadFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       # controller.minsize(width=400,height=400)
@@ -749,7 +723,7 @@ class LoadFrame(tk.Frame):
       self.globalnb.grid(row=0,column=0,columnspan=2,padx=10,pady=10)
 
       self.nb = ttk.Notebook(self,
-         height=300,width=450)
+         height=286,width=450)
       self.nb.enable_traversal()
       # 
       self.nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
@@ -766,17 +740,18 @@ class LoadFrame(tk.Frame):
    def refine(self):
       global RR, Rt
       RR = RietveldRefinery(Rt,input_weights=RR.composition_by_weight,
-         factr=1e7,iprint=1000)
+         factr=1e5,iprint=1000)
       # RR.mask[0] = True
 
       for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
          .children.values():
-            if isinstance(rp,RefinementParameterControl) or \
-               isinstance(rp,RefinementParameterPolynomControl):
+            if isinstance(rp,RefinementParameterControl) \
+               or isinstance(rp,RefinementParameterPolynomControl):
                if rp.state.get() == 1:
                   for i in xrange(len(Rt)):
-                     if RR.composition_by_weight[i] > 10 or \
-                           rp.parameter['labels'][0][0:3] == "Amp":
+                     if RR.composition_by_weight[i] > 10 \
+                        or rp.parameter['labels'][0][0:3] == "Amp" \
+                        or rp.parameter['labels'][0] == "W":
                         RR.mask = np.logical_or(RR.mask,
                            np.logical_and(RR.phase_masks[i],
                            np.char.startswith(RR.x['labels'],
@@ -787,8 +762,9 @@ class LoadFrame(tk.Frame):
             if isinstance(rp,RefinementParameterControl) or \
                isinstance(rp,RefinementParameterPolynomControl):
                if rp.state.get() == 1:
-                  if RR.composition_by_weight[i] > 10 or \
-                        rp.parameter['labels'][0][0:3] == "Amp":
+                  if RR.composition_by_weight[i] > 10 \
+                     or rp.parameter['labels'][0][0:3] == "Amp" \
+                     or rp.parameter['labels'][0] == "W":
                      RR.mask = np.logical_or(RR.mask,
                         np.logical_and(RR.phase_masks[i-1],
                         np.char.startswith(RR.x['labels'],
@@ -842,7 +818,7 @@ class PlotFrame(tk.Frame):
 
       global canvas 
       canvas = FigureCanvasTkAgg(fig, master=self)
-      canvas.get_tk_widget().pack(side=tk.TOP)
+      canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
       # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
 
       toolbar = NavigationToolbar2TkAgg(canvas,self)
