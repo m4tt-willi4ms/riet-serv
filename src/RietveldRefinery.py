@@ -7,6 +7,7 @@ import itertools
 import matplotlib.pyplot as plt
 from scipy.optimize import approx_fprime
 from scipy.optimize import fmin_l_bfgs_b as minimizer
+from scipy.optimize import minimize
 import json,codecs
 
 from RietveldPhases import RietveldPhases
@@ -220,19 +221,41 @@ class RietveldRefinery:
             np.logical_and(self.mask,self.global_and_phase_masks[i]))
       # if self.bkgd_refine:
       #    self.raw_profile_state = self.total_profile()
+      # self.result = \
+      #    minimizer(self.weighted_sum_of_squares,self.x['values'][self.mask],
+      #    callback = self.callback,
+      #    fprime = self.weighted_sum_of_squares_grad,
+      #    # approx_grad = True,
+      #    factr = self.factr,
+      #    iprint = self.iprint,
+      #    m = self.m,
+      #    maxiter = self.maxiter,
+      #    pgtol = self.pgtol,
+      #    # epsilon = self.epsilon, \
+      #    bounds = zip(self.x['l_limits'][self.mask],
+      #       self.x['u_limits'][self.mask]))
+
+      options = {
+         'ftol': self.factr*2.2e-16,
+         # 'xtol': self.factr*2.2e-16,
+         'gtol': self.pgtol,
+         'maxcor': self.m,
+         'maxiter': self.maxiter,
+         'disp': True,
+         }
       self.result = \
-         minimizer(self.weighted_sum_of_squares,self.x['values'][self.mask],
-         callback = self.callback, \
-         fprime = self.weighted_sum_of_squares_grad, \
+         minimize(self.weighted_sum_of_squares,self.x['values'][self.mask],
+         method = 'L-BFGS-B',#'Newton-CG',#
+         options=options,
+         # jac = False,
+         jac = self.weighted_sum_of_squares_grad,
+         callback = self.callback,
          # approx_grad = True,
-         factr = self.factr,
-         iprint = self.iprint,
-         m = self.m,
-         maxiter = self.maxiter,
-         pgtol = self.pgtol,
          # epsilon = self.epsilon, \
-         bounds = zip(self.x['l_limits'][self.mask], \
-            self.x['u_limits'][self.mask]))
+         bounds = zip(self.x['l_limits'][self.mask],
+            self.x['u_limits'][self.mask]),
+         )
+
       self.t1 = time.time()
       print "\n"
 
@@ -462,7 +485,8 @@ class RietveldRefinery:
       R_e = np.sqrt((len(RietveldPhases.two_theta)-len(self.x[self.mask])
          )/self.weighted_sum_of_I_squared)
       if fn is not None:
-         print "\n" + self.result[2]['task']
+         # print self.result
+         print "\n" + self.result['message']
          print "\nTime taken to run " + fn.__name__ + " with " \
             + str(np.sum(self.mask)) + " parameters: " \
             + str(round(self.t1-self.t0,3)) + " seconds"
