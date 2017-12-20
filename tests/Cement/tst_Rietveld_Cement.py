@@ -37,7 +37,7 @@ def exercise_Rietveld_Refinery_Cement():
    for cif in cifs:
    #    tt0 = time.time()
       Rt.append(RietveldPhases(r"data//cifs//Cement/"+cif, 
-         delta_theta=1.,Intensity_Cutoff = 0.005))
+         delta_theta=0.5,Intensity_Cutoff = 0.005))
    #    tt1 = time.time()
    #    print "TIME TO READ IN: " +str(tt1-tt0) + " seconds"
 
@@ -48,7 +48,7 @@ def exercise_Rietveld_Refinery_Cement():
 
    #Now use the full dataset
    RR = RietveldRefinery(Rt, 
-      factr=1e10,store_intermediate_state=False, show_plots=True)
+      factr=1e9,store_intermediate_state=False, show_plots=True)
    # RR.display(RR.minimize_Bkgd)
    # RR.display(RR.minimize_Bkgd_Offset)
    # RR.display(RR.minimize_Amplitude)
@@ -62,7 +62,7 @@ def exercise_Rietveld_Refinery_Cement():
    # RR.display(RR.minimize_Amplitude_Offset_W)
 
    RR = RietveldRefinery(Rt, 
-      factr=1e8,store_intermediate_state=False, show_plots=True)
+      factr=1e7,store_intermediate_state=False, show_plots=True)
    # RR.display(RR.minimize_eta)
    RR.display(RR.minimize_Amplitude_Bkgd_Offset_W)
    # # RR.display(RR.minimize_only_Alite)
@@ -73,10 +73,10 @@ def exercise_Rietveld_Refinery_Cement():
    # # RR.display(RR.minimize_All)
    # # RR.display(RR.minimize_All)
 
-   #For fine-tuning
-   # RR2 = RietveldRefinery(RR.phase_list, maxiter=10,
-   #    store_intermediate_state=False,show_plots=True)
-   # RR2.display(RR2.minimize_All)
+   # For fine-tuning
+   RR2 = RietveldRefinery(RR.phase_list, maxiter=10, factr=1e4,
+      store_intermediate_state=False,show_plots=True)
+   RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)
    # RR2.display(RR2.minimize_All)

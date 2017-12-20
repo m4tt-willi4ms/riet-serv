@@ -19,11 +19,11 @@ import jsonpickle
 from libtbx import easy_pickle
 from scitbx import lbfgsb
 
-custom_dtype = np.dtype([ \
-      ('labels','S12'), \
-      ('values','f8'), \
-      ('l_limits','f8'), \
-      ('u_limits','f8') \
+custom_dtype = np.dtype([
+      ('labels','S12'),
+      ('values','f8'),
+      ('l_limits','f8'),
+      ('u_limits','f8'),
       # ('round','i4')
       ])
 
@@ -32,9 +32,10 @@ default_two_theta_0 = np.array([('two_theta_0',0.0,-0.2,0.2)],
    dtype=custom_dtype)
 default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 
-default_U = np.array([('U',0.00,0,0.1)],dtype=custom_dtype)
-default_V = np.array([('V',-0.00,-0.1,0)],dtype=custom_dtype)
-default_W = np.array([('W',0.007,0.0001,1)],dtype=custom_dtype)
+default_U = np.array([('U',0.00,-0.1,0.1)],dtype=custom_dtype)
+default_V = np.array([('V',-0.00,-0.1,0.1)],dtype=custom_dtype)
+# default_W = np.array([('W',0.01,0.0001,1)],dtype=custom_dtype)
+default_W = np.array([('W',0.003,0.0001,1)],dtype=custom_dtype)
 default_Amplitude = np.array([('Amplitude',0.1,0,float('inf'))],
    dtype=custom_dtype)
 default_eta_order = 2
@@ -242,7 +243,7 @@ class RietveldPhases:
       W=default_W,
       eta_order=default_eta_order,
       lattice_dev=default_lattice_dev,
-      recompute_peak_positions=False,
+      recompute_peak_positions=True,
       ):
 
       if I_max is not None:
@@ -261,7 +262,11 @@ class RietveldPhases:
       self.recompute_peak_positions = recompute_peak_positions
 
       self.load_cif(fn_cif)
-      self.lattice_parameters = self.set_lattice_parameters()
+
+      # self.uc_mask = [True,True,True,True,True,True,]
+      # self.lattice_parameters = self.set_lattice_parameters()
+      RietveldPhases.assemble_global_x()
+      self.assemble_phase_x()
 
       self.compute_relative_intensities()
 
@@ -274,46 +279,14 @@ class RietveldPhases:
       yield self.W
       yield self.Amplitude
       yield self.eta
-      yield self.lattice_parameters
-
-   def assemble_lattice_params(self):
-      crystal_system = self.structure.space_group().crystal_system()
-      uc_params = self.unit_cell.parameters()
-      if crystal_system == "Triclinic":
-         mask = [True,True,True,True,True,True]
-      elif crystal_system == "Monoclinic":
-         mask = [True,True,True]
-         for i in xrange(3,6):
-            if np.isclose(uc_params[i], 90):
-               mask.append(False)
-            else: mask.append(True)
-      elif crystal_system == "Orthorhombic":
-         mask = [True,True,True,False,False,False]
-      elif crystal_system == "Tetragonal":
-         mask = [True]
-         for i in xrange(1,3):
-            if np.isclose(uc_params[i],uc_params[0]):
-               mask.append(False)
-            else: mask.append(True)
-         mask.append([False,False,False])
-      elif crystal_system == "Trigonal":
-         if np.isclose(uc_params[3],uc_params[4]) and \
-            np.isclose(uc_params[3],uc_params[5]):
-            mask = [True,False,False,True,False,False]
-         else: mask = [True,False,True,False,False,False]
-      elif crystal_system == "Hexagonal":
-         mask = [True,False,True,False,False,False]
-      elif crystal_system == "Cubic":
-         mask = [True,False,False,False,False,False]
-
-      assert len(mask) == 6
-      return np.array([x for x in self.unit_cell_parameter_gen(mask)],
-            dtype=custom_dtype)
+      if self.recompute_peak_positions:
+         yield self.lattice_parameters
 
    def assemble_phase_x(self):
       if self.recompute_peak_positions:
          self.assemble_lattice_params()
       self.phase_x = np.hstack((x for x in self.phase_param_gen()))
+
       global_x_no_bkgd = RietveldPhases.global_x \
          [RietveldPhases.global_x_no_bkgd_mask]
       self.global_and_phase_x = np.hstack((global_x_no_bkgd,self.phase_x))
@@ -338,7 +311,57 @@ class RietveldPhases:
          self.phase_x = phase_x
       else:
          self.phase_x[mask] = phase_x[mask] 
-      
+      if self.recompute_peak_positions:
+         self.update_unit_cell()
+
+   def update_unit_cell(self):
+      if np.char.startswith(self.crystal_system,"Tri"):
+         self.unit_cell = uctbx.unit_cell(
+            (float(x) for x in np.nditer(self.lattice_parameters['values'])))
+      elif np.char.startswith(self.crystal_system,"M"):
+         a = self.lattice_parameters['values'][0]
+         b = self.lattice_parameters['values'][1]
+         c = self.lattice_parameters['values'][2]
+         if self.uc_mask[3]:
+            alpha = self.lattice_parameters['values'][3]
+         else: alpha = 90
+         if self.uc_mask[4]:
+            beta = self.lattice_parameters['values'][3]
+         else: beta = 90
+         if self.uc_mask[5]:
+            gamma = self.lattice_parameters['values'][3]
+         else: gamma = 90
+         self.unit_cell = uctbx.unit_cell(
+            (a,b,c,alpha,beta,gamma))
+      elif np.char.startswith(self.crystal_system,"O"):
+         a = self.lattice_parameters['values'][0]
+         b = self.lattice_parameters['values'][1]
+         c = self.lattice_parameters['values'][2]
+         self.unit_cell = uctbx.unit_cell((a,b,c,90,90,90))
+      elif np.char.startswith(self.crystal_system,"Te"):
+         a = self.lattice_parameters['values'][0]
+         if self.uc_mask[1]:
+            b = self.lattice_parameters['values'][1]
+         else: b = a
+         if self.uc_mask[2]:
+            c = self.lattice_parameters['values'][1]
+         else: c = a
+         self.unit_cell = uctbx.unit_cell(
+            (a,b,c,90,90,90))
+      elif np.char.startswith(self.crystal_system,"RT"):
+         a = self.lattice_parameters['values'][0]
+         alpha = self.lattice_parameters['values'][1]
+         self.unit_cell = uctbx.unit_cell(
+            (a,a,a,alpha,alpha,alpha))
+      elif np.char.startswith(self.crystal_system,"HT") \
+         or np.char.startswith(self.crystal_system,"He"):
+         a = self.lattice_parameters['values'][0]
+         c = self.lattice_parameters['values'][1]
+         self.unit_cell = uctbx.unit_cell(
+            (a,a,c,90,90,120))
+      elif np.char.startswith(self.crystal_system,"C"):
+         a = self.lattice_parameters['values'][0]
+         self.unit_cell = uctbx.unit_cell((a,a,a,90,90,90))
       
    def load_cif(self,fn,d_min = 1.0,lammbda = "CUA1"):
       """Reads in a crystal structure, unit cell from iotbx
@@ -360,8 +383,7 @@ class RietveldPhases:
          input_string=as_cif).build_crystal_structures() \
             [os.path.split(fn)[1][0:7]]
       self.unit_cell = self.structure.unit_cell()
-      self.unit_cell_parameters = np.array(self.unit_cell.parameters())
-      # print self.unit_cell_parameters
+      self.crystal_system = self.structure.space_group().crystal_system()
 
       for scatterer in self.structure.scatterers():
          if (scatterer.scattering_type == "O-2"):
@@ -371,62 +393,86 @@ class RietveldPhases:
          if (scatterer.scattering_type == "Si+4"):
             scatterer.scattering_type = "Si4+"
 
-   def unit_cell_parameter_gen(self,mask):
+   def assemble_lattice_params(self):
+      """Sets the independent self.lattice_parameters attributes, 
+      according to the crystal system.
+
+      """
+      uc_params = self.unit_cell.parameters()
+      if self.crystal_system == "Triclinic":
+         self.uc_mask = [True,True,True,True,True,True]
+      elif self.crystal_system == "Monoclinic":
+         self.uc_mask = [True,True,True]
+         for i in xrange(3,6):
+            if np.isclose(uc_params[i], 90):
+               self.uc_mask.append(False)
+            else: self.uc_mask.append(True)
+      elif self.crystal_system == "Orthorhombic":
+         self.uc_mask = [True,True,True,False,False,False]
+      elif self.crystal_system == "Tetragonal":
+         self.uc_mask = [True]
+         if np.isclose(uc_params[1],uc_params[0]):
+            self.uc_mask += [False,True]
+         else: self.uc_mask += [True,False]
+         self.uc_mask += [False,False,False]
+      elif self.crystal_system == "Trigonal":
+         if np.isclose(uc_params[3],uc_params[4]) and \
+            np.isclose(uc_params[3],uc_params[5]):
+            self.uc_mask = [True,False,False,True,False,False]
+            self.crystal_system = "RTrigonal"
+         else: 
+            self.uc_mask = [True,False,True,False,False,False]
+            self.crystal_system = "HTrigonal"
+      elif self.crystal_system == "Hexagonal":
+         self.uc_mask = [True,False,True,False,False,False]
+      elif self.crystal_system == "Cubic":
+         self.uc_mask = [True,False,False,False,False,False]
+
+      assert len(self.uc_mask) == 6
+      self.lattice_parameters = np.array(
+         [x for x in self.unit_cell_parameter_gen()],dtype=custom_dtype)
+
+   def unit_cell_parameter_gen(self):
       """returns all unit cell parameters specified by the mask 
       (a list of six booleans)
       """
       global uc_labels
+      uc_params = self.unit_cell.parameters()
       for i in xrange(6):
-         if mask[i]:
+         if self.uc_mask[i]:
             yield ('uc_'+uc_labels[i],
-               self.unit_cell_parameters[i],
-               self.unit_cell_parameters[i]*(1-self.lattice_dev),
-               self.unit_cell_parameters[i]*(1+self.lattice_dev))
+               uc_params[i],
+               uc_params[i]*(1-self.lattice_dev),
+               uc_params[i]*(1+self.lattice_dev))
 
    def set_lattice_parameters(self):
       """Returns a numpy array consisting of the lattice parameters
          
       """
-      mask = [True,True,True,True,True,True]
-      # mask = [False,False,False,False,False,False]
-      return  np.array(
-         [x for x in self.unit_cell_parameter_gen(mask)],dtype=custom_dtype)
+      self.lattice_parameters = np.array(
+         [x for x in self.unit_cell_parameter_gen()],dtype=custom_dtype)
+      return self.lattice_parameters
 
-   # def update_unit_cell(self):
-   #    if self.refine_unit_cell:
-   #       unit_cell_parameters = list(self.unit_cell.parameters()) #self.get_unit_cell_parameters()
-   #       for (i,param) in enumerate(unit_cell_parameters):
-   #          if self.unit_cell_indices[i] != 0:
-   #             unit_cell_parameters[i] = \
-   #                self.x['values'][self.unit_cell_indices[i]]
-
-   #       # print unit_cell_parameters
-   #       self.unit_cell = uctbx.unit_cell(tuple(unit_cell_parameters))
-   #       # self.Update_two_thetas()
-   #       self.Compute_Relative_Intensities()
-
-   def compute_relative_intensities(self,lammbda="CUA1",anomalous_flag = True):
+   def compute_relative_intensities(self,anomalous_flag = True):
       r"""Returns squared structure factors, weighted by the multiplicity of 
          each reflection.
          
          :param float d_min: The minimum resolution needed
-         :param str lammbda: Wavelength label
          
          :return: *d*-spacings and :math:`m\times|F|^2` for each reflection,
              where *m* is the multiplicity and *F* is the structure factor.
          :rtype: numpy array
 
       """
-      self.f_miller_set = self.structure.build_miller_set(anomalous_flag, \
+      self.f_miller_set = self.structure.build_miller_set(anomalous_flag,
          d_min=RietveldPhases.d_min).sort()
       # Let's use scattering factors from the International Tables
       self.structure.scattering_type_registry(table="it1992") #,  "it1992",  
          # "wk1995" "n_gaussian"\
       self.structure.set_inelastic_form_factors( \
-         photon=wavelengths.characteristic(lammbda),table="sasaki")
+         photon=wavelengths.characteristic(self.lambdas[0]),table="sasaki")
 
-
-      f_calc =  self.structure.structure_factors(d_min=RietveldPhases.d_min, \
+      f_calc =  self.structure.structure_factors(d_min=RietveldPhases.d_min,
          anomalous_flag=anomalous_flag).f_calc().sort()
 
       self.crystal_density = self.structure.crystal_density()
@@ -453,16 +499,24 @@ class RietveldPhases:
          self.relative_intensities = self.relative_intensities \
             [self.d_mask]
 
-      two_thetas = np.zeros((2,len(self.d_spacings)))
-      # factors = np.zeros((2,len(self.d_spacings)))
-      for i in xrange(0,len(self.lambdas),1):
-         # read wavelength
-         lambda_i = wavelengths.characteristic(self.lambdas[i]).as_angstrom()
-         # Compute two_theta for each d-spacing
-         two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/self.d_spacings)
+      # two_thetas = np.zeros((2,len(self.d_spacings)))
+      # # factors = np.zeros((2,len(self.d_spacings)))
+      # for i in xrange(0,len(self.lambdas),1):
+      #    # read wavelength
+      #    lambda_i = wavelengths.characteristic(self.lambdas[i]).as_angstrom()
+      #    # Compute two_theta for each d-spacing
+      #    two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/self.d_spacings)
       
       # Assemble into a single array
-      self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
+      # self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
+      self.two_theta_peaks = np.concatenate((
+         self.unit_cell.two_theta(self.f_miller_set.indices(),
+         wavelengths.characteristic(self.lambdas[0]).as_angstrom(), 
+         deg=True).as_numpy_array()[self.d_mask],
+         self.unit_cell.two_theta(self.f_miller_set.indices(),
+         wavelengths.characteristic(self.lambdas[1]).as_angstrom(), 
+         deg=True).as_numpy_array()[self.d_mask]
+         ))
       #: list of peak positions as a function of :math:`2\theta`
       self.two_theta_peaks.shape = (self.two_theta_peaks.shape[0],1)
       self.weighted_intensities = np.concatenate( \
@@ -490,20 +544,40 @@ class RietveldPhases:
             (len(self.two_theta_peaks),len(self.two_theta)))[self.masks]
       self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2 
 
-   def update_two_thetas(self):
-      self.d_spacings = self.f_miller_set.d_spacings().data().as_numpy_array() \
-         [self.d_mask] 
+   def update_two_thetas(self,anomalous_flag=False):
 
-      two_thetas = np.zeros((2,len(self.d_spacings)))
-      # factors = np.zeros((2,len(self.d_spacings)))
-      for i in xrange(0,len(self.lambdas),1):
-         # read wavelength
-         lambda_i = wavelengths.characteristic(self.lambdas[i]).as_angstrom()
-         # Compute two_theta for each d-spacing
-         two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/self.d_spacings)
+      # print list(self.f_miller_set.indices())
+      # print self.unit_cell.two_theta(self.f_miller_set.indices(),
+      #    wavelengths.characteristic(self.lambdas[0]).as_angstrom(), 
+      #    deg=True).as_numpy_array()
+      # print self.unit_cell.two_theta(self.f_miller_set.indices(),
+      #    wavelengths.characteristic(self.lambdas[1]).as_angstrom(), 
+      #    deg=True).as_numpy_array()
+      # self.d_spacings = self.f_miller_set.d_spacings().data().as_numpy_array() \
+      #    [self.d_mask] 
+
+      # two_thetas = np.zeros((2,len(self.d_spacings)))
+      # # factors = np.zeros((2,len(self.d_spacings)))
+      # for i in xrange(0,len(self.lambdas),1):
+      #    # read wavelength
+      #    lambda_i = wavelengths.characteristic(self.lambdas[i]).as_angstrom()
+      #    # Compute two_theta for each d-spacing
+      #    two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/self.d_spacings)
       
       # Assemble into a single array
-      self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
+      self.update_unit_cell()
+      # self.f_miller_set = self.structure.build_miller_set(anomalous_flag,
+      #    d_min=RietveldPhases.d_min).sort()
+
+      self.two_theta_peaks = np.concatenate((
+         self.unit_cell.two_theta(self.f_miller_set.indices(),
+         wavelengths.characteristic(self.lambdas[0]).as_angstrom(), 
+         deg=True).as_numpy_array()[self.d_mask],
+         self.unit_cell.two_theta(self.f_miller_set.indices(),
+         wavelengths.characteristic(self.lambdas[1]).as_angstrom(), 
+         deg=True).as_numpy_array()[self.d_mask]
+         ))
+
       #: list of peak positions as a function of :math:`2\theta`
       self.two_theta_peaks.shape = (self.two_theta_peaks.shape[0],1)
       # self.weighted_intensities = np.concatenate( \
@@ -512,7 +586,7 @@ class RietveldPhases:
       # self.weighted_intensities.shape = (self.weighted_intensities.shape[0],1)
       self.tan_two_theta_peaks = np.tan(math.pi/360.0*self.two_theta_peaks)
       self.tan_two_theta_peaks.shape = (self.tan_two_theta_peaks.shape[0],1)
-      self.masks = self.peak_masks()
+      # self.masks = self.peak_masks()
 
       self.two_theta_masked = \
          np.broadcast_to(self.two_theta,
@@ -630,6 +704,8 @@ class RietveldPhases:
       # print str(RietveldPhases.global_x['values'][RietveldPhases.global_x_no_bkgd_mask])
       self.phase_x['values'] = \
          self.global_and_phase_x['values'][self.phase_mask]
+      # if self.recompute_peak_positions:
+      #    self.update_two_thetas()
 
    def phase_profile_x(self,x,mask):
       self.update_global_and_phase_x(x,mask)
@@ -686,6 +762,7 @@ class RietveldPhases:
    #    return result
 
    def peak_masks(self,delta_theta=None):
+      # print "called peak_masks()", inspect.stack()[1][3]
       if delta_theta is not None:
          return np.abs(self.two_theta-RietveldPhases.two_theta_0['values']
             -self.two_theta_peaks) < delta_theta
