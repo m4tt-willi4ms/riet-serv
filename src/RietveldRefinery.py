@@ -11,12 +11,14 @@ import json,codecs
 
 from RietveldPhases import RietveldPhases
 
-default_factr = 1e3
+default_factr = 1e4
 default_iprint = 1
 default_maxiter = 150
 default_m = 15
 default_pgtol = 1e-5
 default_epsilon = 1e-13
+
+default_composition_cutoff = 3
 
 class RietveldRefinery:
    """
@@ -36,6 +38,7 @@ class RietveldRefinery:
       pgtol=default_pgtol,
       epsilon=default_epsilon,
       input_weights=None,
+      composition_cutoff=default_composition_cutoff,
       ):
       """
          Given some list of phases, an instance of the refinery is initialized
@@ -51,6 +54,7 @@ class RietveldRefinery:
       self.m = 15
       self.pgtol = pgtol
       self.epsilon = epsilon
+      self.composition_cutoff = composition_cutoff
 
 
       # if input_string[-4:] == ".txt":
@@ -71,23 +75,23 @@ class RietveldRefinery:
 
       self.weighted_sum_of_I_squared = np.sum(
          RietveldPhases.I**2/RietveldPhases.sigma**2)
-
-      if self.bkgd_refine:
-         self.raw_profile_state = np.sum( x for x in self.phase_profiles())
       
       RietveldPhases.assemble_global_x()
       for phase in self.phase_list:
          phase.assemble_phase_x()
-         phase.update_two_thetas()
+
       self.x = np.hstack((RietveldPhases.global_x,
          np.hstack((x.phase_x for x in self.phase_list))))
+
+      if self.bkgd_refine:
+         self.raw_profile_state = np.sum( x for x in self.phase_profiles())
 
       self.mask = np.zeros(len(self.x),dtype=bool)
 
       self.composition_by_volume = np.zeros(len(self.phase_list))
       if input_weights is not None:
          self.composition_by_weight = input_weights
-      else: self.composition_by_weight = np.zeros(len(self.phase_list))
+      else: self.composition_by_weight = 100*np.ones(len(self.phase_list))
 
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
@@ -216,7 +220,8 @@ class RietveldRefinery:
             np.logical_and(self.mask,self.global_and_phase_masks[i]))
       # if self.bkgd_refine:
       #    self.raw_profile_state = self.total_profile()
-      minimizer(self.weighted_sum_of_squares,self.x['values'][self.mask],
+      self.result = \
+         minimizer(self.weighted_sum_of_squares,self.x['values'][self.mask],
          callback = self.callback, \
          fprime = self.weighted_sum_of_squares_grad, \
          # approx_grad = True,
@@ -457,7 +462,9 @@ class RietveldRefinery:
       R_e = np.sqrt((len(RietveldPhases.two_theta)-len(self.x[self.mask])
          )/self.weighted_sum_of_I_squared)
       if fn is not None:
-         print "\nTime taken to run " + fn.__name__ + ": " \
+         print "\n" + self.result[2]['task']
+         print "\nTime taken to run " + fn.__name__ + " with " \
+            + str(np.sum(self.mask)) + " parameters: " \
             + str(round(self.t1-self.t0,3)) + " seconds"
       print "R_wp: " + str(R_wp)
       print "R_e: " + str(R_e)
