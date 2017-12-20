@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import \
 from  matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib import style, use
+from matplotlib.widgets import SpanSelector
 # use("TkAgg")
 style.use("ggplot")
 
@@ -74,6 +75,20 @@ subplot3 = fig.add_subplot(313) #plt.subplot(3,1,3)
       #    self.Weighted_Squared_Errors(),'bo',ms=2)
 # plt.ylabel(r"$\frac{1}{I} \, (I-I_{\rm calc})^2$")
 # plt.xlabel(r'$2\,\theta$')
+
+def onselect(xmin, xmax):
+   x = RietveldPhases.two_theta
+   indmin, indmax = np.searchsorted(x,
+      (xmin, xmax))
+   indmax = min(len(x) - 1, indmax)
+
+   thisx = RietveldPhases.two_theta[indmin:indmax]
+   thisy = RietveldPhases.I[indmin:indmax]
+   # line2.set_data
+   # subplot2.axes.lines[0].set_data(thisx, thisy)
+   subplot2.set_xlim(thisx[0], thisx[-1])
+   subplot2.set_ylim(0, thisy.max())
+   fig.canvas.draw()
 
 two_thetas = []
 ys = []
@@ -192,27 +207,27 @@ class RietveldGUI(tk.Tk):
       self.plotframe.grid(row=0,column=1,sticky='ew')
 
       # temp. to allow for auto-loading of profile
-      self.getProfile()
-      self.getCifs()
+      # self.getProfile()
+      # self.getCifs()
       # self.paramframe.refine()
 
    def getCifs(self):
-      # self.filePaths = tkFileDialog.askopenfilenames(
-      #    initialdir = "./data/cifs")
-      self.filePaths = [
-      r".\data\cifs\Cement\1540705-Alite.cif", 
-      r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
-      r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
-      # r".\data\cifs\Cement\9004096-anhydrite.cif",
-      r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # r".\data\cifs\Cement\9005521-bassanite.cif",
-      r".\data\cifs\Cement\9012789-Belite.cif", 
-      # r".\data\cifs\Cement\9009667-calcite.cif",
-      r".\data\cifs\Cement\1200009-Ferrite.cif", 
-      r".\data\cifs\Cement\1011094-FreeLime.cif", 
-      r".\data\cifs\Cement\1000053-Periclase.cif", 
-      # r".\data\cifs\Cement\9000113-portlandite.cif",
-      ]
+      self.filePaths = tkFileDialog.askopenfilenames(
+         initialdir = "./data/cifs")
+      # self.filePaths = [
+      # r".\data\cifs\Cement\1540705-Alite.cif", 
+      # r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
+      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
+      # # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      # r".\data\cifs\Cement\9007569-Arcanite.cif",
+      # # r".\data\cifs\Cement\9005521-bassanite.cif",
+      # r".\data\cifs\Cement\9012789-Belite.cif", 
+      # # r".\data\cifs\Cement\9009667-calcite.cif",
+      # r".\data\cifs\Cement\1200009-Ferrite.cif", 
+      # r".\data\cifs\Cement\1011094-FreeLime.cif", 
+      # r".\data\cifs\Cement\1000053-Periclase.cif", 
+      # # r".\data\cifs\Cement\9000113-portlandite.cif",
+      # ]
       # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
       # iconEntry.insert(0,fileName)
@@ -240,9 +255,9 @@ class RietveldGUI(tk.Tk):
 
 
    def getProfile(self):
-      # self.fileName = tkFileDialog.askopenfilename(
-      #    initialdir = "./data/profiles")
-      self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      self.fileName = tkFileDialog.askopenfilename(
+         initialdir = "./data/profiles")
+      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
       # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
       # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" + 
@@ -293,9 +308,13 @@ def updateplotdata():
    subplot1.legend(bbox_to_anchor=(.8,.7))
    subplot1.set_ylabel(r"$I$")
    subplot2.clear()
-   subplot2.scatter(RietveldPhases.two_theta[ROI_mask],
-      RietveldPhases.I[ROI_mask],label='Data',s=1, color='red')
+   subplot2.scatter(RietveldPhases.two_theta,
+      RietveldPhases.I,label='Data',s=1, color='red')
    subplot2.set_ylabel(r"$I$")
+   subplot2.set_xlim(RietveldPhases.two_theta[ROI_mask][0], 
+      RietveldPhases.two_theta[ROI_mask][-1])
+   subplot2.set_ylim(RietveldPhases.I[ROI_mask].min(), 
+      RietveldPhases.I[ROI_mask].max())
    subplot3.set_ylabel(r"$(\Delta I/\sigma)^2$")
    canvas.show()
 
@@ -590,8 +609,9 @@ def updateplotprofile(update_view=False):
    subplot1.plot(RietveldPhases.two_theta,RR.total_profile_state,
       label=r'$I_{\rm calc}$',color='blue')
    subplot1.legend(bbox_to_anchor=(.8,.7))
-   subplot2.plot(RietveldPhases.two_theta[ROI_mask],
-      RR.total_profile_state[ROI_mask],color='blue')
+   subplot2.plot(RietveldPhases.two_theta,
+      RR.total_profile_state,color='blue')
+
    if RR is not None:
       subplot3.plot(RietveldPhases.two_theta,
          RR.weighted_squared_errors_state,
@@ -606,6 +626,10 @@ def updateplotprofile(update_view=False):
       subplot2.axes.autoscale_view()
       subplot3.axes.relim()
       subplot3.axes.autoscale_view()
+
+   global span
+   span = SpanSelector(subplot1, onselect, 'horizontal', useblit=False,
+                 rectprops=dict(alpha=0.5, facecolor='green'))
 
    # print Rt[0].structure.space_group().crystal_system()
    # print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
@@ -700,6 +724,41 @@ class RefinementParameterSet(tk.Frame):
 
       self.grid_columnconfigure(0,minsize=286)
 
+class LabelScale(tk.Frame):
+   def __init__(self,parent,controller,
+      text="",
+      from_=0,
+      to=200,
+      tickinterval=50,
+      length=150,
+      resolution=10,
+      initial=100,
+      *args,**kwargs):
+      tk.Frame.__init__(self,parent,*args,**kwargs)
+
+      self.value = tk.IntVar()
+      self.label = tk.Label(self,text=text)
+      self.label.grid(row=0,column=0)
+      
+      self.vallabel=tk.Label(self,textvariable=self.value)
+      self.vallabel.grid(row=0,column=1,sticky='w')
+
+      self.scale = tk.Scale(self,
+         from_=from_,
+         to=to,
+         tickinterval=tickinterval,
+         variable=self.value,
+         orient=tk.HORIZONTAL,
+         length=length,
+         showvalue=0,
+         resolution=resolution,
+         )
+      self.scale.grid(row=0,column=2)
+      self.scale.set(initial)
+
+
+      self.grid_columnconfigure(1,minsize=40)
+
 class LoadFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       # controller.minsize(width=400,height=400)
@@ -724,19 +783,27 @@ class LoadFrame(tk.Frame):
       self.globalnb.grid(row=0,column=0,columnspan=2,padx=10,pady=10)
 
       self.nb = ttk.Notebook(self,
-         height=286,width=450)
+         height=220,width=450)
       self.nb.enable_traversal()
       # 
       self.nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
       # self.nb.grid(row=2,column=1,columnspan=2)
 
+      self.labelscale = LabelScale(self,parent,
+         text="Max number of iterations: ",
+         from_=0,
+         to=300,
+         initial=150,
+         length=200)
+      self.labelscale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
+
       self.RefineButton = ttk.Button(self, text='Refine', 
          command=self.refine, takefocus=False)
-      self.RefineButton.grid(row=2,column=0, padx=10, pady=10)
+      self.RefineButton.grid(row=3,column=0, padx=10, pady=10)
 
       self.CancelButton = ttk.Button(self, text='Cancel', 
          command=self.cancel, takefocus=False)
-      self.CancelButton.grid(row=2,column=1, padx=10, pady=10)
+      self.CancelButton.grid(row=3,column=1, padx=10, pady=10)
 
    def refine(self):
       global RR, Rt
@@ -758,8 +825,9 @@ class LoadFrame(tk.Frame):
                   if rp.state.get() == 1:
                      Rt[i].recompute_peak_positions = True
 
+      maxiter = self.labelscale.scale.get()
       RR = RietveldRefinery(Rt,input_weights=RR.composition_by_weight,
-         factr=1e3)
+         maxiter=maxiter)
       # RR.mask[0] = True
 
       for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
@@ -806,7 +874,10 @@ class LoadFrame(tk.Frame):
          updateplotprofile()
          time.sleep(0.5)
       t.join()
-      fig.suptitle("Optimization Complete")#mplitude_Bkgd_Offset")
+      if RR.result['message'][0:4] == "STOP":
+         fig.suptitle("Optimization Ended...")#mplitude_Bkgd_Offset")
+      elif RR.result['message'][0:4] == "CONV":
+         fig.suptitle("Optimization Complete.")
       updateplotprofile(update_view=True)
       
       RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
@@ -835,7 +906,7 @@ class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
-      global canvas 
+      global canvas, onselect, subplot1, span
       canvas = FigureCanvasTkAgg(fig, master=self)
       canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
       # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')

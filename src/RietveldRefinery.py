@@ -13,7 +13,7 @@ import json,codecs
 from RietveldPhases import RietveldPhases
 
 default_factr = 1e4
-default_iprint = 1
+default_iprint = -1
 default_maxiter = 150
 default_m = 15
 default_pgtol = 1e-5
