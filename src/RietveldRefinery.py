@@ -12,12 +12,12 @@ import json,codecs
 
 from RietveldPhases import RietveldPhases
 
-default_factr = 1e4
+default_factr = 1e3
 default_iprint = -1
 default_maxiter = 150
-default_m = 15
+default_m = 10
 default_pgtol = 1e-5
-default_epsilon = 1e-13
+default_epsilon = 1e-14
 
 default_composition_cutoff = 3
 
@@ -28,7 +28,7 @@ class RietveldRefinery:
    """
 
 
-   def __init__(self,phase_list, \
+   def __init__(self,phase_list, rietveld_plot, \
       bkgd_refine=False,
       store_intermediate_state=False,
       show_plots=False,
@@ -46,6 +46,7 @@ class RietveldRefinery:
          to readily run a refinement process.
       """
       self.phase_list = phase_list
+      self.rietveld_plot = rietveld_plot
       self.bkgd_refine = bkgd_refine
       self.store_intermediate_state = store_intermediate_state
       self.show_plots = show_plots
@@ -214,6 +215,7 @@ class RietveldRefinery:
       self.t0 = time.time()
       # self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
+      self.count = 0
 
       self.global_and_phase_refine_masks = []
       for i in xrange(len(self.phase_list)):
@@ -235,14 +237,18 @@ class RietveldRefinery:
       #    bounds = zip(self.x['l_limits'][self.mask],
       #       self.x['u_limits'][self.mask]))
 
+      if not self.bkgd_refine:
+         self.rietveld_plot.fig.suptitle("In Progress...")
+      
       options = {
          'ftol': self.factr*2.2e-16,
          # 'xtol': self.factr*2.2e-16,
          'gtol': self.pgtol,
          'maxcor': self.m,
          'maxiter': self.maxiter,
-         'disp': True,
+         # 'disp': True,
          }
+
       self.result = \
          minimize(self.weighted_sum_of_squares,self.x['values'][self.mask],
          method = 'L-BFGS-B',#'Newton-CG',#
@@ -257,9 +263,13 @@ class RietveldRefinery:
          )
 
       self.t1 = time.time()
-      print "\n"
 
       if not self.bkgd_refine:
+         if self.result['message'][0:4] == "STOP":
+            self.rietveld_plot.fig.suptitle("Optimization Ended...")
+         elif self.result['message'][0:4] == "CONV":
+            self.rietveld_plot.fig.suptitle("Optimization Complete.")
+      
          Amplitudes = self.x['values'] \
             [np.char.startswith(self.x['labels'],"Amp")]
          total = np.sum(Amplitudes) 
@@ -277,7 +287,11 @@ class RietveldRefinery:
             self.composition_by_weight[i] = val/weight_total*100
             # print "Phase " + str(i[0]+1) + ": " + \
             #    str(val/weight_total*100)  + " %"
-         # print "\n"
+
+      self.rietveld_plot.updateplotprofile(RietveldPhases.two_theta,
+            self.total_profile_state,wse=self.weighted_squared_errors_state,
+            update_view=True)
+      print "\n"
 
    def update_phase_list(self):
       Amp_mask = np.char.startswith(self.x['labels'],"Amp")
@@ -309,7 +323,11 @@ class RietveldRefinery:
          self.update_plot()
       elif self.store_intermediate_state:
          self.update_state()
+      if not self.bkgd_refine and self.count % 5 == 0:
+         self.rietveld_plot.updateplotprofile(RietveldPhases.two_theta,
+            self.total_profile_state,wse=self.weighted_squared_errors_state)
       # print self.x[self.mask]
+      self.count += 1
 
    def minimize_with_mask(self,mask):
       self.mask = mask
@@ -569,3 +587,98 @@ class RietveldRefinery:
          fig.canvas.flush_events()
          time.sleep(1)
          plt.close('all')
+
+import matplotlib
+matplotlib.use("TkAgg")
+matplotlib.style.use("ggplot")
+from matplotlib.backends.backend_tkagg import \
+   FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from  matplotlib.figure import Figure
+import matplotlib.animation as animation
+from matplotlib.widgets import SpanSelector
+
+class RietveldPlot:
+   """This class is used to group together objects associated with the
+   matplotlib plots used in displaying the results of RietveldRefinery
+   instances.
+   """
+   def __init__(self):
+      self.fig = Figure(dpi=100)
+      self.subplot1 = self.fig.add_subplot(311)
+      self.subplot2 = self.fig.add_subplot(312) 
+      self.subplot3 = self.fig.add_subplot(313)
+      # self.canvas = canvas
+      # self.span = None
+
+   def updateplotdata(self,two_theta,I,ROI_center=30,delta_theta=5):
+
+      ROI_mask = np.abs(two_theta-ROI_center) < delta_theta
+
+      self.subplot1.clear()
+      self.subplot1.scatter(two_theta,I,label='Data',s=1, color='red')
+      self.subplot1.legend(bbox_to_anchor=(.8,.7))
+      self.subplot1.set_ylabel(r"$I$")
+
+      self.subplot2.clear()
+      self.subplot2.scatter(two_theta,I,label='Data',s=1, color='red')
+      self.subplot2.set_ylabel(r"$I$")
+      self.subplot2.set_xlim(two_theta[ROI_mask][0],two_theta[ROI_mask][-1])
+      self.subplot2.set_ylim(0,I[ROI_mask].max())
+
+      self.subplot3.set_ylabel(r"$(\Delta I/\sigma)^2$")
+
+
+      def onselect(xmin, xmax):
+         x = RietveldPhases.two_theta
+         indmin, indmax = np.searchsorted(x,
+            (xmin, xmax))
+         indmax = min(len(x) - 1, indmax)
+
+         thisx = RietveldPhases.two_theta[indmin:indmax]
+         thisy = RietveldPhases.I[indmin:indmax]
+         # line2.set_data
+         # subplot2.axes.lines[0].set_data(thisx, thisy)
+         self.subplot2.set_xlim(thisx[0], thisx[-1])
+         self.subplot2.set_ylim(0, thisy.max())
+         self.fig.canvas.draw()
+         
+      self.span = SpanSelector(self.subplot1, onselect, 'horizontal', 
+                    rectprops=dict(alpha=0.5, facecolor='green'))
+         
+      self.fig.canvas.show()
+
+   def updateplotprofile(self,two_theta,profile,wse=None,update_view=False):
+      if len(self.subplot1.axes.lines) is not 0:
+         for x in (self.subplot1,self.subplot2,self.subplot3):
+            for line in x.axes.lines:
+               line.remove()
+      self.subplot1.plot(two_theta,profile,label=r'$I_{\rm calc}$',color='blue')
+      self.subplot1.legend(bbox_to_anchor=(.8,.7))
+      
+      self.subplot2.plot(two_theta,profile,label=r'$I_{\rm calc}$',color='blue')
+
+      if wse is not None:
+         self.subplot3.plot(two_theta,wse,
+            label=r'$(\Delta I/\sigma)^2$',color='green')
+
+      if update_view:
+         self.subplot1.axes.relim()
+         self.subplot1.axes.autoscale_view()
+         self.subplot2.axes.relim()
+         self.subplot2.axes.autoscale_view()
+         self.subplot3.axes.relim()
+         self.subplot3.axes.autoscale_view()
+
+
+
+      self.fig.canvas.draw()
+
+   def reset_plot_profile(self):
+      if len(self.subplot1.axes.lines) is not 0:
+         for x in (self.subplot1,self.subplot2,self.subplot3):
+            for line in x.axes.lines:
+               line.remove()
+      self.fig.suptitle("")
+      self.subplot1.axes.legend_.remove()
+      self.fig.canvas.draw()
+   

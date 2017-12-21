@@ -28,7 +28,7 @@ import sys, os
 # sys.path.append(os.path.abspath("../.."))
 
 from src.RietveldPhases import RietveldPhases
-from src.RietveldRefinery import RietveldRefinery
+from src.RietveldRefinery import RietveldRefinery, RietveldPlot
 
 from scitbx import lbfgsb
 from cctbx.eltbx import wavelengths
@@ -218,15 +218,15 @@ class RietveldGUI(tk.Tk):
       # r".\data\cifs\Cement\1540705-Alite.cif", 
       # r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
       # r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
-      # # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      # r".\data\cifs\Cement\9004096-anhydrite.cif",
       # r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # # r".\data\cifs\Cement\9005521-bassanite.cif",
+      # r".\data\cifs\Cement\9005521-bassanite.cif",
       # r".\data\cifs\Cement\9012789-Belite.cif", 
-      # # r".\data\cifs\Cement\9009667-calcite.cif",
+      # r".\data\cifs\Cement\9009667-calcite.cif",
       # r".\data\cifs\Cement\1200009-Ferrite.cif", 
       # r".\data\cifs\Cement\1011094-FreeLime.cif", 
       # r".\data\cifs\Cement\1000053-Periclase.cif", 
-      # # r".\data\cifs\Cement\9000113-portlandite.cif",
+      # r".\data\cifs\Cement\9000113-portlandite.cif",
       # ]
       # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
@@ -236,7 +236,7 @@ class RietveldGUI(tk.Tk):
       for i,filePath in enumerate(self.filePaths):
          cif_file_name = os.path.split(filePath)[1]
          Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
-            delta_theta=1.,Intensity_Cutoff=0.01))
+            delta_theta=0.8,Intensity_Cutoff=0.01))
          if self.numPhases == 0:
             self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
                self.paramframe,change_all=True),text="Phases: All")
@@ -247,11 +247,11 @@ class RietveldGUI(tk.Tk):
       # RietveldPhases.empty_x()
       # RietveldPhases.global_params_from_string(global_input_string,
       #    two_thetas,ys)
-      global RR
-      RR = RietveldRefinery(Rt,
+      global RR,Rp
+      RR = RietveldRefinery(Rt,Rp,
          store_intermediate_state=False, show_plots=False)
 
-      updateplotprofile()
+      Rp.updateplotprofile(RietveldPhases.two_theta,RR.total_profile_state)
 
 
    def getProfile(self):
@@ -296,27 +296,28 @@ class RietveldGUI(tk.Tk):
       self.paramframe = LoadFrame(self.container,self,padx=10)#,pady=10)
       self.paramframe.grid(row=0,column=0) 
 
-      updateplotdata()
+      global Rp
+      Rp.updateplotdata(RietveldPhases.two_theta,RietveldPhases.I)
 
    def exit(self):
       self.destroy()
 
-def updateplotdata():
-   subplot1.clear()
-   subplot1.scatter(RietveldPhases.two_theta,RietveldPhases.I,
-      label='Data',s=1, color='red')
-   subplot1.legend(bbox_to_anchor=(.8,.7))
-   subplot1.set_ylabel(r"$I$")
-   subplot2.clear()
-   subplot2.scatter(RietveldPhases.two_theta,
-      RietveldPhases.I,label='Data',s=1, color='red')
-   subplot2.set_ylabel(r"$I$")
-   subplot2.set_xlim(RietveldPhases.two_theta[ROI_mask][0], 
-      RietveldPhases.two_theta[ROI_mask][-1])
-   subplot2.set_ylim(RietveldPhases.I[ROI_mask].min(), 
-      RietveldPhases.I[ROI_mask].max())
-   subplot3.set_ylabel(r"$(\Delta I/\sigma)^2$")
-   canvas.show()
+# def updateplotdata():
+#    subplot1.clear()
+#    subplot1.scatter(RietveldPhases.two_theta,RietveldPhases.I,
+#       label='Data',s=1, color='red')
+#    subplot1.legend(bbox_to_anchor=(.8,.7))
+#    subplot1.set_ylabel(r"$I$")
+#    subplot2.clear()
+#    subplot2.scatter(RietveldPhases.two_theta,
+#       RietveldPhases.I,label='Data',s=1, color='red')
+#    subplot2.set_ylabel(r"$I$")
+#    subplot2.set_xlim(RietveldPhases.two_theta[ROI_mask][0], 
+#       RietveldPhases.two_theta[ROI_mask][-1])
+#    subplot2.set_ylim(RietveldPhases.I[ROI_mask].min(), 
+#       RietveldPhases.I[ROI_mask].max())
+#    subplot3.set_ylabel(r"$(\Delta I/\sigma)^2$")
+#    canvas.show()
 
 class VarLabelEntry(tk.Frame):
    def __init__(self,parent,text,x_label,index,*args, **kwargs):
@@ -355,6 +356,8 @@ class VarLabelEntry(tk.Frame):
       self.entry.grid(row=0,column=1)
 
    def onValidate(self, d, i, P, s, S, v, V, W):
+      global RR, Rp
+      
       try:
          if all(P != x for x in self.passable):
             val = float(P)
@@ -372,7 +375,6 @@ class VarLabelEntry(tk.Frame):
                RietveldPhases.x[self.x_label][self.index] = val
          else:
             RietveldPhases.x[self.x_label][self.index] = 0
-         global RR
 
       except(ValueError):
          return False
@@ -381,7 +383,8 @@ class VarLabelEntry(tk.Frame):
             RietveldPhases.x[self.x_label]
       if RR is not None:
          RR.Update_state()
-         updateplotprofile()
+      if Rp is not None:
+         Rp.updateplotprofile()
       return True
 
 class RoundsBoxes(tk.Frame):
@@ -412,10 +415,10 @@ class RefinementParameterControl(tk.Frame):
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
          variable = self.state, text=text)
-      self.checkbutton.grid(row=0,column=0,sticky='w')
+      self.checkbutton.grid(row=1,column=0,sticky='w')
 
-      self.rounds = RoundsBoxes(self,parent,default_round_start)
-      self.rounds.grid(row=0,column=1,sticky='w')
+      # self.rounds = RoundsBoxes(self,parent,default_round_start)
+      # self.rounds.grid(row=0,column=1,sticky='w')
 
       # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
       # self.initial.grid(row=0,column=1,sticky='e')
@@ -441,13 +444,15 @@ class RefinementParameterControl(tk.Frame):
 
    def checkbutton_clicked(self):
       if self.state.get() == 1:
-         self.rounds.grid()
+         pass
+         # self.rounds.grid()
          # self.initial.grid()
          # self.l_limit.grid()
          # self.u_limit.grid()
          # self.round_dropdownlist.grid()
       if self.state.get() == 0:
-         self.rounds.grid_remove()
+         pass
+         # self.rounds.grid_remove()
          # self.initial.grid_remove()
          # self.l_limit.grid_remove()
          # self.u_limit.grid_remove()
@@ -479,8 +484,8 @@ class RefinementParameterRadioControl(tk.Frame):
       self.radioframe.grid(row=0,column=1)
       self.radiovar.set(1)
 
-      self.rounds = RoundsBoxes(self,parent,default_round_start)
-      self.rounds.grid(row=0,column=2,sticky='w')
+      # self.rounds = RoundsBoxes(self,parent,default_round_start)
+      # self.rounds.grid(row=0,column=2,sticky='w')
 
       # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
       # self.initial.grid(row=0,column=1,sticky='e')
@@ -508,14 +513,14 @@ class RefinementParameterRadioControl(tk.Frame):
    def checkbutton_clicked(self):
       if self.state.get() == 1:
          self.radioframe.grid()
-         self.rounds.grid()
+         # self.rounds.grid()
          # self.initial.grid()
          # self.l_limit.grid()
          # self.u_limit.grid()
          # self.round_dropdownlist.grid()
       if self.state.get() == 0:
          self.radioframe.grid_remove()
-         self.rounds.grid_remove()
+         # self.rounds.grid_remove()
          # self.initial.grid_remove()
          # self.l_limit.grid_remove()
          # self.u_limit.grid_remove()
@@ -557,8 +562,8 @@ class RefinementParameterPolynomControl(tk.Frame):
          text="Order:", min_int=0, max_int=6, default_int=default_order)
       self.order_dropdownlist.grid(row=0,column=1)
 
-      self.rounds = RoundsBoxes(self,parent,default_round_start)
-      self.rounds.grid(row=0,column=2)
+      # self.rounds = RoundsBoxes(self,parent,default_round_start)
+      # self.rounds.grid(row=0,column=2)
 
       # self.round_dropdownlist = Dropdown_Int_List(self, parent,
       #    text="Round:", min_int=1, max_int=max_refinement_rounds, 
@@ -572,21 +577,23 @@ class RefinementParameterPolynomControl(tk.Frame):
       self.checkbutton_clicked()
 
    def checkbutton_clicked(self):
-      global RR
+      global RR,Rp,canvas
       if self.state.get() == 1:
          self.order_dropdownlist.grid()
-         self.rounds.grid()
+         # self.rounds.grid()
 
          if self.text == "Background":
-            RR = RietveldRefinery(Rt, \
+            RR = RietveldRefinery(Rt,Rp, \
                bkgd_refine=True,
                store_intermediate_state=False, show_plots=False)
             RR.minimize_bkgd()
-            updateplotprofile()
+            # Rp.updateplotprofile(RietveldPhases.two_theta,
+            #    RR.total_profile_state,wse=RR.weighted_squared_errors_state)
+            # Rp.fig.canvas.draw()
 
       if self.state.get() == 0:
          self.order_dropdownlist.grid_remove()
-         self.rounds.grid_remove()
+         # self.rounds.grid_remove()
 
          # if self.text == "Background":
          #    if len(subplot1.axes.lines) is not 0:
@@ -601,44 +608,44 @@ def startthread(func):
    t.start()
    return t
 
-def updateplotprofile(update_view=False):
-   if len(subplot1.axes.lines) is not 0:
-      for x in (subplot1,subplot2,subplot3):
-         for line in x.axes.lines:
-            line.remove()
-   subplot1.plot(RietveldPhases.two_theta,RR.total_profile_state,
-      label=r'$I_{\rm calc}$',color='blue')
-   subplot1.legend(bbox_to_anchor=(.8,.7))
-   subplot2.plot(RietveldPhases.two_theta,
-      RR.total_profile_state,color='blue')
+# def updateplotprofile(update_view=False):
+#    if len(subplot1.axes.lines) is not 0:
+#       for x in (subplot1,subplot2,subplot3):
+#          for line in x.axes.lines:
+#             line.remove()
+#    subplot1.plot(RietveldPhases.two_theta,RR.total_profile_state,
+#       label=r'$I_{\rm calc}$',color='blue')
+#    subplot1.legend(bbox_to_anchor=(.8,.7))
+#    subplot2.plot(RietveldPhases.two_theta,
+#       RR.total_profile_state,color='blue')
 
-   if RR is not None:
-      subplot3.plot(RietveldPhases.two_theta,
-         RR.weighted_squared_errors_state,
-         label=r'$(\Delta I/\sigma)^2$',color='green')
-   # subplot3.set_xlabel(r'$2\,\theta$')
-   # subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{\sigma^2}$")
+#    if RR is not None:
+#       subplot3.plot(RietveldPhases.two_theta,
+#          RR.weighted_squared_errors_state,
+#          label=r'$(\Delta I/\sigma)^2$',color='green')
+#    # subplot3.set_xlabel(r'$2\,\theta$')
+#    # subplot3.set_ylabel(r"$\frac{(I-I_{\rm calc})^2}{\sigma^2}$")
 
-   if update_view:
-      subplot1.axes.relim()
-      subplot1.axes.autoscale_view()
-      subplot2.axes.relim()
-      subplot2.axes.autoscale_view()
-      subplot3.axes.relim()
-      subplot3.axes.autoscale_view()
+#    if update_view:
+#       subplot1.axes.relim()
+#       subplot1.axes.autoscale_view()
+#       subplot2.axes.relim()
+#       subplot2.axes.autoscale_view()
+#       subplot3.axes.relim()
+#       subplot3.axes.autoscale_view()
 
-   global span
-   span = SpanSelector(subplot1, onselect, 'horizontal', useblit=False,
-                 rectprops=dict(alpha=0.5, facecolor='green'))
+#    global span
+#    span = SpanSelector(subplot1, onselect, 'horizontal', useblit=False,
+#                  rectprops=dict(alpha=0.5, facecolor='green'))
 
-   # print Rt[0].structure.space_group().crystal_system()
-   # print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
-   # Rt[0].update_unit_cell()
-   # print Rt[0].unit_cell
-   # print Rt[0].structure.space_group().average_unit_cell(Rt[0].unit_cell)
-   # print lattice_symmetry.group(Rt[0].unit_cell)
-   # print tmp.lattice_group_info()
-   canvas.draw()
+#    # print Rt[0].structure.space_group().crystal_system()
+#    # print RietveldPhases.x['values'][Rt[0].unit_cell_indices[0]]
+#    # Rt[0].update_unit_cell()
+#    # print Rt[0].unit_cell
+#    # print Rt[0].structure.space_group().average_unit_cell(Rt[0].unit_cell)
+#    # print lattice_symmetry.group(Rt[0].unit_cell)
+#    # print tmp.lattice_group_info()
+#    canvas.draw()
 
 class Dropdown_Int_List(tk.Frame):
    def __init__(self, parent, controller, text="", default_int=2, min_int=0,
@@ -746,7 +753,7 @@ class LabelScale(tk.Frame):
       self.scale = tk.Scale(self,
          from_=from_,
          to=to,
-         tickinterval=tickinterval,
+         # tickinterval=tickinterval,
          variable=self.value,
          orient=tk.HORIZONTAL,
          length=length,
@@ -766,7 +773,7 @@ class LoadFrame(tk.Frame):
 
       self.parent = parent
       self.controller = controller
-      self.globalnb = ttk.Notebook(self,height=100,width=450)
+      self.globalnb = ttk.Notebook(self,height=100,width=250)
       self.globalFrame = tk.Frame(self.globalnb,padx=10,pady=10)
       #, width=100, height=100)
       # self.globalLabelFrame.p#grid(row=0,column=0)
@@ -793,7 +800,7 @@ class LoadFrame(tk.Frame):
          text="Max number of iterations: ",
          from_=0,
          to=300,
-         initial=150,
+         initial=100,
          length=200)
       self.labelscale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
 
@@ -806,7 +813,7 @@ class LoadFrame(tk.Frame):
       self.CancelButton.grid(row=3,column=1, padx=10, pady=10)
 
    def refine(self):
-      global RR, Rt
+      global RR, Rt, Rp
 
       for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
          .children.values():
@@ -814,19 +821,21 @@ class LoadFrame(tk.Frame):
                or isinstance(rp,RefinementParameterPolynomControl):
                if rp.parameter['labels'][0][0:3] == "uc_":
                   for i in xrange(len(Rt)):
-                     if rp.state.get() == 1:
+                     if rp.state.get() == 1 and \
+                        RR.composition_by_weight[i] >= RR.composition_cutoff:
                         Rt[i].recompute_peak_positions = True
                      else: Rt[i].recompute_peak_positions = False
 
       for i,tab in enumerate(self.nb.tabs()[1:]):
          for rp in self.nb.children[tab.split('.')[-1]].children.values():
             if isinstance(rp,RefinementParameterControl):
-               if rp.parameter['labels'][0][0:3] == "uc_":
+               if rp.parameter['labels'][0][0:3] == "uc_" and \
+                  RR.composition_by_weight[i] >= RR.composition_cutoff:
                   if rp.state.get() == 1:
                      Rt[i].recompute_peak_positions = True
 
       maxiter = self.labelscale.scale.get()
-      RR = RietveldRefinery(Rt,input_weights=RR.composition_by_weight,
+      RR = RietveldRefinery(Rt,Rp,input_weights=RR.composition_by_weight,
          maxiter=maxiter)
       # RR.mask[0] = True
 
@@ -836,8 +845,10 @@ class LoadFrame(tk.Frame):
                or isinstance(rp,RefinementParameterPolynomControl):
                if rp.state.get() == 1:
                   for i in xrange(len(Rt)):
+                     # print rp.parameter['labels'][0][0:3]
                      if RR.composition_by_weight[i] >= RR.composition_cutoff \
-                        or rp.parameter['labels'][0][0:3] == "Amp" \
+                        or np.any(
+                           np.char.startswith(rp.parameter['labels'],"Amp")) \
                         or rp.parameter['labels'][0] == "W":
                         RR.mask = np.logical_or(RR.mask,
                            np.logical_and(RR.phase_masks[i],
@@ -849,8 +860,10 @@ class LoadFrame(tk.Frame):
             if isinstance(rp,RefinementParameterControl) or \
                isinstance(rp,RefinementParameterPolynomControl):
                if rp.state.get() == 1:
+                  # print rp.parameter['labels'][0][0:3]
                   if RR.composition_by_weight[i] >= RR.composition_cutoff \
-                     or rp.parameter['labels'][0][0:3] == "Amp" \
+                     or np.any(
+                           np.char.startswith(rp.parameter['labels'],"Amp")) \
                      or rp.parameter['labels'][0] == "W":
                      RR.mask = np.logical_or(RR.mask,
                         np.logical_and(RR.phase_masks[i],
@@ -868,46 +881,48 @@ class LoadFrame(tk.Frame):
 
          # print self.nb.children[tab.split('.')[-1]]. \
          #    param_dict['Amplitude'].state.get()
-      t = startthread(RR.minimize)#Amplitude_Bkgd_Offset)
-      fig.suptitle("In Progress...")#mplitude_Bkgd_Offset")
-      while t.isAlive():
-         updateplotprofile()
-         time.sleep(0.5)
-      t.join()
-      if RR.result['message'][0:4] == "STOP":
-         fig.suptitle("Optimization Ended...")#mplitude_Bkgd_Offset")
-      elif RR.result['message'][0:4] == "CONV":
-         fig.suptitle("Optimization Complete.")
-      updateplotprofile(update_view=True)
-      
+      # t = startthread(RR.minimize)#Amplitude_Bkgd_Offset)
+      # global Rp
+      # Rp.fig.suptitle("In Progress...")#mplitude_Bkgd_Offset")
+      # while t.isAlive():
+      #    Rp.updateplotprofile(RietveldPhases.two_theta,
+      #       RR.total_profile_state,wse=RR.weighted_squared_errors_state)
+      #    Rp.fig.canvas.draw()
+      #    time.sleep(0.5)
+      # if RR.result['message'][0:4] == "STOP":
+      #    Rp.fig.suptitle("Optimization Ended...")#mplitude_Bkgd_Offset")
+      # elif RR.result['message'][0:4] == "CONV":
+      #    Rp.fig.suptitle("Optimization Complete.")
+      # Rp.updateplotprofile(RietveldPhases.two_theta,
+      #       RR.total_profile_state,wse=RR.weighted_squared_errors_state,
+      #       update_view=True)
+      RR.minimize()
+      # t.join()
       RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
       RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
 
    def cancel(self):
       self.controller.numPhases = 0
-      global Rt, RR
+      global Rt, RR, Rp
       Rt = []
-      # RR = None
-      del RR
+      if RR is not None:
+         del RR
+      RR = None
       # RietveldPhases.set_profile()
       for tab in self.nb.tabs():
          self.nb.hide(tab)
          self.nb.forget(tab)
-      if len(subplot1.axes.lines) is not 0:
-         for x in (subplot1,subplot2,subplot3):
-            for line in x.axes.lines:
-               line.remove()
-         fig.suptitle("")
-         subplot1.axes.legend_.remove()
-         canvas.draw()
+      Rp.reset_plot_profile()
       # self.controller.getCifs()
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
-      global canvas, onselect, subplot1, span
-      canvas = FigureCanvasTkAgg(fig, master=self)
+      # global canvas, onselect, subplot1, span
+      global Rp,canvas
+      Rp = RietveldPlot()
+      canvas = FigureCanvasTkAgg(Rp.fig, master=self)
       canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
       # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
 
