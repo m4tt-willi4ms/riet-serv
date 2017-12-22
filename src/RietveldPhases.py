@@ -35,7 +35,7 @@ default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 default_U = np.array([('U',0.00,-0.1,0.1)],dtype=custom_dtype)
 default_V = np.array([('V',0.00,-0.1,0.1)],dtype=custom_dtype)
 # default_W = np.array([('W',0.01,0.0001,1)],dtype=custom_dtype)
-default_W = np.array([('W',0.003,0.0001,1)],dtype=custom_dtype)
+default_W = np.array([('W',0.003,0.000001,1)],dtype=custom_dtype)
 default_Amplitude = np.array([('Amplitude',0.1,0,float('inf'))],
    dtype=custom_dtype)
 default_eta_order = 2
@@ -136,7 +136,7 @@ class RietveldPhases:
       I = []
       sigma = []
       with open(filename) as file:
-         for line in file.readlines():#[4:]:
+         for line in file.readlines()[1:]:#[4:]:
             if number_of_columns == 2:
                two_thetatmp, Itmp = line.split()
             # if float(two_thetatmp) < 15:

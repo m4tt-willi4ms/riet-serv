@@ -288,9 +288,8 @@ class RietveldRefinery:
             # print "Phase " + str(i[0]+1) + ": " + \
             #    str(val/weight_total*100)  + " %"
 
-      self.rietveld_plot.updateplotprofile(RietveldPhases.two_theta,
-            self.total_profile_state,wse=self.weighted_squared_errors_state,
-            update_view=True)
+      self.rietveld_plot.updateplotprofile(self.total_profile_state,
+         wse=self.relative_differences_state,update_view=True)
       print "\n"
 
    def update_phase_list(self):
@@ -324,8 +323,8 @@ class RietveldRefinery:
       elif self.store_intermediate_state:
          self.update_state()
       if not self.bkgd_refine and self.count % 5 == 0:
-         self.rietveld_plot.updateplotprofile(RietveldPhases.two_theta,
-            self.total_profile_state,wse=self.weighted_squared_errors_state)
+         self.rietveld_plot.updateplotprofile(self.total_profile_state,
+            wse=self.relative_differences_state)
       # print self.x[self.mask]
       self.count += 1
 
@@ -604,29 +603,49 @@ class RietveldPlot:
    """
    def __init__(self):
       self.fig = Figure(dpi=100)
-      self.subplot1 = self.fig.add_subplot(311)
-      self.subplot2 = self.fig.add_subplot(312) 
-      self.subplot3 = self.fig.add_subplot(313)
+      # self.subplot1 = self.fig.subplot2grid((3,1),(0,0),rowspan=2)
+      # self.subplot1 = self.fig.subplot2grid((3,1),(0,2),rowspan=2)
+      self.subplot1 = self.fig.add_subplot(2,1,1)
+      self.subplot2 = self.fig.add_subplot(2,1,2) 
+      # self.subplot3 = self.fig.add_subplot(313)
       # self.canvas = canvas
       # self.span = None
 
-   def updateplotdata(self,two_theta,I,ROI_center=30,delta_theta=5):
+   def setplotdata(self,ROI_center=None,delta_theta=3):
 
+      two_theta = RietveldPhases.two_theta
+      I = RietveldPhases.I
+      if ROI_center is None:
+         ROI_center = two_theta[np.argmax(I)]
       ROI_mask = np.abs(two_theta-ROI_center) < delta_theta
-
+      self.I_max = I.max()
       self.subplot1.clear()
-      self.subplot1.scatter(two_theta,I,label='Data',s=1, color='red')
-      self.subplot1.legend(bbox_to_anchor=(.8,.7))
+      self.subplot1.scatter(two_theta,I,label='Data',s=1, color='blue')
+      # self.subplot1.legend(bbox_to_anchor=(.8,.7))
       self.subplot1.set_ylabel(r"$I$")
+      self.profile1, = self.subplot1.plot(two_theta,np.zeros(len(two_theta)),
+         label=r'$I_{\rm calc}$',alpha=0.7,color='red')
+      self.subplot1.axhline(y=-self.I_max/2,color='black')
+      self.diff1, = self.subplot1.plot(
+         two_theta,-self.I_max/2*np.ones(len(two_theta)),
+         label=r'$\Delta I$',color='green')
+      self.subplot1.legend(bbox_to_anchor=(.8,.7))
 
       self.subplot2.clear()
-      self.subplot2.scatter(two_theta,I,label='Data',s=1, color='red')
+      self.subplot2.scatter(two_theta,I,label='Data',s=1, color='blue')
       self.subplot2.set_ylabel(r"$I$")
+      self.profile2, = self.subplot2.plot(two_theta,np.zeros(len(two_theta)),
+         alpha=0.7,color='red')
+      self.subplot2.axhline(y=-self.I_max/2,color='black')
+      self.diff2, = self.subplot2.plot(two_theta,
+         -self.I_max/2*np.ones(len(two_theta)),
+         label=r'$\Delta I$',color='green')
+
       self.subplot2.set_xlim(two_theta[ROI_mask][0],two_theta[ROI_mask][-1])
-      self.subplot2.set_ylim(0,I[ROI_mask].max())
+      self.subplot2.set_ylim(top=I[ROI_mask].max())
 
-      self.subplot3.set_ylabel(r"$(\Delta I/\sigma)^2$")
-
+      # self.subplot3.set_ylabel(r"$\Delta I$")
+      # self.subplot3.set_ylim(-self.I_max/2,self.I_max/2)
 
       def onselect(xmin, xmax):
          x = RietveldPhases.two_theta
@@ -639,43 +658,54 @@ class RietveldPlot:
          # line2.set_data
          # subplot2.axes.lines[0].set_data(thisx, thisy)
          self.subplot2.set_xlim(thisx[0], thisx[-1])
-         self.subplot2.set_ylim(0, thisy.max())
+         self.subplot2.set_ylim(top=thisy.max())
          self.fig.canvas.draw()
-         
+
       self.span = SpanSelector(self.subplot1, onselect, 'horizontal', 
                     rectprops=dict(alpha=0.5, facecolor='green'))
          
       self.fig.canvas.show()
 
-   def updateplotprofile(self,two_theta,profile,wse=None,update_view=False):
-      if len(self.subplot1.axes.lines) is not 0:
-         for x in (self.subplot1,self.subplot2,self.subplot3):
-            for line in x.axes.lines:
-               line.remove()
-      self.subplot1.plot(two_theta,profile,label=r'$I_{\rm calc}$',color='blue')
-      self.subplot1.legend(bbox_to_anchor=(.8,.7))
-      
-      self.subplot2.plot(two_theta,profile,label=r'$I_{\rm calc}$',color='blue')
-
+   def updateplotprofile(self,profile,wse=None,update_view=False):
+      # if len(self.subplot1.axes.lines) is not 0:
+      #    for x in (self.subplot1,self.subplot2):#,self.subplot3):
+      #       for line in x.axes.lines:
+      #          line.remove()
+      self.profile1.set_ydata(profile)
+      self.profile2.set_ydata(profile)
       if wse is not None:
-         self.subplot3.plot(two_theta,wse,
-            label=r'$(\Delta I/\sigma)^2$',color='green')
+         sigma = RietveldPhases.sigma
+         self.diff1.set_ydata(-self.I_max/2+wse*sigma**2)
+         self.diff2.set_ydata(-self.I_max/2+wse*sigma**2)
+      # self.subplot1.plot(two_theta,profile,label=r'$I_{\rm calc}$',
+      #    alpha=0.7,color='red')
+      #    self.subplot1.plot(two_theta,-self.I_max/2+wse*RietveldPhases.sigma**2,
+      #       label=r'$\Delta I$',color='green')
+      # self.subplot1.legend(bbox_to_anchor=(.8,.7))
+      
+      # self.subplot2.plot(two_theta,profile,
+      #    alpha=0.7,color='red')
+      # if wse is not None:
+      #    self.subplot2.plot(two_theta,-self.I_max/2+wse*RietveldPhases.sigma**2,
+      #       color='green')
+
+      # if wse is not None:
+      #    self.subplot3.plot(two_theta,wse*RietveldPhases.sigma**2,
+      #       label=r'$\Delta I$',color='green')
 
       if update_view:
          self.subplot1.axes.relim()
          self.subplot1.axes.autoscale_view()
          self.subplot2.axes.relim()
          self.subplot2.axes.autoscale_view()
-         self.subplot3.axes.relim()
-         self.subplot3.axes.autoscale_view()
-
-
+         # self.subplot3.axes.relim()
+         # self.subplot3.axes.autoscale_view()
 
       self.fig.canvas.draw()
 
    def reset_plot_profile(self):
       if len(self.subplot1.axes.lines) is not 0:
-         for x in (self.subplot1,self.subplot2,self.subplot3):
+         for x in (self.subplot1,self.subplot2):#,self.subplot3):
             for line in x.axes.lines:
                line.remove()
       self.fig.suptitle("")
