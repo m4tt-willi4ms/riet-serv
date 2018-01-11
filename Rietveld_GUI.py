@@ -6,6 +6,7 @@ from __future__ import division
 import numpy as np
 import time
 import pdb
+import copy
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import \
@@ -38,7 +39,7 @@ from cctbx.sgtbx import lattice_symmetry
 import Tkinter as tk
 import tkFileDialog
 
-LARGE_FONT = ("Verdana", 11)
+LARGE_FONT = ("Verdana", 31)
 
 
 # fig = Figure(dpi=100)
@@ -70,6 +71,9 @@ two_thetas = []
 ys = []
 
 Rt = []
+x_list = []
+Rt_list = []
+mask_list = []
 RR = None
 
 # x_defaults = {}
@@ -86,13 +90,28 @@ max_refinement_rounds = 5
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
 
+class AutoScrollbar(tk.Scrollbar):
+    # a scrollbar that hides itself if it's not needed.  only
+    # works if you use the grid geometry manager.
+    def set(self, lo, hi):
+        if float(lo) <= 0.0 and float(hi) >= 1.0:
+            # grid_remove is currently missing from Tkinter!
+            self.tk.call("grid", "remove", self)
+        else:
+            self.grid()
+        tk.Scrollbar.set(self, lo, hi)
+    def pack(self, **kw):
+        raise TclError, "cannot use pack with this widget"
+    def place(self, **kw):
+        raise TclError, "cannot use place with this widget"
+
 class RietveldGUI(tk.Tk):
    def __init__(self, *args, **kwargs):
       tk.Tk.__init__(self, *args, **kwargs)
 
       tk.Tk.iconbitmap(self, default=u"doc//ProtoLogo_R.ico")
       tk.Tk.wm_title(self, "Rietveld Refinement")
-      tk.Tk.wm_geometry(self,'1200x600')
+      tk.Tk.wm_geometry(self,'1260x600')
 
       self.container = tk.Frame(self)
       self.container.pack(side="top", fill="both", expand=True)
@@ -159,14 +178,71 @@ class RietveldGUI(tk.Tk):
       s.configure("Button",borderwidth=0)
 
       self.numPhases=0
+      self.results_frame = tk.Frame(self.container)
 
-      self.plotframe = PlotFrame(self.container,self,pady=10,padx=10)
-      self.plotframe.grid(row=0,column=0,sticky='w')
+      self.results_string = tk.StringVar()
+      self.results_title = tk.Label(self.results_frame,
+         textvariable=self.results_string)
+      self.results_string.set("Results:")
+      self.results_title.grid(row=0,column=0,sticky='w',padx=10)
+
+      self.results_box_scrollbar = AutoScrollbar(self.results_frame)
+      self.results_box_scrollbar.grid(row=1,column=1,sticky='ns',
+         pady=10)
+
+      self.results_box = tk.Listbox(self.results_frame,
+         activestyle='none',
+         width=33,
+         height=5,
+         yscrollcommand=self.results_box_scrollbar.set
+         )
+      self.results_box.bind('<<ListboxSelect>>', self.onClick)
+      self.results_box.grid(row=1,column=0,sticky='nsew',
+         pady=10)
+
+
+      self.results_box_scrollbar.config(command=self.results_box.yview)
+
+      self.results_text_scrollbar = AutoScrollbar(self.results_frame)
+      self.results_text_scrollbar.grid(row=2,column=1,sticky='ns')
+
+      self.results_text = tk.Text(self.results_frame, 
+         height=15,
+         width=33,
+         yscrollcommand=self.results_text_scrollbar.set,
+         takefocus=0,
+         wrap=tk.WORD,
+         )
+      self.results_text.grid(row=2,column=0,sticky='ns')
+      self.results_text.insert(tk.END,"")
+
+      self.results_text_scrollbar.config(command=self.results_text.yview)
+
+      self.results_frame.grid_rowconfigure(2,minsize=300)
+
+      self.results_frame.grid(row=0,column=0)
+
+      self.plotframe = PlotFrame(self.container,self,padx=10,pady=10)
+      self.plotframe.grid(row=0,column=1,sticky='w')
 
       # temp. to allow for auto-loading of profile
       self.getProfile()
       self.getCifs()
       # self.paramframe.refine()
+
+   def onClick(self,event):
+      global RR,Rt,Rp,x_list,Rt_list
+      # print self.results_box.curselection()[0]
+      # pdb.set_trace()
+      RR = RietveldRefinery(Rt_list[self.results_box.curselection()[0]],
+         Rp,
+         mask=mask_list[self.results_box.curselection()[0]],
+         input_weights=RR.composition_by_weight)
+      RR.revert_to_x(x_list[self.results_box.curselection()[0]])
+
+      self.results_text.delete(0.0,tk.END)
+      self.results_text.insert(tk.END,RR.display_parameters())
+      # self.param_string.set(RR.display_parameters())
 
    def getCifs(self,filePaths=None):
       if filePaths is None:
@@ -233,7 +309,7 @@ class RietveldGUI(tk.Tk):
       ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
 
       self.paramframe = LoadFrame(self.container,self,padx=10)#,pady=10)
-      self.paramframe.grid(row=0,column=1) 
+      self.paramframe.grid(row=0,column=2) 
 
       global Rp
       Rp.setplotdata()
@@ -590,7 +666,7 @@ class RefinementParameterSet(tk.Frame):
          phase = Rt[0]
 
       RefinementParameterControl(self,parent,
-         phase.Amplitude,text="Amplitude",change_all=change_all
+         phase.Amplitude,text="Scale",change_all=change_all
          ,default_round_start=2).grid(row=1,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
@@ -598,7 +674,7 @@ class RefinementParameterSet(tk.Frame):
          .grid(row=2,column=0,sticky='w')
 
       RefinementParameterPolynomControl(self,parent, phase.eta,
-         text="eta",default_order=1,default_round_start=3).grid(row=3,column=0,
+         text=u"\u03b7",default_order=1,default_round_start=3).grid(row=3,column=0,
          sticky='w')
 
       RefinementParameterControl(self,parent,
@@ -621,7 +697,7 @@ class LabelScale(tk.Frame):
       from_=0,
       to=200,
       tickinterval=50,
-      length=150,
+      length=100,
       resolution=10,
       initial=100,
       *args,**kwargs):
@@ -661,6 +737,7 @@ class LoadFrame(tk.Frame):
       self.nbwidth = nbwidth
       self.globalnb = ttk.Notebook(self,height=100,width=self.nbwidth)
       self.globalFrame = tk.Frame(self.globalnb,padx=10,pady=10)
+      self.numruns = 0
       #, width=100, height=100)
       # self.globalLabelFrame.p#grid(row=0,column=0)
 
@@ -671,7 +748,7 @@ class LoadFrame(tk.Frame):
       self.bkgd_control.grid(row=0,column=0,sticky='w')
 
       RefinementParameterRadioControl(self.globalFrame,self,
-         RietveldPhases.two_theta_0,text="Two theta offset") \
+         RietveldPhases.two_theta_0,text=u"2\u03b8 Offset") \
          .grid(row=1,column=0,sticky='w')
       
       self.globalnb.add(self.globalFrame,text="Global Parameters")
@@ -689,7 +766,7 @@ class LoadFrame(tk.Frame):
          from_=0,
          to=300,
          initial=100,
-         length=200)
+         length=100)
       self.labelscale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
 
       self.RefineButton = ttk.Button(self, text='Refine', 
@@ -701,7 +778,7 @@ class LoadFrame(tk.Frame):
       self.CancelButton.grid(row=3,column=1, padx=10, pady=10)
 
    def refine(self):
-      global RR, Rt, Rp
+      global RR, Rt, Rp, x_list, Rt_list
 
       for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
          .children.values():
@@ -766,8 +843,23 @@ class LoadFrame(tk.Frame):
                   rp.parameter['labels'][0][0:3])))
 
       RR.minimize()
-      RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
+
+      x_list.append(copy.deepcopy(RR.x))
+      mask_list.append(copy.deepcopy(RR.mask))
+      Rt_list.append(copy.deepcopy(Rt))
+
+      # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
       RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
+
+      self.parent.master.results_box.insert(self.numruns,
+         "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
+         " parameters, GoF = " + str(round(RR.GoF,3)))
+      self.parent.master.results_box.see(tk.END)
+      # self.parent.master.param_string.set(RR.display_parameters())
+      self.parent.master.results_text.delete(0.0,tk.END)
+      self.parent.master.results_text.insert(tk.END,RR.display_parameters())
+      self.numruns += 1
+
 
    def reset(self):
       self.controller.numPhases = 0
@@ -804,4 +896,6 @@ class PlotFrame(tk.Frame):
 
 if __name__ == "__main__":
    root = RietveldGUI()
+   root.call('wm', 'attributes', '.', '-topmost', True)
+   root.after_idle(root.call, 'wm', 'attributes', '.', '-topmost', False)
    root.mainloop()

@@ -12,7 +12,7 @@ import json,codecs
 
 from RietveldPhases import RietveldPhases
 
-default_factr = 1e3
+default_factr = 1e2
 default_iprint = -1
 default_maxiter = 150
 default_m = 10
@@ -33,6 +33,7 @@ class RietveldRefinery:
       store_intermediate_state=False,
       show_plots=False,
       factr=default_factr,
+      mask=None,
       iprint=default_iprint,
       maxiter=default_maxiter,
       m=default_m,
@@ -88,7 +89,10 @@ class RietveldRefinery:
       if self.bkgd_refine:
          self.raw_profile_state = np.sum( x for x in self.phase_profiles())
 
-      self.mask = np.zeros(len(self.x),dtype=bool)
+      if mask is not None:
+         self.mask = mask
+      else:
+         self.mask = np.zeros(len(self.x),dtype=bool)
 
       self.composition_by_volume = np.zeros(len(self.phase_list))
       if input_weights is not None:
@@ -180,6 +184,12 @@ class RietveldRefinery:
       # self.Relative_Differences_state.shape = \
       #    (self.Relative_Differences_state.shape[0],1)
       self.weighted_squared_errors_state = self.weighted_squared_errors()
+
+   def revert_to_x(self,x):
+      self.x = x
+      self.update_state()
+      self.rietveld_plot.updateplotprofile(self.total_profile_state,
+            wse=self.relative_differences_state)
 
    def weighted_sum_of_squares(self,x):
       # print self.mask
@@ -487,13 +497,21 @@ class RietveldRefinery:
 
    def display_parameters(self,fn=None):
       if fn is not None:
-         print "After " + fn.__name__ + ":"
+         param_list = "After " + fn.__name__ + ":\n"
+      else: 
+         param_list = ""
       for label,value,l,u in zip( \
          self.x['labels'][self.mask], \
          self.x['values'][self.mask], \
          self.x['l_limits'][self.mask], \
          self.x['u_limits'][self.mask]):
-         print label + " = " + str(value) + " (" + str(l) + ", " + str(u) + ")"
+         param_list += \
+            label + " = " \
+            + ('%.4g' % value) + " (" \
+            + ('%.4g' % l) + ", " \
+            + ('%.4g' % u) + ")\n"
+      print param_list
+      return param_list
 
    def display_stats(self,fn=None):
       # self.mask = np.ones(len(self.x),dtype=bool)
@@ -501,15 +519,19 @@ class RietveldRefinery:
       R_wp = np.sqrt(WSS/self.weighted_sum_of_I_squared)
       R_e = np.sqrt((len(RietveldPhases.two_theta)-len(self.x[self.mask])
          )/self.weighted_sum_of_I_squared)
+
+      self.num_params = np.sum(self.mask)
+      self.GoF = R_wp/R_e
+
       if fn is not None:
          # print self.result
          print "\n" + self.result['message']
          print "\nTime taken to run " + fn.__name__ + " with " \
-            + str(np.sum(self.mask)) + " parameters: " \
+            + str(self.num_params) + " parameters: " \
             + str(round(self.t1-self.t0,3)) + " seconds"
       print "R_wp: " + str(R_wp)
       print "R_e: " + str(R_e)
-      print "Goodness-of-Fit: " + str(R_wp/R_e)
+      print "Goodness-of-Fit: " + str(self.GoF)
 
       if not self.bkgd_refine:
          print "\n"
@@ -622,10 +644,13 @@ class RietveldPlot:
       self.subplot1.clear()
       self.subplot1.scatter(two_theta,I,label='Data',s=1, color='blue')
       # self.subplot1.legend(bbox_to_anchor=(.8,.7))
-      self.subplot1.set_ylabel(r"$I$")
+      self.subplot1.set_ylabel(r"$I$",rotation=0)
       self.profile1, = self.subplot1.plot(two_theta,np.zeros(len(two_theta)),
          label=r'$I_{\rm calc}$',alpha=0.7,color='red')
-      self.subplot1.axhline(y=-self.I_max/2,color='black')
+      self.subplot1.axhline(y=-self.I_max/2,
+         # xmin=two_theta[0],
+         # xmax=two_theta[-1],
+         color='black')
       self.diff1, = self.subplot1.plot(
          two_theta,-self.I_max/2*np.ones(len(two_theta)),
          label=r'$\Delta I$',color='green')
@@ -633,36 +658,24 @@ class RietveldPlot:
 
       self.subplot2.clear()
       self.subplot2.scatter(two_theta,I,label='Data',s=1, color='blue')
-      self.subplot2.set_ylabel(r"$I$")
+      self.subplot2.set_ylabel(r"$I$",rotation=0)
       self.profile2, = self.subplot2.plot(two_theta,np.zeros(len(two_theta)),
          alpha=0.7,color='red')
-      self.subplot2.axhline(y=-self.I_max/2,color='black')
+      self.subplot2.axhline(y=-self.I_max/2,
+         # xmin=two_theta[0],
+         # xmax=two_theta[-1],
+         color='black')
       self.diff2, = self.subplot2.plot(two_theta,
          -self.I_max/2*np.ones(len(two_theta)),
          label=r'$\Delta I$',color='green')
 
       self.subplot2.set_xlim(two_theta[ROI_mask][0],two_theta[ROI_mask][-1])
-      self.subplot2.set_ylim(top=I[ROI_mask].max())
+      self.subplot2.axes.set_xlabel(r'$2\,\theta$')
+      # self.subplot2.set_ylim(top=I[ROI_mask].max())
 
       # self.subplot3.set_ylabel(r"$\Delta I$")
       # self.subplot3.set_ylim(-self.I_max/2,self.I_max/2)
 
-      def onselect(xmin, xmax):
-         x = RietveldPhases.two_theta
-         indmin, indmax = np.searchsorted(x,
-            (xmin, xmax))
-         indmax = min(len(x) - 1, indmax)
-
-         thisx = RietveldPhases.two_theta[indmin:indmax]
-         thisy = RietveldPhases.I[indmin:indmax]
-         # line2.set_data
-         # subplot2.axes.lines[0].set_data(thisx, thisy)
-         self.subplot2.set_xlim(thisx[0], thisx[-1])
-         self.subplot2.set_ylim(top=thisy.max())
-         self.fig.canvas.draw()
-
-      self.span = SpanSelector(self.subplot1, onselect, 'horizontal', 
-                    rectprops=dict(alpha=0.5, facecolor='green'))
          
       self.fig.canvas.show()
 
@@ -692,6 +705,25 @@ class RietveldPlot:
       # if wse is not None:
       #    self.subplot3.plot(two_theta,wse*RietveldPhases.sigma**2,
       #       label=r'$\Delta I$',color='green')
+
+      def onselect(xmin, xmax):
+         x = RietveldPhases.two_theta
+         indmin, indmax = np.searchsorted(x,
+            (xmin, xmax))
+         indmax = min(len(x) - 1, indmax)
+
+         thisx = RietveldPhases.two_theta[indmin:indmax]
+         # thisy = RietveldPhases.I[indmin:indmax]
+         # line2.set_data
+         # subplot2.axes.lines[0].set_data(thisx, thisy)
+         self.subplot2.set_xlim(thisx[0], thisx[-1])
+         self.subplot2.axes.set_ylim(
+            top=1.07*max(np.max(profile[indmin:indmax]),
+               np.max(RietveldPhases.I[indmin:indmax])))
+         self.fig.canvas.draw()
+
+      self.span = SpanSelector(self.subplot1, onselect, 'horizontal', 
+                    rectprops=dict(alpha=0.5, facecolor='green'))
 
       if update_view:
          self.subplot1.axes.relim()
