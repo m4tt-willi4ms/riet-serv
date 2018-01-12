@@ -379,11 +379,24 @@ class RietveldPhases:
       """
       with open(fn, 'r') as file:
          as_cif = file.read()
-      self.structure = iotbx.cif.reader( \
-         input_string=as_cif).build_crystal_structures() \
+      cif_reader = iotbx.cif.reader(input_string=as_cif)
+      self.structure = cif_reader.build_crystal_structures() \
             [os.path.split(fn)[1][0:7]]
       self.unit_cell = self.structure.unit_cell()
       self.crystal_system = self.structure.space_group().crystal_system()
+            
+      tmp = iotbx.cif.reader( \
+         input_string=as_cif).model()
+      try:
+         self.chemical_name = \
+            tmp[os.path.split(fn)[1][0:7]]['_chemical_name_mineral']
+      except KeyError:
+         pass
+      try:
+         self.chemical_name = \
+            tmp[os.path.split(fn)[1][0:7]]['_chemical_name_systematic']
+      except KeyError:
+         self.chemical_name = os.path.split(fn)[1]
 
       for scatterer in self.structure.scatterers():
          if (scatterer.scattering_type == "O-2"):

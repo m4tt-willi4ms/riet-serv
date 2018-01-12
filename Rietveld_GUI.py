@@ -210,7 +210,7 @@ class RietveldGUI(tk.Tk):
          height=15,
          width=33,
          yscrollcommand=self.results_text_scrollbar.set,
-         takefocus=0,
+         state=tk.DISABLED,
          wrap=tk.WORD,
          )
       self.results_text.grid(row=2,column=0,sticky='ns')
@@ -240,8 +240,10 @@ class RietveldGUI(tk.Tk):
          input_weights=RR.composition_by_weight)
       RR.revert_to_x(x_list[self.results_box.curselection()[0]])
 
+      self.results_text.config(state=tk.NORMAL)
       self.results_text.delete(0.0,tk.END)
       self.results_text.insert(tk.END,RR.display_parameters())
+      self.results_text.config(state=tk.DISABLED)
       # self.param_string.set(RR.display_parameters())
 
    def getCifs(self,filePaths=None):
@@ -415,8 +417,8 @@ class RefinementParameterControl(tk.Frame):
          variable = self.state, text=text)
       self.checkbutton.grid(row=1,column=0,sticky='w')
 
-      # self.rounds = RoundsBoxes(self,parent,default_round_start)
-      # self.rounds.grid(row=0,column=1,sticky='w')
+      self.rounds = RoundsBoxes(self,parent,default_round_start)
+      self.rounds.grid(row=0,column=1,sticky='w')
 
       # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
       # self.initial.grid(row=0,column=1,sticky='e')
@@ -856,8 +858,10 @@ class LoadFrame(tk.Frame):
          " parameters, GoF = " + str(round(RR.GoF,3)))
       self.parent.master.results_box.see(tk.END)
       # self.parent.master.param_string.set(RR.display_parameters())
+      self.parent.master.results_text.config(state=tk.NORMAL)
       self.parent.master.results_text.delete(0.0,tk.END)
       self.parent.master.results_text.insert(tk.END,RR.display_parameters())
+      self.parent.master.results_text.config(state=tk.DISABLED)
       self.numruns += 1
 
 
