@@ -21,22 +21,14 @@ PROTO Rietveld Refinement
 .. * :ref:`modindex`
 .. * :ref:`search`
 
-.. FasterProfileGen
-.. =================
-
-.. This module is a temporary module, used to build up the essential codebase 
-.. before transitioning to a more organized structure.
-.. As can be seen, the module has become quite unreadable; improvements to be made
-.. in the upcoming RietveldPhase project.
-
-.. .. automodule:: FasterProfileGen
-..    :members:
-
 Rietveld Phases Module
 ======================
 
-This module is built to replace FasterProfileGen, in a way that is both more 
-versatile and more accommodating of multi-phase powder diffraction profiles.
+This module is used to build up store input data and build representations
+of a particular crystal phases's powder profile, based on some fitting 
+parameters. The module is meant to be extendable, so that more parameters can
+be added at a later time, and so that more fine-grained models of powder
+profiles can be implemented at a later time.
 
 .. automodule:: RietveldPhases
 .. autoclass:: RietveldPhases
@@ -45,11 +37,16 @@ versatile and more accommodating of multi-phase powder diffraction profiles.
    :undoc-members:
    :inherited-members:
    :show-inheritance:
+   
+   .. automethod:: __init__
 
 Rietveld Refinery Module
 ========================
 
-
+The module is designed to take in some list of Rietveld Phases and produce the 
+ingredients necessary to run the Rietveld Refinement engine. This engine can 
+then be run a number of times, and can be used to update plot data during the 
+refinement.
 
 .. automodule:: RietveldRefinery
 .. autoclass:: RietveldRefinery

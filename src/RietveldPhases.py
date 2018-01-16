@@ -51,6 +51,7 @@ class RietveldPhases:
 
       Parameters
       -----------
+
       fn_cif : string
          This string stores the file name of the CIF card (including the .cif 
          xtension) for the corresponding phase
@@ -62,6 +63,7 @@ class RietveldPhases:
 
       Other Parameters
       -----------------
+
       two_theta_0 : float
          :math:`2\theta_0` is a refinable offset, used 
          to adjust for any miscalibration of detector motor positions when
@@ -131,7 +133,8 @@ class RietveldPhases:
    def set_profile(cls,filename,
       number_of_columns=3,
       min_two_theta=0,
-      max_two_theta=180):
+      max_two_theta=180,
+      wavelength=None):
       two_theta = []
       I = []
       sigma = []

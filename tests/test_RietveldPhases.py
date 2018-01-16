@@ -14,54 +14,37 @@ from src.RietveldRefinery import RietveldRefinery
 
 from cctbx.eltbx import wavelengths
 
-input_strings = ["""\
-U              0.0   -0.1   0.1
-V              0.0   -0.1   0.1
-W              0.0006   -0.1   0.1
-Amplitude         1 0      inf
-eta:           2
-unit_cell_a    0.01
-""",
-"""\
-U              0.2   -0.1   0.1
-V              0.3   -0.1   0.1
-W              0.0008   -0.1   0.1
-Amplitude         1 0      inf
-eta:           2
-"""]
+# class RietveldPhasesTest(unittest.TestCase):
 
-global_input_string = """\
-Bkgd:          3
-two_theta_0       0.001      -2.0  2.0
-"""
+#    def setUp(self):
+RietveldPhases.set_profile(
+   r"./data/profiles/Jade-Al2O3-Sim.xye",number_of_columns=2)
 
-minimizer_input_string = """\
-factr       1e4
-maxiter     100
-iprint      1
-m           10
-pgtol       1e-5
-epsilon     1e-13
-"""
+def test_data_read_in():
+   assert len(RietveldPhases.two_theta) == 4250
+   print RietveldPhases.d_min
+   print RietveldPhases.d_max
+   assert len(RietveldPhases.I) == 4250
 
-tst_two_theta = []
-tst_y = []
+test_phase = RietveldPhases("./data/cifs/1000032.cif")
 
-is_Sim_data = True #: Should be False unless simulated data 
-   #: (e.g. "Jade-AL2O3-Sim.xye") is used
-display_plots = False #: Only use to see sample plots
-# with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
-# with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
-# with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-# with open(r"..//data//profiles//Jade-Al2O3-Sim.xye") as file:
-#    for line in file.readlines():#[4:]:
-#       # two_thetatmp, ytmp, ztmp = line.split()
-#       two_thetatmp, ytmp = line.split()
-#       # if float(two_thetatmp) < 15:
-#       tst_two_theta.append(float(two_thetatmp))
-#       tst_y.append(float(ytmp))
-# tst_two_theta = np.array(tst_two_theta)
-# tst_y = 0.01*np.array(tst_y)
+def test_set_bkgd_order():
+   test_phase.set_bkgd_order(3)
+   assert len(test_phase.bkgd) == 3
+
+def test_U_default():
+   print test_phase.U.shape
+   assert test_phase.U.dtype == RietveldPhases.custom_dtype
+   assert test_phase.U.shape[0] == 1
+   assert test_phase.U['labels'] == 'U'
+   assert np.isclose(test_phase.U['values'], 0.0)
+   assert np.isclose(test_phase.U['l_limits'], -0.1)
+   assert np.isclose(test_phase.U['u_limits'], 0.1)
+
+   # def test_data_readin2(self):
+   #    self.assertTrue(len(RietveldPhases.I)==4250)
+
+
 
 def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
