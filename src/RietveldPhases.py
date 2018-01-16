@@ -152,15 +152,11 @@ class RietveldPhases:
       cls.I = np.array(I)
       cls.sigma = np.array(sigma)
 
-      cls.I = cls.I \
-         [np.logical_and(cls.two_theta > min_two_theta,
-            cls.two_theta < max_two_theta)]
-      cls.sigma = cls.sigma \
-         [np.logical_and(cls.two_theta > min_two_theta,
-            cls.two_theta < max_two_theta)]
-      cls.two_theta = cls.two_theta \
-         [np.logical_and(cls.two_theta > min_two_theta,
-            cls.two_theta < max_two_theta)]
+      min_max_mask = np.logical_and(cls.two_theta > min_two_theta,
+         cls.two_theta < max_two_theta)
+      cls.I = cls.I[min_max_mask]
+      cls.sigma = cls.sigma[min_max_mask]
+      cls.two_theta = cls.two_theta[min_max_mask]
 
       CU_wavelength = wavelengths.characteristic(RietveldPhases.lambdas[0]) \
          .as_angstrom()
@@ -259,6 +255,7 @@ class RietveldPhases:
       self.Amplitude = Amplitude
       self.eta = self.set_eta_order(eta_order)
       self.lattice_dev = lattice_dev
+
       self.recompute_peak_positions = recompute_peak_positions
 
       self.load_cif(fn_cif)
@@ -385,18 +382,17 @@ class RietveldPhases:
       self.unit_cell = self.structure.unit_cell()
       self.crystal_system = self.structure.space_group().crystal_system()
             
-      tmp = iotbx.cif.reader( \
-         input_string=as_cif).model()
+      cif_model = cif_reader.model()
       try:
+         # print cif_model[os.path.split(fn)[1][0:7]]['_chemical_name_mineral']
          self.chemical_name = \
-            tmp[os.path.split(fn)[1][0:7]]['_chemical_name_mineral']
+            cif_model[os.path.split(fn)[1][0:7]]['_chemical_name_mineral']
       except KeyError:
-         pass
-      try:
-         self.chemical_name = \
-            tmp[os.path.split(fn)[1][0:7]]['_chemical_name_systematic']
-      except KeyError:
-         self.chemical_name = os.path.split(fn)[1]
+         try:
+            self.chemical_name = \
+               cif_model[os.path.split(fn)[1][0:7]]['_chemical_name_systematic']
+         except KeyError:
+            self.chemical_name = os.path.split(fn)[1]
 
       for scatterer in self.structure.scatterers():
          if (scatterer.scattering_type == "O-2"):

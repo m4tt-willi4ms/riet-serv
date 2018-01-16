@@ -26,3 +26,4 @@ tests/Cement/build/
 tests/Cement/dist/
 build/
 dist/
+.cache/

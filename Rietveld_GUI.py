@@ -87,6 +87,7 @@ RR = None
 # x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
 
 max_refinement_rounds = 5
+num_phase_params = 6
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
 
@@ -253,39 +254,41 @@ class RietveldGUI(tk.Tk):
          #    initialdir = "./data/cifs")
       else:
          self.filePaths = filePaths
-      # self.filePaths = [
-      # r".\data\cifs\Cement\1540705-Alite.cif", 
-      # r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
-      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
-      # r".\data\cifs\Cement\9004096-anhydrite.cif",
-      # r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # r".\data\cifs\Cement\9005521-bassanite.cif",
-      # r".\data\cifs\Cement\9012789-Belite.cif", 
-      # r".\data\cifs\Cement\9009667-calcite.cif",
-      # r".\data\cifs\Cement\1200009-Ferrite.cif", 
-      # r".\data\cifs\Cement\1011094-FreeLime.cif", 
-      # r".\data\cifs\Cement\1000053-Periclase.cif", 
-      # r".\data\cifs\Cement\9000113-portlandite.cif",
-      # ]
-      self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
+      self.filePaths = [
+      r".\data\cifs\Cement\1540705-Alite.cif", 
+      r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
+      r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
+      r".\data\cifs\Cement\9004096-anhydrite.cif",
+      r".\data\cifs\Cement\9007569-Arcanite.cif",
+      r".\data\cifs\Cement\9005521-bassanite.cif",
+      r".\data\cifs\Cement\9012789-Belite.cif", 
+      r".\data\cifs\Cement\9009667-calcite.cif",
+      r".\data\cifs\Cement\1200009-Ferrite.cif", 
+      r".\data\cifs\Cement\1011094-FreeLime.cif", 
+      r".\data\cifs\Cement\1000053-Periclase.cif", 
+      r".\data\cifs\Cement\9000113-portlandite.cif",
+      ]
+      # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
-      # iconEntry.insert(0,fileName)
-      global Rt
-      # I_max = np.max(RietveldPhases.I)
+
+      global Rt, selections
+      Rt = []
+      selections = []
       for i,filePath in enumerate(self.filePaths):
-         cif_file_name = os.path.split(filePath)[1]
+         # cif_file_name = os.path.split(filePath)[1]
          Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
             delta_theta=0.8,Intensity_Cutoff=0.01))
-         if self.numPhases == 0:
-            self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
-               self.paramframe,change_all=True),text="Phases: All")
-         self.paramframe.nb.add(
-            RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
-            text=str(i+1)+" ")
+         selections.append(np.zeros((num_phase_params,max_refinement_rounds+1),
+            dtype=bool))
+         # if self.numPhases == 0:
+         # self.paramframe.nb.add(
+         #    RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
+         #    text=str(i+1)+" ")
          self.numPhases += 1
-      # RietveldPhases.empty_x()
-      # RietveldPhases.global_params_from_string(global_input_string,
-      #    two_thetas,ys)
+
+      self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
+            self.paramframe),text="Phase Parameters")
+
       global RR,Rp
       RR = RietveldRefinery(Rt,Rp,
          store_intermediate_state=False, show_plots=False)
@@ -301,8 +304,8 @@ class RietveldGUI(tk.Tk):
       # self.fileName = tkFileDialog.askopenfilename(
       #    initialdir = "./data/profiles")
       # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
-      # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
-      self.fileName = r".\\data\\profiles\\d5_05005.xye"
+      self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
+      # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" + 
          os.path.split(self.fileName)[1]+")")
 
@@ -310,7 +313,9 @@ class RietveldGUI(tk.Tk):
       global ROI_mask
       ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
 
-      self.paramframe = LoadFrame(self.container,self,padx=10)#,pady=10)
+      self.paramframe = LoadFrame(self.container,self,padx=10,
+         nbwidth=400
+         )#,pady=10)
       self.paramframe.grid(row=0,column=2) 
 
       global Rp
@@ -415,7 +420,7 @@ class RefinementParameterControl(tk.Frame):
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
          variable = self.state, text=text)
-      self.checkbutton.grid(row=1,column=0,sticky='w')
+      self.checkbutton.grid(row=0,column=0,sticky='w')
 
       self.rounds = RoundsBoxes(self,parent,default_round_start)
       self.rounds.grid(row=0,column=1,sticky='w')
@@ -543,8 +548,6 @@ class LatticeParameterControl(tk.Frame):
       self.index = index
       self.crystal_system = Rt[index].structure.space_group().crystal_system()
 
-
-
 class RefinementParameterPolynomControl(tk.Frame):
    def __init__(self, parent, controller, parameter,
       text="", default_order=2, default_round_start=1,*args, **kwargs):
@@ -659,17 +662,37 @@ class RefinementParameterSet(tk.Frame):
 
       if index is not None:
          phase = Rt[index]
-         tk.Label(self,text=os.path.split(
-            controller.controller.filePaths[index])[1]) \
-            .grid(row=0,column=0,sticky='w',)     
+         # tk.Label(self,text=os.path.split(
+         #    controller.controller.filePaths[index])[1]) \
+         #    .grid(row=0,column=0,sticky='w',)     
       else:
-         tk.Label(self,text="").grid(row=0,column=0,columnspan=2,
-            sticky='n')
+         # tk.Label(self,text="").grid(row=0,column=0,columnspan=2,
+         #    sticky='n')
          phase = Rt[0]
 
+      phase_names = ['All']
+      for phase in Rt:
+         phase_names.append(phase.chemical_name)
+      self.change_all = change_all
+      self.selection = tk.StringVar()
+      self.selection.set(phase_names[0])
+      # self.phase_option_menu = tk.OptionMenu(self,self.selection,*phase_names)
+      # self.phase_option_menu.grid(row=0,column=0)
+      self.phase_combobox = ttk.Combobox(self,
+         textvariable=self.selection,
+         values=phase_names,
+         state='readonly',
+         exportselection=0,
+         width=min(len(max(phase_names,key=len)),30),
+         )
+      self.phase_combobox.bind("<<ComboboxSelected>>",self.onPhaseSelected)
+      # self.phase_combobox.state()
+      self.phase_combobox.grid(row=0,column=0,sticky='w')
+
+
       RefinementParameterControl(self,parent,
-         phase.Amplitude,text="Scale",change_all=change_all
-         ,default_round_start=2).grid(row=1,column=0,sticky='w')
+         phase.Amplitude,text="Scale",change_all=self.change_all,
+         default_round_start=2).grid(row=1,column=0,sticky='w')
 
       RefinementParameterControl(self,parent,
          phase.W,text="Caglioti W",default_round_start=2) \
@@ -692,6 +715,16 @@ class RefinementParameterSet(tk.Frame):
          default_round_start=2).grid(row=6,column=0,sticky='w')
 
       self.grid_columnconfigure(0,minsize=286)
+
+   def onPhaseSelected(self,event):
+      if self.phase_combobox.current() == 0:
+         self.change_all = True
+      else:
+         self.change_all = False
+
+
+
+      print self.phase_combobox.current()
 
 class LabelScale(tk.Frame):
    def __init__(self,parent,controller,
@@ -900,6 +933,9 @@ class PlotFrame(tk.Frame):
 
 if __name__ == "__main__":
    root = RietveldGUI()
+   # w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+   # root.geometry("%dx%d+0+0" % (w, h))
+   # root.state('zoomed')
    root.call('wm', 'attributes', '.', '-topmost', True)
    root.after_idle(root.call, 'wm', 'attributes', '.', '-topmost', False)
    root.mainloop()
