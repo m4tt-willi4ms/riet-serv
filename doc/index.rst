@@ -24,21 +24,14 @@ PROTO Rietveld Refinement
 Rietveld Phases Module
 ======================
 
-This module is used to build up store input data and build representations
+This module is used to store input data and build representations
 of a particular crystal phases's powder profile, based on some fitting 
-parameters. The module is meant to be extendable, so that more parameters can
-be added at a later time, and so that more fine-grained models of powder
-profiles can be implemented at a later time.
+parameters. The module is meant to be extendable, so that more fine-grained models of powder profiles can be implemented at a later time.
 
-.. automodule:: RietveldPhases
-.. autoclass:: RietveldPhases
-   :members:
-   :member-order: bysource
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-   
-   .. automethod:: __init__
+      .. automodule:: src.RietveldPhases
+      .. autoclass:: RietveldPhases
+         :members:
+         :member-order: bysource
 
 Rietveld Refinery Module
 ========================
@@ -48,10 +41,10 @@ ingredients necessary to run the Rietveld Refinement engine. This engine can
 then be run a number of times, and can be used to update plot data during the 
 refinement.
 
-.. automodule:: RietveldRefinery
-.. autoclass:: RietveldRefinery
-   :members:
-   :member-order: bysource
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
+      .. automodule:: RietveldRefinery
+      .. autoclass:: RietveldRefinery
+         :members:
+         :member-order: bysource
+         :undoc-members:
+         :inherited-members:
+         :show-inheritance:

@@ -4,12 +4,14 @@ import time
 import matplotlib.pyplot as plt
 from random import randrange
 import profile, pstats
-import unittest
+import pytest
+import copy
 
 import sys, os
 sys.path.append(os.path.abspath(".."))
 
-from src.RietveldPhases import RietveldPhases
+import src.RietveldPhases as RietveldPhases
+from src.RietveldPhases import RietveldPhases as Rp
 from src.RietveldRefinery import RietveldRefinery
 
 from cctbx.eltbx import wavelengths
@@ -17,51 +19,115 @@ from cctbx.eltbx import wavelengths
 # class RietveldPhasesTest(unittest.TestCase):
 
 #    def setUp(self):
-RietveldPhases.set_profile(
+Rp.set_profile(
    r"./data/profiles/Jade-Al2O3-Sim.xye",number_of_columns=2)
 
 def test_data_read_in():
-   assert len(RietveldPhases.two_theta) == 4250
-   print RietveldPhases.d_min
-   print RietveldPhases.d_max
-   assert len(RietveldPhases.I) == 4250
+   assert len(Rp.two_theta) == 4250
+   assert np.isclose(Rp.d_min,1.08934)
+   assert np.isclose(Rp.d_max,17.58881)
+   assert len(Rp.I) == 4250
+   assert np.isclose(Rp.two_theta[-1],90)
+   assert len(Rp.sigma) == 4250
+   assert np.isclose(Rp.sigma[-1],np.sqrt(Rp.I[-1]))
 
-test_phase = RietveldPhases("./data/cifs/1000032.cif")
+def test_global_parameters_exist():
+   Rp_dict = Rp.__dict__
+   assert 'two_theta_0' in Rp_dict
+   assert 'bkgd' in Rp_dict
+
+test_phase = Rp("./data/cifs/1000032.cif")
+
+def test_parameters_exist():
+   tp_dict = test_phase.__dict__
+   print tp_dict
+   assert 'U' in tp_dict
+   assert 'V' in tp_dict
+   assert 'W' in tp_dict
+   assert 'Amplitude' in tp_dict
+   assert 'eta' in tp_dict
+   assert 'lattice_parameters' in tp_dict
 
 def test_set_bkgd_order():
-   test_phase.set_bkgd_order(3)
+   Rp.set_bkgd_order(3)
+   assert len(Rp.bkgd) == 3
    assert len(test_phase.bkgd) == 3
 
+def test_bkgd_param_gen():
+   gen = Rp.bkgd_param_gen(order=3)
+   for n in xrange(0,3):
+      assert next(gen)['labels'] == 'bkgd_' + str(n)
+   assert pytest.raises(StopIteration,next,gen)
+
+def test_background_polynomial():
+   Rp.bkgd['values'][0] = 1
+   assert np.all(np.isclose(Rp.background_polynomial(),
+      np.ones(len(Rp.two_theta),dtype=float)))
+
+   Rp.bkgd['values'] = np.array([1,2,3],dtype=float)
+   assert np.all(np.isclose(Rp.background_polynomial(),
+      1.0+2.0*Rp.two_theta+3.0*Rp.two_theta_powers[2,:]))
+
+   Rp.bkgd['values'] = np.array([0,0,0],dtype=float)
+   assert np.all(np.isclose(Rp.background_polynomial(),
+      np.zeros(len(Rp.two_theta),dtype=float)))
+
 def test_U_default():
-   print test_phase.U.shape
    assert test_phase.U.dtype == RietveldPhases.custom_dtype
-   assert test_phase.U.shape[0] == 1
-   assert test_phase.U['labels'] == 'U'
-   assert np.isclose(test_phase.U['values'], 0.0)
-   assert np.isclose(test_phase.U['l_limits'], -0.1)
-   assert np.isclose(test_phase.U['u_limits'], 0.1)
+   assert test_phase.U['labels'] == RietveldPhases.default_U['labels']
+   assert np.isclose(test_phase.U['values'], RietveldPhases.default_U['values'])
+   assert np.isclose(test_phase.U['l_limits'], 
+      RietveldPhases.default_U['l_limits'])
+   assert np.isclose(test_phase.U['u_limits'], 
+      RietveldPhases.default_U['u_limits'])
 
-   # def test_data_readin2(self):
-   #    self.assertTrue(len(RietveldPhases.I)==4250)
+def test_set_vertical_offset():
+   assert test_phase.vertical_offset == False
+   assert 'cos_theta' not in test_phase.__dict__
+   test_phase.set_vertical_offset(True)
+   assert test_phase.vertical_offset == True
+   assert 'cos_theta' in Rp.__dict__
+   assert np.isclose(Rp.cos_theta[-1],-360/np.pi/np.sqrt(2))
 
+def test_LP_intensity_scaling():
+   assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
+   
+   Rp.two_theta_0['values'] = 0.1
+   two_theta = Rp.two_theta - Rp.two_theta_0['values']
+   assert np.all(np.isclose(Rp.LP_intensity_scaling(),
+      (1+np.cos(np.pi/180*two_theta)**2) \
+         /np.sin(np.pi/360*two_theta) \
+         /np.sin(np.pi/180*two_theta)))
+   Rp.two_theta_0['values'] = 0.0
+
+Rp.assemble_global_x()
+
+def test_assemble_global_x():
+   assert 'global_x' in Rp.__dict__
+   assert 'global_x_no_bkgd_mask' in Rp.__dict__
+   assert len(Rp.global_x) == len(Rp.bkgd) + 1 # + 1 for two_theta_0
+
+def test_update_global_x():
+   mask = np.zeros(len(Rp.global_x),dtype=bool)
+   mask[0] = True
+   new_x = copy.deepcopy(Rp.global_x)
+   new_x['values'][0] = 0.3
+   Rp.update_global_x(new_x,mask)
+   assert np.isclose(Rp.global_x['values'][0],0.3)
+
+def test_global_param_gen():
+   order = 4 
+   Rp.set_bkgd_order(order)
+   gen = Rp.global_param_gen()
+   assert next(gen)['labels'] == 'two_theta_0'
+   assert np.all(np.char.startswith(next(gen)['labels'],'bkgd_'))
+   assert pytest.raises(StopIteration,next,gen)
 
 
 def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
    cifs = ["1000032.cif","1507774.cif"]
    Rt = []
-
-   CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
-   d_min = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[-1])
-   d_max = CU_wavelength/2/np.sin(np.pi/360*tst_two_theta[0])
-   # print "two_theta_max: " + str(tst_two_theta[-1])
-   # print "d-min: "+ str(d_min)
-
-   RietveldPhases.global_params_from_string(global_input_string,
-      tst_two_theta,tst_y)
-   for cif,input_string in zip(cifs,input_strings):
-      Rt.append(RietveldPhases(r"..//data//cifs//" + cif,
-         d_min,d_max, delta_theta = 2.0,Intensity_Cutoff = 0.005))
 
    #Testing Read-in from input_string
    assert np.isclose(Rt[0].x['values'][Rt[0].U_index], 0.0)

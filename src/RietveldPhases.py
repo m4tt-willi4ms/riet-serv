@@ -34,70 +34,144 @@ default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 
 default_U = np.array([('U',0.00,-0.1,0.1)],dtype=custom_dtype)
 default_V = np.array([('V',0.00,-0.1,0.1)],dtype=custom_dtype)
-# default_W = np.array([('W',0.01,0.0001,1)],dtype=custom_dtype)
 default_W = np.array([('W',0.003,0.000001,1)],dtype=custom_dtype)
 default_Amplitude = np.array([('Amplitude',0.1,0,float('inf'))],
    dtype=custom_dtype)
+default_delta_theta = 0.5
+default_intensity_cutoff = 0.01
 default_eta_order = 2
 default_lattice_dev = 0.01
+default_recompute_peak_positions = True
 
 uc_labels = ["a","b","c","alpha","beta","gamma"]
 
 
 class RietveldPhases:
    r"""
-      Used to group together methods for calculating powder profiles
+      Used to collect parameters and methods for calculating powder profiles
       for Rietveld phases.  
 
       Parameters
       -----------
-
       fn_cif : string
-         This string stores the file name of the CIF card (including the .cif 
-         xtension) for the corresponding phase
-      input_string_or_file_name : string
-         This string contains either: 
-            -  The name of a file (ending in .txt) in which the initial 
-               parameters, limits will be stored
-            -  The input string itself (for debugging purposes)
+         This string stores the location of the CIF card (including the .cif 
+         xtension) for the corresponding phase, either as an absolute path
+         or a relative one (relative to the root directory)
 
-      Other Parameters
-      -----------------
+      I_max : float, optional
+         Can be used to specify the maximum intensity relative to which the 
+         computed intensities should be scaled. If unspecified, the maximum
+         intensity is determined from profile data (which can be loaded 
+         using the :func:`~src.RietveldPhases.RietveldPhases.set_profile()`
+         class method, described later).
 
-      two_theta_0 : float
-         :math:`2\theta_0` is a refinable offset, used 
-         to adjust for any miscalibration of detector motor positions when
-         collecting data
-      Bkgd : np.array
-         This array contains the coefficients of a polynomial
-         used to model the profile background
+      delta_theta : float, optional
+         :math:`\Delta\theta` specifies the region around which each peak 
+         profile is generated, using the formula
 
-      :cvar float two_theta_0: :math:`2\theta_0` is a refinable offset, used 
-         to adjust for any miscalibration of detector motor positions when
-         collecting data
-      :cvar np.array Bkgd: This array contains the coefficients of a polynomial
-         used to model the profile background
-      :cvar float K_alpha_2_factor: The value by which the :math:`K_{\alpha 2}`
-         peaks are rescaled relative to the primary (:math:`K_{\alpha 1}`) peaks
-         (not refinable at present)
-      :cvar float delta_theta: :math:`\delta\theta` describes the window over
-         which a given peak profile is evaluated. (In practice it's inefficient 
-         to evaluate profile tails many standard deviations away from the peak, 
-         so some limit is set hard-coded here.)
+         .. math:: |\theta-\theta_{\rm peak}| < \Delta \theta \,.
+
+         The default value is 
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 40
+
+      intensity_cutoff : float, optional
+         The relative intensity, below which peaks are not generated. (In 
+         practice this is implemented when computing the squares of structure 
+         factors, and before any Lorentz, polarization rescaling is applied.)
+         The default value of :math:`|F|^2_{\rm cutoff}` is
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 41
+
+
+      lattice_dev : float, optional
+         This parameter specifices the maximum allowed relative deviation of 
+         any lattice parameters (assuming lattice parameters will be refined).
+         The default value of `lattice_dev` is 0.01.
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 43
+
+      recompute_peak_positions : bool, optional
+         This boolean variable determines whether or not peak positions are
+         recomputed before determining the phase profile. (This is only 
+         necessary if lattice parameters are being refined.) The default value
+         is 
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 44
+
+      Attributes
+      ----------
+      Amplitude : np.array (custom dtype)
+         The initial input parameters for the phase scale factor (Amplitude).
+         Its default label, value, lower- and upper-limit are set to be
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 38,39
+
+         respectively.
+
+      U : np.array (custom dtype)
+         The initial input parameters for the Caglioti `U` parameter.
+         Its default label, value, lower- and upper-limit are set to be
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 35
+
+         respectively.
+
+      V : np.array (custom dtype)
+         The initial input parameters for the Caglioti `V` parameter.
+         Its default label, value, lower- and upper-limit are set to be
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 36
+
+         respectively.
+
+      W : np.array (custom dtype)
+         The initial input parameters for the Caglioti `W` parameter.
+         Its default label, value, lower- and upper-limit are set to be
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 37
+
+         respectively.
+
+      eta_order : int
+         `eta_order` is used to specify the number of parameters to appear in 
+         the corresponding eta polynomial (for more information, see
+         :func:`~src.RietveldPhases.RietveldPhases.eta_polynomial()`).
+         The default value is 
+
+         .. literalinclude:: ../src/RietveldPhases.py
+            :lines: 42
 
       Notes
       -----
-      Testing out the notes functionality in numpydocs
-   """
+      This class contains many classmethods, which can be used by any of the 
+      RietveldPhases instances.
 
+   """
    custom_dtype = custom_dtype
+
+   bkgd_order = default_bkgd_order
+
+   Amplitude = default_Amplitude
+   U = default_U
+   V = default_V
+   W = default_W
+   eta_order = default_eta_order
 
    two_theta_0 = default_two_theta_0
    vertical_offset = default_vertical_offset
-   bkgd = None #: Initialized to None
-   two_theta = None
 
    max_polynom_order = 5
+   '''The maximum number of parameters allowed in any parameter represented
+      as a polynomial (e.g. bkgd, eta)'''
 
    lambdas=["CUA1","CUA2"] #: Default values
    K_alpha_factors = [1,0.48]  #: Default values
@@ -109,6 +183,7 @@ class RietveldPhases:
          order = cls.max_polynom_order
       elif order < 1:
          order = 1
+      cls.bkgd_order = order
       cls.bkgd = np.hstack((x for x in cls.bkgd_param_gen(order)))
       return cls.bkgd
 
@@ -116,7 +191,8 @@ class RietveldPhases:
    def set_vertical_offset(cls,value):
       assert type(value) == bool
       cls.vertical_offset = value
-      cls.cos_theta = -360/np.pi*np.cos(cls.two_theta/2)
+      if value:
+         cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
    @classmethod
    def bkgd_param_gen(cls,order=default_bkgd_order):
@@ -234,15 +310,10 @@ class RietveldPhases:
 
    def __init__(self,fn_cif,
       I_max=None,
-      delta_theta = 0.5,
-      Intensity_Cutoff=0.01,
-      Amplitude=default_Amplitude,
-      U=default_U,
-      V=default_V,
-      W=default_W,
-      eta_order=default_eta_order,
+      delta_theta = default_delta_theta,
+      intensity_cutoff=default_intensity_cutoff,
       lattice_dev=default_lattice_dev,
-      recompute_peak_positions=True,
+      recompute_peak_positions=default_recompute_peak_positions,
       ):
 
       if I_max is not None:
@@ -250,13 +321,9 @@ class RietveldPhases:
       else:
          self.I_max = np.amax(RietveldPhases.I)
 
-      self.Intensity_Cutoff = Intensity_Cutoff
+      self.intensity_cutoff = intensity_cutoff
       self.delta_theta = delta_theta
-      self.U = U
-      self.V = V
-      self.W = W
-      self.Amplitude = Amplitude
-      self.eta = self.set_eta_order(eta_order)
+      self.eta = self.set_eta_order(RietveldPhases.eta_order)
       self.lattice_dev = lattice_dev
 
       self.recompute_peak_positions = recompute_peak_positions
@@ -504,7 +571,7 @@ class RietveldPhases:
       self.rel_I_max_calc = np.amax(self.relative_intensities)
       if self.relative_intensities.shape[0] != 0:
          self.d_mask = np.logical_and( \
-            self.relative_intensities > self.Intensity_Cutoff
+            self.relative_intensities > self.intensity_cutoff
             *self.rel_I_max_calc, self.d_spacings < RietveldPhases.d_max)
          self.d_spacings = self.d_spacings \
             [self.d_mask]
@@ -622,6 +689,7 @@ class RietveldPhases:
          order = RietveldPhases.max_polynom_order
       elif order <1:
          order = 1
+      self.eta_order = order
       self.eta = np.hstack((x for x in self.eta_param_gen(order)))
       return self.eta
 
@@ -754,25 +822,6 @@ class RietveldPhases:
       # print np.sum(result,axis=1)
       return result
 
-   # def PseudoVoigtProfile(self,index):
-   #    result = np.zeros(len(self.two_theta[self.masks[index]]))
-   #    two_theta_0 = RietveldPhases.x['values'][RietveldPhases.two_theta_0_index]
-   #    Amplitude = RietveldPhases.x['values'][self.Amplitude_index]
-   #    eta_vals = self.eta_Polynomial(self.two_theta[self.masks[index]])
-   #    omegaUVW_squareds = np.abs(
-   #       RietveldPhases.x['values'][self.U_index] 
-   #          *self.tan_two_theta_peaks_sq_masked[index]
-   #       +RietveldPhases.x['values'][self.V_index] 
-   #          *self.tan_two_theta_peaks_masked[index]
-   #       +RietveldPhases.x['values'][self.W_index])
-   #    two_thetabar_squared = (self.two_theta[self.masks[index]] -two_theta_0 
-   #          -self.two_theta_peaks_masked[index])**2 \
-   #          /omegaUVW_squareds
-   #    result = Amplitude*self.weighted_intensities_masked[index] \
-   #       *self.LP_factors[self.masks[index]]*(eta_vals/(1+two_thetabar_squared) \
-   #          +(1-eta_vals)*np.exp(-np.log(2)*two_thetabar_squared))
-   #    return result
-
    def peak_masks(self,delta_theta=None):
       # print "called peak_masks()", inspect.stack()[1][3]
       if delta_theta is not None:
@@ -781,33 +830,3 @@ class RietveldPhases:
       else:
          return np.abs(self.two_theta-RietveldPhases.two_theta_0['values']
             - self.two_theta_peaks) < self.delta_theta
-
-   # def bkgd_mask(self,two_theta,bkgd_delta_theta):
-   #    return np.any(self.peak_masks(bkgd_delta_theta) \
-   #       ,axis=0)
-
-   # def showPVProfilePlot(self,plottitle,index,autohide=True):
-   #    # if autohide:
-   #    plt.ion()
-   #    fig = plt.figure(figsize=(6,4))
-   #    # plt.subplot(3,1,1)
-   #    plt.scatter(self.two_theta[self.masks[index]],self.I[self.masks[index]],
-   #       label='Data',s=1,color='red')
-   #    plt.title(plottitle)
-
-   #    plt.plot(self.two_theta[self.masks[index]],self.Phase_Profile() \
-   #       [self.masks[index]],label=r'Total $I_{\rm calc}$')
-   #    plt.plot(self.two_theta[self.masks[index]],self.PseudoVoigtProfile(index), \
-   #       label=r'$I_{\rm calc}$')
-
-   #    plt.legend(bbox_to_anchor=(.8,.7))
-   #    plt.ylabel(r"$I$")
-
-   #    # fig, ax = plt.subplots()
-   #    # plt.ioff()
-   #    fig.canvas.draw()
-   #    plt.show()
-   #    if autohide:
-   #       fig.canvas.flush_events()
-   #       time.sleep(1)
-   #       plt.close('all')
