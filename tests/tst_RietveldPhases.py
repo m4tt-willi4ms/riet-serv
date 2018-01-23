@@ -14,19 +14,6 @@ from src.RietveldRefinery import RietveldRefinery
 
 from cctbx.eltbx import wavelengths
 
-class RietveldPhasesTest(unittest.TestCase):
-
-   def setUp(self):
-      RietveldPhases.set_profile(
-         r"./data/profiles/Jade-Al2O3-Sim.xye",number_of_columns=2)
-
-   def test_data_readin(self):
-      print len(RietveldPhases.two_theta)
-      self.assertTrue(len(RietveldPhases.two_theta)==4250)
-
-   def test_data_readin2(self):
-      self.assertTrue(len(RietveldPhases.I)==4250)
-
 input_strings = ["""\
 U              0.0   -0.1   0.1
 V              0.0   -0.1   0.1

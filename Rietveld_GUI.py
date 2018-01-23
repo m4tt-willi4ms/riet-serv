@@ -277,7 +277,7 @@ class RietveldGUI(tk.Tk):
       for i,filePath in enumerate(self.filePaths):
          # cif_file_name = os.path.split(filePath)[1]
          Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
-            delta_theta=0.8,Intensity_Cutoff=0.01))
+            delta_theta=0.8,intensity_cutoff=0.01))
          selections.append(np.zeros((num_phase_params,max_refinement_rounds+1),
             dtype=bool))
          # if self.numPhases == 0:
