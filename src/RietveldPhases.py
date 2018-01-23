@@ -6,16 +6,13 @@ import sys
 import numpy as np
 from scipy.optimize import approx_fprime
 import matplotlib.pyplot as plt
+import jsonpickle
 
 import paths
 
-import iotbx.cif, cctbx.miller
-from cctbx import xray
-from cctbx import crystal
-from cctbx import uctbx
-from cctbx.array_family import flex
+import iotbx.cif
+from cctbx import xray, miller, crystal, uctbx
 from cctbx.eltbx import wavelengths
-import jsonpickle
 from libtbx import easy_pickle
 from scitbx import lbfgsb
 
@@ -42,9 +39,6 @@ default_intensity_cutoff = 0.01
 default_eta_order = 2
 default_lattice_dev = 0.01
 default_recompute_peak_positions = True
-
-uc_labels = ["a","b","c","alpha","beta","gamma"]
-
 
 class RietveldPhases:
    r"""
@@ -316,6 +310,8 @@ class RietveldPhases:
       recompute_peak_positions=default_recompute_peak_positions,
       ):
 
+      self.fn_cif = fn_cif
+
       if I_max is not None:
          self.I_max= I_max
       else:
@@ -323,12 +319,12 @@ class RietveldPhases:
 
       self.intensity_cutoff = intensity_cutoff
       self.delta_theta = delta_theta
-      self.eta = self.set_eta_order(RietveldPhases.eta_order)
+      self.eta = self.set_eta_order(self.eta_order)
       self.lattice_dev = lattice_dev
 
       self.recompute_peak_positions = recompute_peak_positions
 
-      self.load_cif(fn_cif)
+      self.load_cif(fn_cif,d_min = RietveldPhases.d_min)
 
       # self.uc_mask = [True,True,True,True,True,True,]
       # self.lattice_parameters = self.set_lattice_parameters()
@@ -515,7 +511,7 @@ class RietveldPhases:
       """returns all unit cell parameters specified by the mask 
       (a list of six booleans)
       """
-      global uc_labels
+      uc_labels = ["a","b","c","alpha","beta","gamma"]
       uc_params = self.unit_cell.parameters()
       for i in xrange(6):
          if self.uc_mask[i]:
@@ -568,11 +564,11 @@ class RietveldPhases:
       # print "Volume: " + str(self.unit_cell.volume())
 
       # Drop any peaks below the Intensity Cutoff
-      self.rel_I_max_calc = np.amax(self.relative_intensities)
+      rel_I_max_calc = np.amax(self.relative_intensities)
       if self.relative_intensities.shape[0] != 0:
          self.d_mask = np.logical_and( \
             self.relative_intensities > self.intensity_cutoff
-            *self.rel_I_max_calc, self.d_spacings < RietveldPhases.d_max)
+            *rel_I_max_calc, self.d_spacings < RietveldPhases.d_max)
          self.d_spacings = self.d_spacings \
             [self.d_mask]
          self.relative_intensities = self.relative_intensities \
@@ -642,7 +638,7 @@ class RietveldPhases:
       #    lambda_i = wavelengths.characteristic(self.lambdas[i]).as_angstrom()
       #    # Compute two_theta for each d-spacing
       #    two_thetas[i] = 360/math.pi*np.arcsin(lambda_i/2/self.d_spacings)
-      
+
       # Assemble into a single array
       self.update_unit_cell()
       # self.f_miller_set = self.structure.build_miller_set(anomalous_flag,
