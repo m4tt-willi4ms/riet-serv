@@ -122,7 +122,7 @@ class RietveldGUI(tk.Tk):
 
       self.menu = tk.Menu(self)
       self.config(menu=self.menu)
-      
+
       self.FileMenu = tk.Menu(self.menu,tearoff=False)
 
       self.menu.add_cascade(label="File", menu=self.FileMenu)
@@ -179,19 +179,122 @@ class RietveldGUI(tk.Tk):
       s.configure("Button",borderwidth=0)
 
       self.numPhases=0
-      self.results_frame = tk.Frame(self.container)
+
+
+      self.history_frame = HistoryFrame(self.container)
+      self.history_frame.grid(row=0,column=0)
+
+      self.plot_frame = PlotFrame(self.container,self,padx=10,pady=10)
+      self.plot_frame.grid(row=0,column=1,sticky='w')
+
+      self.param_frame = ParamFrame(self.container,self,padx=10,
+         nb_width=275
+         )#,pady=10)
+      self.param_frame.grid(row=0,column=2)
+      # temp. to allow for auto-loading of profile
+      # self.getProfile()
+      # self.getCifs()
+      # self.param_frame.refine()
+
+   def getCifs(self,filePaths=None):
+      if filePaths is None:
+         # pass
+         self.filePaths = tkFileDialog.askopenfilenames(
+            initialdir = "./data/cifs")
+      else:
+         self.filePaths = filePaths
+      # self.filePaths = [
+      # r".\data\cifs\Cement\1540705-Alite.cif",
+      # r".\data\cifs\Cement\1000039-AluminateCubic.cif",
+      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
+      # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      # r".\data\cifs\Cement\9007569-Arcanite.cif",
+      # r".\data\cifs\Cement\9005521-bassanite.cif",
+      # r".\data\cifs\Cement\9012789-Belite.cif",
+      # r".\data\cifs\Cement\9009667-calcite.cif",
+      # r".\data\cifs\Cement\1200009-Ferrite.cif",
+      # r".\data\cifs\Cement\1011094-FreeLime.cif",
+      # r".\data\cifs\Cement\1000053-Periclase.cif",
+      # r".\data\cifs\Cement\9000113-portlandite.cif",
+      # ]
+      # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
+
+
+      global Rt, selections
+      Rt = []
+      selections = []
+      for i,filePath in enumerate(self.filePaths):
+         # cif_file_name = os.path.split(filePath)[1]
+         Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
+            delta_theta=0.8,intensity_cutoff=0.01))
+         selections.append(np.zeros((num_phase_params,max_refinement_rounds+1),
+            dtype=bool))
+         self.param_frame.phase_names.append(Rt[-1].chemical_name)
+         # if self.numPhases == 0:
+         # self.param_frame.nb.add(
+         #    RefinementParameterSet(self.param_frame.nb,self.param_frame,index=i),
+         #    text=str(i+1)+" ")
+         self.numPhases += 1
+
+      self.param_frame.phase_combobox.grid_remove()
+      self.param_frame.phase_combobox = ttk.Combobox(
+         self.param_frame.phase_frame,
+         textvariable=self.param_frame.selection,
+         values=self.param_frame.phase_names,
+         state='readonly',
+         exportselection=0,
+         width=min(len(max(self.param_frame.phase_names,key=len)),30),
+         )
+      self.param_frame.phase_combobox.grid(row=0,column=0,sticky='w')
+      # self.param_frame.nb.add(RefinementParameterSet(self.param_frame.nb,
+      #       self.param_frame),text="Phase Parameters")
+
+      global RR,Rp
+      RR = RietveldRefinery(Rt,Rp,
+         store_intermediate_state=False, show_plots=False)
+
+      self.param_frame.bkgd_control.state.set(1)
+      self.param_frame.bkgd_control.checkbutton_clicked()
+      # pdb.set_trace()
+
+      Rp.updateplotprofile(RR.total_profile_state)
+
+
+   def getProfile(self):
+      self.fileName = tkFileDialog.askopenfilename(
+         initialdir = "./data/profiles")
+      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
+      # self.fileName = r".\\data\\profiles\\d5_05005.xye"
+      self.winfo_toplevel().title("Rietveld Refinement (" +
+         os.path.split(self.fileName)[1]+")")
+
+      RietveldPhases.set_profile(self.fileName, min_two_theta=25)
+      global ROI_mask
+      ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
+
+
+      global Rp
+      Rp.setplotdata()
+
+   def exit(self):
+      self.destroy()
+
+class HistoryFrame(tk.Frame):
+   def __init__(self,parent,*args,**kwargs):
+      tk.Frame.__init__(self,parent)
 
       self.results_string = tk.StringVar()
-      self.results_title = tk.Label(self.results_frame,
-         textvariable=self.results_string)
-      self.results_string.set("Results:")
-      self.results_title.grid(row=0,column=0,sticky='w',padx=10)
+      self.results_title = tk.Label(self,
+         textvariable=self.results_string,font=('Verdana',12))
+      self.results_string.set("History")
+      self.results_title.grid(row=0,column=0,sticky='n')
 
-      self.results_box_scrollbar = AutoScrollbar(self.results_frame)
+      self.results_box_scrollbar = AutoScrollbar(self)
       self.results_box_scrollbar.grid(row=1,column=1,sticky='ns',
          pady=10)
 
-      self.results_box = tk.Listbox(self.results_frame,
+      self.results_box = tk.Listbox(self,
          activestyle='none',
          width=33,
          height=5,
@@ -204,10 +307,10 @@ class RietveldGUI(tk.Tk):
 
       self.results_box_scrollbar.config(command=self.results_box.yview)
 
-      self.results_text_scrollbar = AutoScrollbar(self.results_frame)
+      self.results_text_scrollbar = AutoScrollbar(self)
       self.results_text_scrollbar.grid(row=2,column=1,sticky='ns')
 
-      self.results_text = tk.Text(self.results_frame, 
+      self.results_text = tk.Text(self,
          height=15,
          width=33,
          yscrollcommand=self.results_text_scrollbar.set,
@@ -219,17 +322,7 @@ class RietveldGUI(tk.Tk):
 
       self.results_text_scrollbar.config(command=self.results_text.yview)
 
-      self.results_frame.grid_rowconfigure(2,minsize=300)
-
-      self.results_frame.grid(row=0,column=0)
-
-      self.plotframe = PlotFrame(self.container,self,padx=10,pady=10)
-      self.plotframe.grid(row=0,column=1,sticky='w')
-
-      # temp. to allow for auto-loading of profile
-      self.getProfile()
-      self.getCifs()
-      # self.paramframe.refine()
+      self.grid_rowconfigure(2,minsize=300)
 
    def onClick(self,event):
       global RR,Rt,Rp,x_list,Rt_list
@@ -247,153 +340,92 @@ class RietveldGUI(tk.Tk):
       self.results_text.config(state=tk.DISABLED)
       # self.param_string.set(RR.display_parameters())
 
-   def getCifs(self,filePaths=None):
-      if filePaths is None:
-         pass
-         # self.filePaths = tkFileDialog.askopenfilenames(
-         #    initialdir = "./data/cifs")
-      else:
-         self.filePaths = filePaths
-      self.filePaths = [
-      r".\data\cifs\Cement\1540705-Alite.cif", 
-      r".\data\cifs\Cement\1000039-AluminateCubic.cif", 
-      r".\data\cifs\Cement\9014308-AluminateOrtho.cif", 
-      r".\data\cifs\Cement\9004096-anhydrite.cif",
-      r".\data\cifs\Cement\9007569-Arcanite.cif",
-      r".\data\cifs\Cement\9005521-bassanite.cif",
-      r".\data\cifs\Cement\9012789-Belite.cif", 
-      r".\data\cifs\Cement\9009667-calcite.cif",
-      r".\data\cifs\Cement\1200009-Ferrite.cif", 
-      r".\data\cifs\Cement\1011094-FreeLime.cif", 
-      r".\data\cifs\Cement\1000053-Periclase.cif", 
-      r".\data\cifs\Cement\9000113-portlandite.cif",
-      ]
-      # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
+# class VarLabelEntry(tk.Frame):
+#    def __init__(self,parent,text,x_label,index,*args, **kwargs):
+#       tk.Frame.__init__(self,parent)
+#       self.x_label = x_label
+#       self.index = index
+#       self.change_all = parent.change_all
+#       self.is_l_limits = self.x_label == "l_limits"
+#       self.is_u_limits = self.x_label == "u_limits"
+#       self.is_values = self.x_label == "values"
+#       self.passable = ["","-",".","-."]
 
+#       # self.value = tk.StringVar()
+#       # self.value.set(str(RietveldPhases.x[x_label][index]))
+#       self.label = tk.Label(self,text=text)
 
-      global Rt, selections
-      Rt = []
-      selections = []
-      for i,filePath in enumerate(self.filePaths):
-         # cif_file_name = os.path.split(filePath)[1]
-         Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
-            delta_theta=0.8,intensity_cutoff=0.01))
-         selections.append(np.zeros((num_phase_params,max_refinement_rounds+1),
-            dtype=bool))
-         # if self.numPhases == 0:
-         # self.paramframe.nb.add(
-         #    RefinementParameterSet(self.paramframe.nb,self.paramframe,index=i), 
-         #    text=str(i+1)+" ")
-         self.numPhases += 1
+#       # valid percent substitutions (from the Tk entry man page)
+#       # note: you only have to register the ones you need; this
+#       # example registers them all for illustrative purposes
+#       #
+#       # %d = Type of action (1=insert, 0=delete, -1 for others)
+#       # %i = index of char string to be inserted/deleted, or -1
+#       # %P = value of the entry if the edit is allowed
+#       # %s = value of entry prior to editing
+#       # %S = the text string being inserted or deleted, if any
+#       # %v = the type of validation that is currently set
+#       # %V = the type of validation that triggered the callback
+#       #      (key, focusin, focusout, forced)
+#       # %W = the tk name of the widget
 
-      self.paramframe.nb.add(RefinementParameterSet(self.paramframe.nb,
-            self.paramframe),text="Phase Parameters")
+#       vcmd = (self.register(self.onValidate),
+#          '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+#       self.entry = tk.Entry(self,width=8,validate="key",validatecommand=vcmd)
+#       self.entry.insert(0,str(RietveldPhases.x[x_label][index]))
+#       self.label.grid(row=0,column=0)
+#       self.entry.grid(row=0,column=1)
 
-      global RR,Rp
-      RR = RietveldRefinery(Rt,Rp,
-         store_intermediate_state=False, show_plots=False)
+#    def onValidate(self, d, i, P, s, S, v, V, W):
+#       global RR, Rp
 
-      self.paramframe.bkgd_control.state.set(1)
-      self.paramframe.bkgd_control.checkbutton_clicked()
-      # pdb.set_trace()
+#       try:
+#          if all(P != x for x in self.passable):
+#             val = float(P)
+#             if self.is_l_limits:
+#                if val <= RietveldPhases.x['u_limits'][self.index]:
+#                   RietveldPhases.x[self.x_label][self.index] = val
+#                else:
+#                   raise ValueError
+#             elif self.is_u_limits:
+#                if val >= RietveldPhases.x['l_limits'][self.index]:
+#                   RietveldPhases.x[self.x_label][self.index] = val
+#                else:
+#                   raise ValueError
+#             elif self.is_values:
+#                RietveldPhases.x[self.x_label][self.index] = val
+#          else:
+#             RietveldPhases.x[self.x_label][self.index] = 0
 
-      Rp.updateplotprofile(RR.total_profile_state)
-
-
-   def getProfile(self):
-      # self.fileName = tkFileDialog.askopenfilename(
-      #    initialdir = "./data/profiles")
-      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
-      self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
-      # self.fileName = r".\\data\\profiles\\d5_05005.xye"
-      self.winfo_toplevel().title("Rietveld Refinement (" + 
-         os.path.split(self.fileName)[1]+")")
-
-      RietveldPhases.set_profile(self.fileName, min_two_theta=25)
-      global ROI_mask
-      ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
-
-      self.paramframe = LoadFrame(self.container,self,padx=10,
-         nbwidth=400
-         )#,pady=10)
-      self.paramframe.grid(row=0,column=2) 
-
-      global Rp
-      Rp.setplotdata()
-
-   def exit(self):
-      self.destroy()
-
-class VarLabelEntry(tk.Frame):
-   def __init__(self,parent,text,x_label,index,*args, **kwargs):
-      tk.Frame.__init__(self,parent)
-      self.x_label = x_label
-      self.index = index
-      self.change_all = parent.change_all
-      self.is_l_limits = self.x_label == "l_limits"
-      self.is_u_limits = self.x_label == "u_limits"
-      self.is_values = self.x_label == "values"
-      self.passable = ["","-",".","-."]
-
-      # self.value = tk.StringVar()
-      # self.value.set(str(RietveldPhases.x[x_label][index]))
-      self.label = tk.Label(self,text=text)
-
-      # valid percent substitutions (from the Tk entry man page)
-      # note: you only have to register the ones you need; this
-      # example registers them all for illustrative purposes
-      #
-      # %d = Type of action (1=insert, 0=delete, -1 for others)
-      # %i = index of char string to be inserted/deleted, or -1
-      # %P = value of the entry if the edit is allowed
-      # %s = value of entry prior to editing
-      # %S = the text string being inserted or deleted, if any
-      # %v = the type of validation that is currently set
-      # %V = the type of validation that triggered the callback
-      #      (key, focusin, focusout, forced)
-      # %W = the tk name of the widget
-
-      vcmd = (self.register(self.onValidate),
-         '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
-      self.entry = tk.Entry(self,width=8,validate="key",validatecommand=vcmd)
-      self.entry.insert(0,str(RietveldPhases.x[x_label][index]))
-      self.label.grid(row=0,column=0)
-      self.entry.grid(row=0,column=1)
-
-   def onValidate(self, d, i, P, s, S, v, V, W):
-      global RR, Rp
-      
-      try:
-         if all(P != x for x in self.passable):
-            val = float(P)
-            if self.is_l_limits:
-               if val <= RietveldPhases.x['u_limits'][self.index]:
-                  RietveldPhases.x[self.x_label][self.index] = val
-               else: 
-                  raise ValueError
-            elif self.is_u_limits:
-               if val >= RietveldPhases.x['l_limits'][self.index]:
-                  RietveldPhases.x[self.x_label][self.index] = val
-               else: 
-                  raise ValueError
-            elif self.is_values:
-               RietveldPhases.x[self.x_label][self.index] = val
-         else:
-            RietveldPhases.x[self.x_label][self.index] = 0
-
-      except(ValueError):
-         return False
-      if self.change_all:
-         for Rp in Rt:
-            RietveldPhases.x[self.x_label]
-      if RR is not None:
-         RR.Update_state()
-      if Rp is not None:
-         Rp.updateplotprofile()
-      return True
+#       except(ValueError):
+#          return False
+#       if self.change_all:
+#          for Rp in Rt:
+#             RietveldPhases.x[self.x_label]
+#       if RR is not None:
+#          RR.update_state()
+#       if Rp is not None:
+#          Rp.updateplotprofile()
+#       return True
 
 class RoundsBoxes(tk.Frame):
-   def __init__(self,parent,controller,default_round_start=1):
+
+   order_values = []
+   rounds_options = []
+   for i in xrange(max_refinement_rounds-2):
+      order_values.append(str(i+1)+"-" + str(max_refinement_rounds))
+      rounds_options.append((i+1,True))
+      order_values.append(str(i+1)+"," + str(max_refinement_rounds))
+      rounds_options.append((i+1,False))
+   order_values.append(
+         str(max_refinement_rounds-1) +"-" + str(max_refinement_rounds))
+   rounds_options.append((max_refinement_rounds-1,True))
+   order_values.append(str(max_refinement_rounds))
+   rounds_options.append((max_refinement_rounds,True))
+
+   def __init__(self,parent,controller,
+      default_round_start=1,
+      select_all_rounds=True):
       tk.Frame.__init__(self, parent)
       self.RoundsLabel = tk.Label(self, text = "Rounds: ")
       self.RoundsLabel.grid(row=0,column=0,sticky='e')
@@ -401,33 +433,56 @@ class RoundsBoxes(tk.Frame):
       self.roundcheckbuttons = []
       self.roundstates = []
 
-      for i in xrange(max_refinement_rounds):
-         self.roundstates.append(tk.IntVar())
-         if i >= default_round_start-1:
-            self.roundstates[i].set(1)
-         self.roundcheckbuttons.append(tk.Checkbutton(self,
-            variable = self.roundstates[i], text=str(i+1)))
-         self.roundcheckbuttons[i].grid(row=0,column=i+1)
+      # for i in xrange(max_refinement_rounds):
+      #    self.roundstates.append(tk.IntVar())
+      #    if i >= default_round_start-1:
+      #       self.roundstates[i].set(1)
+      #    self.roundcheckbuttons.append(tk.Checkbutton(self,
+      #       variable = self.roundstates[i], text=str(i+1)))
+      #    self.roundcheckbuttons[i].grid(row=0,column=i+1)
+
+      self.roundselection = tk.StringVar(self)
+      self.orderMenu = ttk.Combobox(self, textvariable=self.roundselection,
+         state='readonly',width =3)
+      self.orderMenu['values'] = tuple(RoundsBoxes.order_values)
+
+      assert type(default_round_start) == int
+      if default_round_start > max_refinement_rounds:
+         default_round_start = max_refinement_rounds
+      if default_round_start <= 0:
+         default_round_start = 1
+      assert type(select_all_rounds) == bool
+      if default_round_start >= max_refinement_rounds-1:
+         select_all_rounds = True
+
+      self.orderMenu.current(RoundsBoxes.rounds_options.index(
+         (default_round_start,select_all_rounds)))
+      self.orderMenu.bind("<<ComboboxSelected>>", self.order_selected)
+      self.orderMenu.grid(row=0,column=1)
+
+   def order_selected(self,event):
+      pass
 
 class RefinementParameterControl(tk.Frame):
-   def __init__(self, parent, controller, parameter, text="", 
-      default_round_start=1,change_all=False,*args, **kwargs):
+   def __init__(self, parent, controller, text="",
+      default_round_start=1,select_all_rounds=True,
+      *args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.parent = parent
-      self.change_all = change_all
-      self.parameter = parameter
 
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
          variable = self.state, text=text)
       self.checkbutton.grid(row=0,column=0,sticky='w')
 
-      self.rounds = RoundsBoxes(self,parent,default_round_start)
+      self.rounds = RoundsBoxes(self,parent,
+         default_round_start=default_round_start,
+         select_all_rounds=select_all_rounds)
       self.rounds.grid(row=0,column=1,sticky='w')
 
       # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
       # self.initial.grid(row=0,column=1,sticky='e')
-      
+
       # self.l_limit = VarLabelEntry(self,'Lower limit:', 'l_limits', index)
       # self.l_limit.grid(row=1,column=0,sticky='w')
 
@@ -435,11 +490,11 @@ class RefinementParameterControl(tk.Frame):
       # self.u_limit.grid(row=1,column=1,sticky='e')
 
       # self.round_dropdownlist = Dropdown_Int_List(self, parent,
-      #    text="Round:", min_int=1, max_int=max_refinement_rounds, 
+      #    text="Round:", min_int=1, max_int=max_refinement_rounds,
       #    default_int=default_round)
       # self.round_dropdownlist.grid(row=0,column=2,rowspan=2,sticky='e')
 
-      
+
 
       self.grid_columnconfigure(0,minsize=150)
       # self.grid_columnconfigure(1,minsize=120)
@@ -449,15 +504,13 @@ class RefinementParameterControl(tk.Frame):
 
    def checkbutton_clicked(self):
       if self.state.get() == 1:
-         pass
-         # self.rounds.grid()
+         self.rounds.grid()
          # self.initial.grid()
          # self.l_limit.grid()
          # self.u_limit.grid()
          # self.round_dropdownlist.grid()
       if self.state.get() == 0:
-         pass
-         # self.rounds.grid_remove()
+         self.rounds.grid_remove()
          # self.initial.grid_remove()
          # self.l_limit.grid_remove()
          # self.u_limit.grid_remove()
@@ -468,19 +521,17 @@ class RefinementParameterControl(tk.Frame):
       #       RietveldPhases.x['values'][index] = 0
 
 class RefinementParameterRadioControl(tk.Frame):
-   def __init__(self, parent, controller, parameter, text="", 
-      default_round_start=1,change_all=False,*args, **kwargs):
+   def __init__(self, parent, controller, text="",
+      default_round_start=1,*args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.parent = parent
-      self.change_all = change_all
-      self.parameter = parameter
 
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
          variable = self.state, text=text)
       self.checkbutton.grid(row=0,column=0,sticky='w')
 
-      self.radioframe = tk.Frame(self) 
+      self.radioframe = tk.Frame(self)
       self.radiovar = tk.IntVar()
       tk.Radiobutton(self.radioframe,text="Angular",variable=self.radiovar,
          value=1,command=self.radiobutton_switched).pack()
@@ -489,12 +540,12 @@ class RefinementParameterRadioControl(tk.Frame):
       self.radioframe.grid(row=0,column=1)
       self.radiovar.set(1)
 
-      # self.rounds = RoundsBoxes(self,parent,default_round_start)
-      # self.rounds.grid(row=0,column=2,sticky='w')
+      self.rounds = RoundsBoxes(self,parent,default_round_start)
+      self.rounds.grid(row=0,column=2,sticky='w')
 
       # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
       # self.initial.grid(row=0,column=1,sticky='e')
-      
+
       # self.l_limit = VarLabelEntry(self,'Lower limit:', 'l_limits', index)
       # self.l_limit.grid(row=1,column=0,sticky='w')
 
@@ -502,15 +553,15 @@ class RefinementParameterRadioControl(tk.Frame):
       # self.u_limit.grid(row=1,column=1,sticky='e')
 
       # self.round_dropdownlist = Dropdown_Int_List(self, parent,
-      #    text="Round:", min_int=1, max_int=max_refinement_rounds, 
+      #    text="Round:", min_int=1, max_int=max_refinement_rounds,
       #    default_int=default_round)
       # self.round_dropdownlist.grid(row=0,column=2,rowspan=2,sticky='e')
 
-      
 
-      self.grid_columnconfigure(0,minsize=120)
+
+      self.grid_columnconfigure(0,minsize=80)
       self.grid_rowconfigure(0,minsize=60)
-      # self.grid_columnconfigure(1,minsize=120)
+      self.grid_columnconfigure(1,minsize=70)
       # self.grid_columnconfigure(2,minsize=110)
 
       self.checkbutton_clicked()
@@ -518,14 +569,14 @@ class RefinementParameterRadioControl(tk.Frame):
    def checkbutton_clicked(self):
       if self.state.get() == 1:
          self.radioframe.grid()
-         # self.rounds.grid()
+         self.rounds.grid()
          # self.initial.grid()
          # self.l_limit.grid()
          # self.u_limit.grid()
          # self.round_dropdownlist.grid()
       if self.state.get() == 0:
          self.radioframe.grid_remove()
-         # self.rounds.grid_remove()
+         self.rounds.grid_remove()
          # self.initial.grid_remove()
          # self.l_limit.grid_remove()
          # self.u_limit.grid_remove()
@@ -542,20 +593,19 @@ class RefinementParameterRadioControl(tk.Frame):
          RietveldPhases.set_vertical_offset(True)
       RietveldPhases.two_theta_0['values'] = 0
 
-class LatticeParameterControl(tk.Frame):
-   def __init__(self,parent,controller,index):
-      tk.Frame.__init__(self,parent)
-      self.index = index
-      self.crystal_system = Rt[index].structure.space_group().crystal_system()
+# class LatticeParameterControl(tk.Frame):
+#    def __init__(self,parent,controller,index):
+#       tk.Frame.__init__(self,parent)
+#       self.index = index
+#       self.crystal_system = Rt[index].structure.space_group().crystal_system()
 
 class RefinementParameterPolynomControl(tk.Frame):
-   def __init__(self, parent, controller, parameter,
+   def __init__(self, parent, controller,
       text="", default_order=2, default_round_start=1,*args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.state = tk.IntVar()
       self.parent = parent
       self.text = text
-      self.parameter = parameter
 
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
          text=text, variable = self.state)
@@ -565,16 +615,16 @@ class RefinementParameterPolynomControl(tk.Frame):
          text="Order:", min_int=0, max_int=6, default_int=default_order)
       self.order_dropdownlist.grid(row=0,column=1)
 
-      # self.rounds = RoundsBoxes(self,parent,default_round_start)
-      # self.rounds.grid(row=0,column=2)
+      self.rounds = RoundsBoxes(self,parent,default_round_start)
+      self.rounds.grid(row=0,column=2)
 
       # self.round_dropdownlist = Dropdown_Int_List(self, parent,
-      #    text="Round:", min_int=1, max_int=max_refinement_rounds, 
+      #    text="Round:", min_int=1, max_int=max_refinement_rounds,
       #    default_int=default_round)
       # self.round_dropdownlist.grid(row=0,column=2)
 
-      self.grid_columnconfigure(0,minsize=90)
-      # self.grid_columnconfigure(1,minsize=90)
+      self.grid_columnconfigure(0,minsize=60)
+      self.grid_columnconfigure(1,minsize=90)
       # self.grid_columnconfigure(2,minsize=110)
 
       self.checkbutton_clicked()
@@ -583,20 +633,23 @@ class RefinementParameterPolynomControl(tk.Frame):
       global RR,Rp,canvas
       if self.state.get() == 1:
          self.order_dropdownlist.grid()
-         # self.rounds.grid()
+         self.rounds.grid()
 
-         if self.text == "Background":
-            RR = RietveldRefinery(Rt,Rp, \
-               bkgd_refine=True,
-               store_intermediate_state=False, show_plots=False)
-            RR.minimize_bkgd()
+         if self.text == "Bkgd.":
+            try:
+               RR = RietveldRefinery(Rt,Rp, \
+                  bkgd_refine=True,
+                  store_intermediate_state=False, show_plots=False)
+               RR.minimize_bkgd()
+            except AttributeError:
+               pass
             # Rp.updateplotprofile(RietveldPhases.two_theta,
             #    RR.total_profile_state,wse=RR.weighted_squared_errors_state)
             # Rp.fig.canvas.draw()
 
       if self.state.get() == 0:
          self.order_dropdownlist.grid_remove()
-         # self.rounds.grid_remove()
+         self.rounds.grid_remove()
          # if RR is not None:
          #    Rp.reset_plot_profile()
          # if self.text == "Background":
@@ -617,7 +670,7 @@ class Dropdown_Int_List(tk.Frame):
          max_int=5,*args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.parent = parent
-      self.order_label = tk.Label(self,text=text)
+      self.order_label = tk.Label(self,text=text+" ")
       self.order_label.grid(row=0,column=0)
 
       self.order = tk.StringVar(self)
@@ -634,8 +687,8 @@ class Dropdown_Int_List(tk.Frame):
       self.orderMenu.bind("<<ComboboxSelected>>", self.order_selected)
       self.orderMenu.grid(row=0,column=1)
 
-      self.grid_columnconfigure(0,minsize=50)
-      self.grid_columnconfigure(1,minsize=50)
+      # self.grid_columnconfigure(0,minsize=30)
+      # self.grid_columnconfigure(1,minsize=50)
 
    def order_selected(self,tmp):
       # print self.order.get()
@@ -650,81 +703,6 @@ class Dropdown_Int_List(tk.Frame):
          RietveldPhases.set_bkgd_order(int(self.order.get())+1)
       self.parent.checkbutton_clicked()
       self.orderMenu.selection_clear()
-
-
-class RefinementParameterSet(tk.Frame):
-   def __init__(self, parent, controller, index=None, change_all=False,
-       *args, **kwargs):
-      tk.Frame.__init__(self, parent, padx=10,pady=10)
-      self.index = index
-
-      global Rt
-
-      if index is not None:
-         phase = Rt[index]
-         # tk.Label(self,text=os.path.split(
-         #    controller.controller.filePaths[index])[1]) \
-         #    .grid(row=0,column=0,sticky='w',)     
-      else:
-         # tk.Label(self,text="").grid(row=0,column=0,columnspan=2,
-         #    sticky='n')
-         phase = Rt[0]
-
-      phase_names = ['All']
-      for phase in Rt:
-         phase_names.append(phase.chemical_name)
-      self.change_all = change_all
-      self.selection = tk.StringVar()
-      self.selection.set(phase_names[0])
-      # self.phase_option_menu = tk.OptionMenu(self,self.selection,*phase_names)
-      # self.phase_option_menu.grid(row=0,column=0)
-      self.phase_combobox = ttk.Combobox(self,
-         textvariable=self.selection,
-         values=phase_names,
-         state='readonly',
-         exportselection=0,
-         width=min(len(max(phase_names,key=len)),30),
-         )
-      self.phase_combobox.bind("<<ComboboxSelected>>",self.onPhaseSelected)
-      # self.phase_combobox.state()
-      self.phase_combobox.grid(row=0,column=0,sticky='w')
-
-
-      RefinementParameterControl(self,parent,
-         phase.Amplitude,text="Scale",change_all=self.change_all,
-         default_round_start=2).grid(row=1,column=0,sticky='w')
-
-      RefinementParameterControl(self,parent,
-         phase.W,text="Caglioti W",default_round_start=2) \
-         .grid(row=2,column=0,sticky='w')
-
-      RefinementParameterPolynomControl(self,parent, phase.eta,
-         text=u"\u03b7",default_order=1,default_round_start=3).grid(row=3,column=0,
-         sticky='w')
-
-      RefinementParameterControl(self,parent,
-         phase.V,text="Caglioti V",default_round_start=2) \
-         .grid(row=4,column=0,sticky='w')
-
-      RefinementParameterControl(self,parent,
-         phase.U,text="Caglioti U",default_round_start=2) \
-         .grid(row=5,column=0,sticky='w')
-
-      RefinementParameterControl(self,parent,
-         phase.lattice_parameters,text="Lattice Parameters",
-         default_round_start=2).grid(row=6,column=0,sticky='w')
-
-      self.grid_columnconfigure(0,minsize=286)
-
-   def onPhaseSelected(self,event):
-      if self.phase_combobox.current() == 0:
-         self.change_all = True
-      else:
-         self.change_all = False
-
-
-
-      print self.phase_combobox.current()
 
 class LabelScale(tk.Frame):
    def __init__(self,parent,controller,
@@ -741,7 +719,7 @@ class LabelScale(tk.Frame):
       self.value = tk.IntVar()
       self.label = tk.Label(self,text=text)
       self.label.grid(row=0,column=0)
-      
+
       self.vallabel=tk.Label(self,textvariable=self.value)
       self.vallabel.grid(row=0,column=1,sticky='w')
 
@@ -761,54 +739,114 @@ class LabelScale(tk.Frame):
 
       self.grid_columnconfigure(1,minsize=40)
 
-class LoadFrame(tk.Frame):
+class ParamFrame(tk.Frame):
    def __init__(self, parent,controller,
-      nbwidth=250,*args,**kwargs):
+      nb_width=250,*args,**kwargs):
       # controller.minsize(width=400,height=400)
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
       self.parent = parent
       self.controller = controller
-      self.nbwidth = nbwidth
-      self.globalnb = ttk.Notebook(self,height=100,width=self.nbwidth)
-      self.globalFrame = tk.Frame(self.globalnb,padx=10,pady=10)
+      self.nb_width = nb_width
+      self.global_nb = ttk.Notebook(self,height=100,width=self.nb_width)
+      self.global_frame = tk.Frame(self.global_nb,padx=10,pady=10)
       self.numruns = 0
       #, width=100, height=100)
       # self.globalLabelFrame.p#grid(row=0,column=0)
 
+      self.param_controls = []
+
       self.bkgd_control = \
-         RefinementParameterPolynomControl(self.globalFrame,self,
-         RietveldPhases.bkgd,text="Background",
+         RefinementParameterPolynomControl(self.global_frame,self,
+         text="Bkgd.",
          default_order=2,default_round_start=1)
+      self.param_controls.append(self.bkgd_control)
       self.bkgd_control.grid(row=0,column=0,sticky='w')
 
-      RefinementParameterRadioControl(self.globalFrame,self,
-         RietveldPhases.two_theta_0,text=u"2\u03b8 Offset") \
-         .grid(row=1,column=0,sticky='w')
-      
-      self.globalnb.add(self.globalFrame,text="Global Parameters")
-      self.globalnb.grid(row=0,column=0,columnspan=2,padx=10,pady=10)
+      self.offset_control = \
+         RefinementParameterRadioControl(self.global_frame,self,
+         text=u"2\u03b8 Corr.")
+      self.param_controls.append(self.offset_control)
+      self.offset_control.grid(row=1,column=0,sticky='w')
 
-      self.nb = ttk.Notebook(self,
-         height=220,width=self.nbwidth)
-      self.nb.enable_traversal()
-      # 
-      self.nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
-      # self.nb.grid(row=2,column=1,columnspan=2)
+      self.global_nb.add(self.global_frame,text="Global Parameters")
+      self.global_nb.grid(row=0,column=0,columnspan=2,padx=10,pady=10)
+
+      self.phase_nb = ttk.Notebook(self,height=220,width=self.nb_width)
+      self.phase_frame = tk.Frame(self.phase_nb,padx=10,pady=10)
+
+      self.phase_names = ['All']
+      self.change_all = True
+
+      self.selection = tk.StringVar()
+      self.selection.set(self.phase_names[0])
+      self.phase_combobox = ttk.Combobox(self.phase_frame,
+         textvariable=self.selection,
+         values=self.phase_names,
+         state='readonly',
+         exportselection=0,
+         width=min(len(max(self.phase_names,key=len)),30),
+         )
+      self.phase_combobox.bind("<<ComboboxSelected>>",self.onPhaseSelected)
+      self.phase_combobox.grid(row=0,column=0,sticky='w')
+
+      self.scale_control = RefinementParameterControl(self.phase_frame,
+         self.parent, text="Scale",change_all=self.change_all,
+         default_round_start=1)
+      self.param_controls.append(self.scale_control)
+      self.scale_control.grid(row=1,column=0,sticky='w')
+
+      self.W_control = RefinementParameterControl(self.phase_frame,self.parent,
+         text="Caglioti W",default_round_start=2)
+      self.param_controls.append(self.W_control)
+      self.W_control.grid(row=2,column=0,sticky='w')
+
+      self.eta_control = RefinementParameterPolynomControl(
+         self.phase_frame,self.parent,
+         text=u"\u03b7",
+         default_order=1,
+         default_round_start=2)
+      self.param_controls.append(self.eta_control)
+      self.eta_control.grid(row=3,column=0,sticky='w')
+
+      self.V_control = RefinementParameterControl(self.phase_frame,self.parent,
+         text="Caglioti V",
+         default_round_start=3,
+         select_all_rounds=False)
+      self.param_controls.append(self.V_control)
+      self.V_control.grid(row=4,column=0,sticky='w')
+
+      self.U_control = RefinementParameterControl(self.phase_frame,self.parent,
+         text="Caglioti U",
+         default_round_start=4,
+         select_all_rounds=False)
+      self.param_controls.append(self.U_control)
+      self.U_control.grid(row=5,column=0,sticky='w')
+
+      self.lattice_control = \
+         RefinementParameterControl(self.phase_frame,self.parent,
+         text="Lattice Parameters",
+         default_round_start=max_refinement_rounds,
+         select_all_rounds=False)
+      self.param_controls.append(self.lattice_control)
+      self.lattice_control.grid(row=6,column=0,sticky='w')
+
+      self.phase_nb.add(self.phase_frame,text="Phase Parameters")
+      self.phase_nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
 
       self.labelscale = LabelScale(self,parent,
          text="Max number of iterations: ",
          from_=0,
          to=300,
          initial=100,
-         length=100)
+         length=80)
       self.labelscale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
 
-      self.RefineButton = ttk.Button(self, text='Refine', 
+      self.RefineButton = ttk.Button(self, text='Refine',
          command=self.refine, takefocus=False)
       self.RefineButton.grid(row=3,column=0, padx=10, pady=10)
 
-      self.CancelButton = ttk.Button(self, text='Reset', 
+      self.CancelButton = ttk.Button(self, text='Reset',
          command=self.reset, takefocus=False)
       self.CancelButton.grid(row=3,column=1, padx=10, pady=10)
 
@@ -869,7 +907,7 @@ class LoadFrame(tk.Frame):
                         np.logical_and(RR.phase_masks[i],
                         np.char.startswith(RR.x['labels'],
                            rp.parameter['labels'][0][0:3])))
-      
+
       for rp in self.globalnb.children[self.globalnb.tabs()[0].split('.')[-1]] \
          .children.values():
          if rp.state.get() == 1:
@@ -897,7 +935,6 @@ class LoadFrame(tk.Frame):
       self.parent.master.results_text.config(state=tk.DISABLED)
       self.numruns += 1
 
-
    def reset(self):
       self.controller.numPhases = 0
       global Rt, RR, Rp
@@ -912,6 +949,13 @@ class LoadFrame(tk.Frame):
       # Rp.reset_plot_profile()
       Rp.fig.suptitle("")
       self.controller.getCifs(self.controller.filePaths)
+
+   def onPhaseSelected(self,event):
+      if self.phase_combobox.current() == 0:
+         self.change_all = True
+      else:
+         self.change_all = False
+      print self.phase_combobox.current()
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):

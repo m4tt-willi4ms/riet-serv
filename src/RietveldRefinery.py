@@ -26,8 +26,6 @@ class RietveldRefinery:
       This class is used to assemble and organize the inputs required to run (a
       series of) Rietveld refinements.
    """
-
-
    def __init__(self,phase_list, rietveld_plot, \
       bkgd_refine=False,
       store_intermediate_state=False,
@@ -78,7 +76,7 @@ class RietveldRefinery:
 
       self.weighted_sum_of_I_squared = np.sum(
          RietveldPhases.I**2/RietveldPhases.sigma**2)
-      
+
       RietveldPhases.assemble_global_x()
       for phase in self.phase_list:
          phase.assemble_phase_x()
@@ -150,15 +148,15 @@ class RietveldRefinery:
 
    def weighted_squared_errors(self):
          # try:
-         #    json.dump(self.TotalProfile().tolist(), 
-         #       codecs.open("current_profile.json", 'w', encoding='utf-8'), 
-         #       separators=(',', ':'), 
-         #       # sort_keys=True, 
+         #    json.dump(self.TotalProfile().tolist(),
+         #       codecs.open("current_profile.json", 'w', encoding='utf-8'),
+         #       separators=(',', ':'),
+         #       # sort_keys=True,
          #       indent=4)
-         #    json.dump(self.x.tolist(), 
-         #       codecs.open("xparams.json", 'w', encoding='utf-8'), 
-         #       separators=(',', ':'), 
-         #       # sort_keys=True, 
+         #    json.dump(self.x.tolist(),
+         #       codecs.open("xparams.json", 'w', encoding='utf-8'),
+         #       separators=(',', ':'),
+         #       # sort_keys=True,
          #       indent=4)
          # except IOError:
          #    pass
@@ -249,7 +247,7 @@ class RietveldRefinery:
 
       if not self.bkgd_refine:
          self.rietveld_plot.fig.suptitle("In Progress...")
-      
+
       options = {
          'ftol': self.factr*2.2e-16,
          # 'xtol': self.factr*2.2e-16,
@@ -279,10 +277,10 @@ class RietveldRefinery:
             self.rietveld_plot.fig.suptitle("Optimization Ended...")
          elif self.result['message'][0:4] == "CONV":
             self.rietveld_plot.fig.suptitle("Optimization Complete.")
-      
+
          Amplitudes = self.x['values'] \
             [np.char.startswith(self.x['labels'],"Amp")]
-         total = np.sum(Amplitudes) 
+         total = np.sum(Amplitudes)
          weight_moments = []
          # print "\n"
          for i,val in np.ndenumerate(Amplitudes):
@@ -378,7 +376,7 @@ class RietveldRefinery:
       self.minimize()
 
    def minimize_First_n_Phases(self,n=1,display_plots = True):
-      tmp = np.argsort(self.x['values'] 
+      tmp = np.argsort(self.x['values']
          [np.char.startswith(self.x['labels'],"Amp")])
       n_phases = [self.Phase_list[i] for i in tmp]
 
@@ -405,10 +403,10 @@ class RietveldRefinery:
       # self.Update_Phase_list()
 
    def minimize_Amplitude_Bkgd_Offset_W(self,display_plots = True):
-      self.mask = np.logical_or( 
-         np.char.startswith(self.x['labels'],"Amp"), 
-            np.logical_or(np.char.startswith(self.x['labels'],"two_"), 
-               np.logical_or(np.char.startswith(self.x['labels'],"bkgd"), 
+      self.mask = np.logical_or(
+         np.char.startswith(self.x['labels'],"Amp"),
+            np.logical_or(np.char.startswith(self.x['labels'],"two_"),
+               np.logical_or(np.char.startswith(self.x['labels'],"bkgd"),
                   self.x['labels'] == "W")))
       self.minimize()
       # self.Update_Phase_list()
@@ -490,7 +488,7 @@ class RietveldRefinery:
 
    def update_plot(self):
       self.current_profile.set_ydata(self.total_profile_state)
-      self.current_profile_masked.set_ydata(self.total_profile_state 
+      self.current_profile_masked.set_ydata(self.total_profile_state
          [self.pltmask])
       self.residuals.set_ydata(self.weighted_squared_errors_state)
       self.fig.canvas.draw()
@@ -498,18 +496,36 @@ class RietveldRefinery:
    def display_parameters(self,fn=None):
       if fn is not None:
          param_list = "After " + fn.__name__ + ":\n"
-      else: 
+      else:
          param_list = ""
-      for label,value,l,u in zip( \
-         self.x['labels'][self.mask], \
-         self.x['values'][self.mask], \
-         self.x['l_limits'][self.mask], \
-         self.x['u_limits'][self.mask]):
-         param_list += \
-            label + " = " \
-            + ('%.4g' % value) + " (" \
-            + ('%.4g' % l) + ", " \
-            + ('%.4g' % u) + ")\n"
+      mask = np.logical_and(self.mask,self.global_mask)
+      if np.any(mask):
+         param_list += "Global:\n"
+      for label,value,l,u in zip(
+            self.x['labels'][mask],
+            self.x['values'][mask],
+            self.x['l_limits'][mask],
+            self.x['u_limits'][mask]):
+            param_list += \
+               "  " + label + " = " \
+               + ('%.4g' % value) + " (" \
+               + ('%.4g' % l) + ", " \
+               + ('%.4g' % u) + ")\n"
+      for i,phase_mask in enumerate(self.phase_masks):
+         mask = np.logical_and(self.mask,phase_mask)
+         if np.any(mask):
+            param_list += "Phase " + str(i+1) + ": " + \
+               self.phase_list[i].chemical_name +"\n"
+            for label,value,l,u in zip(
+               self.x['labels'][mask],
+               self.x['values'][mask],
+               self.x['l_limits'][mask],
+               self.x['u_limits'][mask]):
+               param_list += \
+                  "  " + label + " = " \
+                  + ('%.4g' % value) + " (" \
+                  + ('%.4g' % l) + ", " \
+                  + ('%.4g' % u) + ")\n"
       print param_list
       return param_list
 
@@ -628,7 +644,7 @@ class RietveldPlot:
       # self.subplot1 = self.fig.subplot2grid((3,1),(0,0),rowspan=2)
       # self.subplot1 = self.fig.subplot2grid((3,1),(0,2),rowspan=2)
       self.subplot1 = self.fig.add_subplot(2,1,1)
-      self.subplot2 = self.fig.add_subplot(2,1,2) 
+      self.subplot2 = self.fig.add_subplot(2,1,2)
       # self.subplot3 = self.fig.add_subplot(313)
       # self.canvas = canvas
       # self.span = None
@@ -676,7 +692,7 @@ class RietveldPlot:
       # self.subplot3.set_ylabel(r"$\Delta I$")
       # self.subplot3.set_ylim(-self.I_max/2,self.I_max/2)
 
-         
+
       self.fig.canvas.show()
 
    def updateplotprofile(self,profile,wse=None,update_view=False):
@@ -695,7 +711,7 @@ class RietveldPlot:
       #    self.subplot1.plot(two_theta,-self.I_max/2+wse*RietveldPhases.sigma**2,
       #       label=r'$\Delta I$',color='green')
       # self.subplot1.legend(bbox_to_anchor=(.8,.7))
-      
+
       # self.subplot2.plot(two_theta,profile,
       #    alpha=0.7,color='red')
       # if wse is not None:
@@ -722,7 +738,7 @@ class RietveldPlot:
                np.max(RietveldPhases.I[indmin:indmax])))
          self.fig.canvas.draw()
 
-      self.span = SpanSelector(self.subplot1, onselect, 'horizontal', 
+      self.span = SpanSelector(self.subplot1, onselect, 'horizontal',
                     rectprops=dict(alpha=0.5, facecolor='green'))
 
       if update_view:
@@ -743,4 +759,3 @@ class RietveldPlot:
       self.fig.suptitle("")
       self.subplot1.axes.legend_.remove()
       self.fig.canvas.draw()
-   
