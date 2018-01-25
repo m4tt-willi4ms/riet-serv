@@ -41,55 +41,43 @@ import tkFileDialog
 
 LARGE_FONT = ("Verdana", 31)
 
-
-# fig = Figure(dpi=100)
-# fig, ax = plt.subplots(nrows=3,ncols=1,sharex=True,dpi=100)
-# xdata, ydata = [], []
-# ln, = plt.plot([], [], 'ro', animated=True)
-# fig.suptitle(plottitle)
-canvas = None
-ROI_mask = None
-ROI_center = 32
-ROI_delta_theta = 3
-x_mask = np.zeros(0,dtype=bool)
-
-# def onselect(xmin, xmax):
-#    x = RietveldPhases.two_theta
-#    indmin, indmax = np.searchsorted(x,
-#       (xmin, xmax))
-#    indmax = min(len(x) - 1, indmax)
-
-#    thisx = RietveldPhases.two_theta[indmin:indmax]
-#    thisy = RietveldPhases.I[indmin:indmax]
-#    # line2.set_data
-#    # subplot2.axes.lines[0].set_data(thisx, thisy)
-#    subplot2.set_xlim(thisx[0], thisx[-1])
-#    subplot2.set_ylim(0, thisy.max())
-#    fig.canvas.draw()
-
-two_thetas = []
-ys = []
-
 Rt = []
 x_list = []
 Rt_list = []
 mask_list = []
+selections_list = []
 RR = None
 
-# x_defaults = {}
-# x_defaults['two_theta_0'] = np.array([('two_theta_0',0.0,-0.5,0.5)],
-#    dtype=RietveldPhases.custom_dtype);
-# x_defaults['U'] = np.array([('U',0.0,0,0.1)],
-#    dtype=RietveldPhases.custom_dtype);
-# x_defaults['V'] = np.array([('V',-0.00,-0.1,0)],
-#    dtype=RietveldPhases.custom_dtype);
-
-# x_default = np.empty(0,dtype=RietveldPhases.custom_dtype)
-
 max_refinement_rounds = 5
-num_phase_params = 6
+num_displayed_params = 8
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
+
+def set_refinement_masks():
+   #assumes a refinement instance has been created
+   masks = []
+   for i in xrange(max_refinement_rounds):
+      mask = copy.deepcopy(RR.mask)
+      if selections[0,0,i]:
+         mask = set_mask_by_label("bk",mask)
+      if selections[0,1,i]:
+         mask = set_mask_by_label("tw",mask)
+      print selections.shape
+      for j,phase_mask in enumerate(RR.phase_masks):
+         if selections[j,2,i]:
+            mask = set_mask_by_label("Amp",mask,phase_mask)
+         if selections[j,3,i]:
+            mask = set_mask_by_label("W",mask,phase_mask)
+         if selections[j,4,i]:
+            mask = set_mask_by_label("eta",mask,phase_mask)
+      masks.append(mask)
+   return masks
+
+def set_mask_by_label(label,mask,phase_mask=None):
+   label_mask = np.logical_or(np.char.startswith(RR.x['labels'],label),mask)
+   if phase_mask == None:
+      return label_mask
+   return np.logical_and(label_mask,phase_mask)
 
 class AutoScrollbar(tk.Scrollbar):
     # a scrollbar that hides itself if it's not needed.  only
@@ -178,7 +166,7 @@ class RietveldGUI(tk.Tk):
 
       s.configure("Button",borderwidth=0)
 
-      self.numPhases=0
+      self.num_phases=0
 
 
       self.history_frame = HistoryFrame(self.container)
@@ -187,20 +175,19 @@ class RietveldGUI(tk.Tk):
       self.plot_frame = PlotFrame(self.container,self,padx=10,pady=10)
       self.plot_frame.grid(row=0,column=1,sticky='w')
 
-      self.param_frame = ParamFrame(self.container,self,padx=10,
-         nb_width=275
-         )#,pady=10)
+      self.param_frame = ParamFrame(self.container,self,padx=10,nb_width=275)
       self.param_frame.grid(row=0,column=2)
+
       # temp. to allow for auto-loading of profile
-      # self.getProfile()
-      # self.getCifs()
+      self.getProfile()
+      self.getCifs()
       # self.param_frame.refine()
 
    def getCifs(self,filePaths=None):
       if filePaths is None:
-         # pass
-         self.filePaths = tkFileDialog.askopenfilenames(
-            initialdir = "./data/cifs")
+         pass
+         # self.filePaths = tkFileDialog.askopenfilenames(
+         #    initialdir = "./data/cifs")
       else:
          self.filePaths = filePaths
       # self.filePaths = [
@@ -217,25 +204,30 @@ class RietveldGUI(tk.Tk):
       # r".\data\cifs\Cement\1000053-Periclase.cif",
       # r".\data\cifs\Cement\9000113-portlandite.cif",
       # ]
+      self.filePaths = [
+      r".\data\cifs\1000032.cif",
+      r".\data\cifs\9015662-rutile.cif",
+      ]
       # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
-
 
       global Rt, selections
       Rt = []
-      selections = []
       for i,filePath in enumerate(self.filePaths):
          # cif_file_name = os.path.split(filePath)[1]
          Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
             delta_theta=0.8,intensity_cutoff=0.01))
-         selections.append(np.zeros((num_phase_params,max_refinement_rounds+1),
-            dtype=bool))
          self.param_frame.phase_names.append(Rt[-1].chemical_name)
-         # if self.numPhases == 0:
+         # if self.num_phases == 0:
          # self.param_frame.nb.add(
          #    RefinementParameterSet(self.param_frame.nb,self.param_frame,index=i),
          #    text=str(i+1)+" ")
-         self.numPhases += 1
+         self.num_phases += 1
 
+      selections = np.zeros(
+         (self.num_phases+1,num_displayed_params,max_refinement_rounds),
+         dtype=bool) # +1 -> All
+
+      # Update drop-down phase list
       self.param_frame.phase_combobox.grid_remove()
       self.param_frame.phase_combobox = ttk.Combobox(
          self.param_frame.phase_frame,
@@ -245,9 +237,9 @@ class RietveldGUI(tk.Tk):
          exportselection=0,
          width=min(len(max(self.param_frame.phase_names,key=len)),30),
          )
+      self.param_frame.phase_combobox.bind(
+         "<<ComboboxSelected>>",self.param_frame.onPhaseSelected)
       self.param_frame.phase_combobox.grid(row=0,column=0,sticky='w')
-      # self.param_frame.nb.add(RefinementParameterSet(self.param_frame.nb,
-      #       self.param_frame),text="Phase Parameters")
 
       global RR,Rp
       RR = RietveldRefinery(Rt,Rp,
@@ -261,18 +253,17 @@ class RietveldGUI(tk.Tk):
 
 
    def getProfile(self):
-      self.fileName = tkFileDialog.askopenfilename(
-         initialdir = "./data/profiles")
+      # self.fileName = tkFileDialog.askopenfilename(
+      #    initialdir = "./data/profiles")
       # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
       # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
+      self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
       # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" +
          os.path.split(self.fileName)[1]+")")
 
-      RietveldPhases.set_profile(self.fileName, min_two_theta=25)
-      global ROI_mask
-      ROI_mask = np.abs(RietveldPhases.two_theta - ROI_center) < ROI_delta_theta
-
+      # RietveldPhases.set_profile(self.fileName, min_two_theta=25)
+      RietveldPhases.set_profile(self.fileName, number_of_columns=2)
 
       global Rp
       Rp.setplotdata()
@@ -301,6 +292,7 @@ class HistoryFrame(tk.Frame):
          yscrollcommand=self.results_box_scrollbar.set
          )
       self.results_box.bind('<<ListboxSelect>>', self.onClick)
+      self.results_box.bind('<Double-Button-1>', self.onDoubleClick)
       self.results_box.grid(row=1,column=0,sticky='nsew',
          pady=10)
 
@@ -339,6 +331,9 @@ class HistoryFrame(tk.Frame):
       self.results_text.insert(tk.END,RR.display_parameters())
       self.results_text.config(state=tk.DISABLED)
       # self.param_string.set(RR.display_parameters())
+
+   def onDoubleClick(self,event):
+      pass
 
 # class VarLabelEntry(tk.Frame):
 #    def __init__(self,parent,text,x_label,index,*args, **kwargs):
@@ -412,37 +407,48 @@ class RoundsBoxes(tk.Frame):
 
    order_values = []
    rounds_options = []
-   for i in xrange(max_refinement_rounds-2):
-      order_values.append(str(i+1)+"-" + str(max_refinement_rounds))
-      rounds_options.append((i+1,True))
-      order_values.append(str(i+1)+"," + str(max_refinement_rounds))
-      rounds_options.append((i+1,False))
-   order_values.append(
-         str(max_refinement_rounds-1) +"-" + str(max_refinement_rounds))
-   rounds_options.append((max_refinement_rounds-1,True))
-   order_values.append(str(max_refinement_rounds))
-   rounds_options.append((max_refinement_rounds,True))
+
+   assert type(max_refinement_rounds) == int
+   if max_refinement_rounds < 1:
+      max_refinement_rounds = 1
+
+   if max_refinement_rounds == 1:
+      order_values.append(str(max_refinement_rounds))
+      rounds_options.append((max_refinement_rounds-1,True))
+   else:
+      for i in xrange(max_refinement_rounds-2):
+         order_values.append(str(i+1)+"-" + str(max_refinement_rounds))
+         rounds_options.append((i,True))
+         order_values.append(str(i+1)+"," + str(max_refinement_rounds))
+         rounds_options.append((i,False))
+      order_values.append(
+            str(max_refinement_rounds-1) +"," + str(max_refinement_rounds))
+      rounds_options.append((max_refinement_rounds-2,True))
+      order_values.append(str(max_refinement_rounds))
+      rounds_options.append((max_refinement_rounds-1,True))
 
    def __init__(self,parent,controller,
       default_round_start=1,
       select_all_rounds=True):
+      self.parent = parent
       tk.Frame.__init__(self, parent)
+
       self.RoundsLabel = tk.Label(self, text = "Rounds: ")
       self.RoundsLabel.grid(row=0,column=0,sticky='e')
 
-      self.roundcheckbuttons = []
-      self.roundstates = []
+      # self.roundcheckbuttons = []
+      self.round_states = []
 
       # for i in xrange(max_refinement_rounds):
-      #    self.roundstates.append(tk.IntVar())
+      #    self.round_states.append(tk.IntVar())
       #    if i >= default_round_start-1:
-      #       self.roundstates[i].set(1)
+      #       self.round_states[i].set(1)
       #    self.roundcheckbuttons.append(tk.Checkbutton(self,
-      #       variable = self.roundstates[i], text=str(i+1)))
+      #       variable = self.round_states[i], text=str(i+1)))
       #    self.roundcheckbuttons[i].grid(row=0,column=i+1)
 
-      self.roundselection = tk.StringVar(self)
-      self.orderMenu = ttk.Combobox(self, textvariable=self.roundselection,
+      self.round_selection = tk.StringVar(self)
+      self.orderMenu = ttk.Combobox(self, textvariable=self.round_selection,
          state='readonly',width =3)
       self.orderMenu['values'] = tuple(RoundsBoxes.order_values)
 
@@ -456,29 +462,70 @@ class RoundsBoxes(tk.Frame):
          select_all_rounds = True
 
       self.orderMenu.current(RoundsBoxes.rounds_options.index(
-         (default_round_start,select_all_rounds)))
+         (default_round_start-1,select_all_rounds)))
       self.orderMenu.bind("<<ComboboxSelected>>", self.order_selected)
       self.orderMenu.grid(row=0,column=1)
 
-   def order_selected(self,event):
-      pass
+   def order_selected(self,event,rounds_mask=None):
+      if rounds_mask is None:
+         rounds_options = self.rounds_options[
+            self.order_values.index(self.round_selection.get())]
+         rounds_mask = np.zeros(max_refinement_rounds,dtype=bool)
+         if rounds_options[1]:
+            for i in xrange(max_refinement_rounds-rounds_options[0]):
+               rounds_mask[rounds_options[0]+i] = True
+         else:
+            rounds_mask[rounds_options[0]] = True
+            rounds_mask[-1] = True
+
+      assert type(rounds_mask) == np.ndarray
+      assert len(rounds_mask) == max_refinement_rounds
+
+      combo_sel = int(self.parent.parent.master.master.phase_combobox.current())
+      global selections
+      selections[combo_sel,self.parent.index,:] = rounds_mask
+      # print repr(selections) + '\n'
+
+   def set_round_selection(self,rounds_mask):
+      for i,item in enumerate(rounds_mask):
+         if i < max_refinement_rounds-1:
+            if item:
+               if rounds_mask[i+1]:
+                  self.orderMenu.current(RoundsBoxes.rounds_options.index(
+                     (i,True)))
+               else:
+                  self.orderMenu.current(RoundsBoxes.rounds_options.index(
+                     (i,False)))
+         elif item:
+            self.orderMenu.current(RoundsBoxes.rounds_options.index(
+               (i,True)))
 
 class RefinementParameterControl(tk.Frame):
-   def __init__(self, parent, controller, text="",
+   def __init__(self, parent, controller, index, text="",
       default_round_start=1,select_all_rounds=True,
       *args, **kwargs):
       tk.Frame.__init__(self, parent)
       self.parent = parent
+      self.text = text
+      self.index = index
 
       self.state = tk.IntVar()
       self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
          variable = self.state, text=text)
       self.checkbutton.grid(row=0,column=0,sticky='w')
 
+      self.click_items = []
+
       self.rounds = RoundsBoxes(self,parent,
          default_round_start=default_round_start,
          select_all_rounds=select_all_rounds)
-      self.rounds.grid(row=0,column=1,sticky='w')
+      self.click_items.append(self.rounds)
+
+      self.is_phase_param = \
+         any(list(map(lambda kv: isinstance(kv[1],ttk.Combobox),
+            self.parent.children.iteritems())))
+
+      # self.rounds.grid(row=0,column=2,sticky='w')
 
       # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
       # self.initial.grid(row=0,column=1,sticky='e')
@@ -503,14 +550,50 @@ class RefinementParameterControl(tk.Frame):
       self.checkbutton_clicked()
 
    def checkbutton_clicked(self):
-      if self.state.get() == 1:
-         self.rounds.grid()
+      checked = bool(self.state.get())
+
+      global Rt
+      if len(Rt) is not 0:
+         if checked:
+            self.rounds.order_selected(None)
+         else:
+            self.rounds.order_selected(None,
+               rounds_mask=np.zeros(max_refinement_rounds,dtype=bool))
+
+      # print list(map(lambda x: type(x.__class__),self.parent.children.values()))
+      # print filter(lambda x: type(x) == ttk.Combobox,
+      #    list(self.parent.children.values()))
+      # is_phase_param = any(list(map(lambda kv: isinstance(kv[1],ttk.Combobox),
+      #    self.parent.children.iteritems())))
+
+      if checked:
+         n = 1
+         for item in self.click_items:
+            item.grid(row=0,column=n)
+            n += 1
+
+         if self.text == "Bkgd.":
+            try:
+               RR = RietveldRefinery(Rt,Rp, \
+                  bkgd_refine=True,
+                  store_intermediate_state=False,
+                  show_plots=False)
+               RR.minimize_bkgd()
+            except AttributeError:
+               pass
+
+         # print self.parent.phase_combobox.current()
+         # self.rounds.grid()
          # self.initial.grid()
          # self.l_limit.grid()
          # self.u_limit.grid()
          # self.round_dropdownlist.grid()
-      if self.state.get() == 0:
-         self.rounds.grid_remove()
+      if not checked:
+         for item in self.click_items:
+            item.grid_remove()
+
+         # print self.children
+         # self.rounds.grid_remove()
          # self.initial.grid_remove()
          # self.l_limit.grid_remove()
          # self.u_limit.grid_remove()
@@ -520,71 +603,34 @@ class RefinementParameterControl(tk.Frame):
       #    for phase in Rt:
       #       RietveldPhases.x['values'][index] = 0
 
-class RefinementParameterRadioControl(tk.Frame):
-   def __init__(self, parent, controller, text="",
+class RadioRefinementParameterControl(RefinementParameterControl):
+   def __init__(self, parent, controller, index, text="",
       default_round_start=1,*args, **kwargs):
-      tk.Frame.__init__(self, parent)
-      self.parent = parent
 
-      self.state = tk.IntVar()
-      self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
-         variable = self.state, text=text)
-      self.checkbutton.grid(row=0,column=0,sticky='w')
+      RefinementParameterControl.__init__(self,parent,controller, index,
+         text=text, default_round_start=default_round_start,*args,**kwargs)
 
-      self.radioframe = tk.Frame(self)
+      self.radio_frame = tk.Frame(self)
       self.radiovar = tk.IntVar()
-      tk.Radiobutton(self.radioframe,text="Angular",variable=self.radiovar,
+      tk.Radiobutton(self.radio_frame,text="Angular",variable=self.radiovar,
          value=1,command=self.radiobutton_switched).pack()
-      tk.Radiobutton(self.radioframe,text="Vertical",variable=self.radiovar,
+      tk.Radiobutton(self.radio_frame,text="Vertical",variable=self.radiovar,
          value=2,command=self.radiobutton_switched).pack()
-      self.radioframe.grid(row=0,column=1)
       self.radiovar.set(1)
-
-      self.rounds = RoundsBoxes(self,parent,default_round_start)
-      self.rounds.grid(row=0,column=2,sticky='w')
-
-      # self.initial = VarLabelEntry(self,'Start at:', 'values', index)
-      # self.initial.grid(row=0,column=1,sticky='e')
-
-      # self.l_limit = VarLabelEntry(self,'Lower limit:', 'l_limits', index)
-      # self.l_limit.grid(row=1,column=0,sticky='w')
-
-      # self.u_limit = VarLabelEntry(self,'Upper limit:', 'u_limits', index)
-      # self.u_limit.grid(row=1,column=1,sticky='e')
-
-      # self.round_dropdownlist = Dropdown_Int_List(self, parent,
-      #    text="Round:", min_int=1, max_int=max_refinement_rounds,
-      #    default_int=default_round)
-      # self.round_dropdownlist.grid(row=0,column=2,rowspan=2,sticky='e')
-
-
+      self.click_items.insert(0,self.radio_frame)
 
       self.grid_columnconfigure(0,minsize=80)
       self.grid_rowconfigure(0,minsize=60)
       self.grid_columnconfigure(1,minsize=70)
       # self.grid_columnconfigure(2,minsize=110)
 
-      self.checkbutton_clicked()
-
-   def checkbutton_clicked(self):
-      if self.state.get() == 1:
-         self.radioframe.grid()
-         self.rounds.grid()
-         # self.initial.grid()
-         # self.l_limit.grid()
-         # self.u_limit.grid()
-         # self.round_dropdownlist.grid()
-      if self.state.get() == 0:
-         self.radioframe.grid_remove()
-         self.rounds.grid_remove()
-         # self.initial.grid_remove()
-         # self.l_limit.grid_remove()
-         # self.u_limit.grid_remove()
-         # self.round_dropdownlist.grid_remove()
-      # if self.change_all:
-      #    global Rt
-      #    for phase in Rt:
-      #       RietveldPhases.x['values'][index] = 0
+   # def checkbutton_clicked(self):
+   #    if self.state.get() == 1:
+   #       self.radio_frame.grid()
+   #       self.rounds.grid()
+   #    if self.state.get() == 0:
+   #       self.radio_frame.grid_remove()
+   #       self.rounds.grid_remove()
 
    def radiobutton_switched(self):
       if self.radiovar.get() == 1:
@@ -593,77 +639,25 @@ class RefinementParameterRadioControl(tk.Frame):
          RietveldPhases.set_vertical_offset(True)
       RietveldPhases.two_theta_0['values'] = 0
 
-# class LatticeParameterControl(tk.Frame):
-#    def __init__(self,parent,controller,index):
-#       tk.Frame.__init__(self,parent)
-#       self.index = index
-#       self.crystal_system = Rt[index].structure.space_group().crystal_system()
+class PolynomRefinementParameterControl(RefinementParameterControl):
+   def __init__(self, parent, controller, index,
+      text="",
+      default_round_start=1,
+      select_all_rounds=True,
+      default_order=2,
+      *args, **kwargs):
 
-class RefinementParameterPolynomControl(tk.Frame):
-   def __init__(self, parent, controller,
-      text="", default_order=2, default_round_start=1,*args, **kwargs):
-      tk.Frame.__init__(self, parent)
-      self.state = tk.IntVar()
-      self.parent = parent
-      self.text = text
-
-      self.checkbutton = tk.Checkbutton(self, command=self.checkbutton_clicked,
-         text=text, variable = self.state)
-      self.checkbutton.grid(row=0,column=0,sticky='w')
+      RefinementParameterControl.__init__(self, parent, controller, index,
+         text=text,
+         default_round_start=default_round_start,
+         select_all_rounds=select_all_rounds, *args, **kwargs)
 
       self.order_dropdownlist = Dropdown_Int_List(self, parent,
          text="Order:", min_int=0, max_int=6, default_int=default_order)
-      self.order_dropdownlist.grid(row=0,column=1)
-
-      self.rounds = RoundsBoxes(self,parent,default_round_start)
-      self.rounds.grid(row=0,column=2)
-
-      # self.round_dropdownlist = Dropdown_Int_List(self, parent,
-      #    text="Round:", min_int=1, max_int=max_refinement_rounds,
-      #    default_int=default_round)
-      # self.round_dropdownlist.grid(row=0,column=2)
+      self.click_items.insert(0,self.order_dropdownlist)
 
       self.grid_columnconfigure(0,minsize=60)
       self.grid_columnconfigure(1,minsize=90)
-      # self.grid_columnconfigure(2,minsize=110)
-
-      self.checkbutton_clicked()
-
-   def checkbutton_clicked(self):
-      global RR,Rp,canvas
-      if self.state.get() == 1:
-         self.order_dropdownlist.grid()
-         self.rounds.grid()
-
-         if self.text == "Bkgd.":
-            try:
-               RR = RietveldRefinery(Rt,Rp, \
-                  bkgd_refine=True,
-                  store_intermediate_state=False, show_plots=False)
-               RR.minimize_bkgd()
-            except AttributeError:
-               pass
-            # Rp.updateplotprofile(RietveldPhases.two_theta,
-            #    RR.total_profile_state,wse=RR.weighted_squared_errors_state)
-            # Rp.fig.canvas.draw()
-
-      if self.state.get() == 0:
-         self.order_dropdownlist.grid_remove()
-         self.rounds.grid_remove()
-         # if RR is not None:
-         #    Rp.reset_plot_profile()
-         # if self.text == "Background":
-         #    if len(subplot1.axes.lines) is not 0:
-         #       for x in (subplot1,subplot2,subplot3):
-         #          for line in x.axes.lines:
-         #             line.remove()
-         #    canvas.show()
-
-def startthread(func):
-   # print "here"
-   t = Thread(target=func)
-   t.start()
-   return t
 
 class Dropdown_Int_List(tk.Frame):
    def __init__(self, parent, controller, text="", default_int=2, min_int=0,
@@ -757,14 +751,14 @@ class ParamFrame(tk.Frame):
       self.param_controls = []
 
       self.bkgd_control = \
-         RefinementParameterPolynomControl(self.global_frame,self,
+         PolynomRefinementParameterControl(self.global_frame,self,0,
          text="Bkgd.",
          default_order=2,default_round_start=1)
       self.param_controls.append(self.bkgd_control)
       self.bkgd_control.grid(row=0,column=0,sticky='w')
 
       self.offset_control = \
-         RefinementParameterRadioControl(self.global_frame,self,
+         RadioRefinementParameterControl(self.global_frame,self,1,
          text=u"2\u03b8 Corr.")
       self.param_controls.append(self.offset_control)
       self.offset_control.grid(row=1,column=0,sticky='w')
@@ -776,7 +770,6 @@ class ParamFrame(tk.Frame):
       self.phase_frame = tk.Frame(self.phase_nb,padx=10,pady=10)
 
       self.phase_names = ['All']
-      self.change_all = True
 
       self.selection = tk.StringVar()
       self.selection.set(self.phase_names[0])
@@ -791,40 +784,40 @@ class ParamFrame(tk.Frame):
       self.phase_combobox.grid(row=0,column=0,sticky='w')
 
       self.scale_control = RefinementParameterControl(self.phase_frame,
-         self.parent, text="Scale",change_all=self.change_all,
-         default_round_start=1)
+         self.parent,2, text="Scale", default_round_start=1)
       self.param_controls.append(self.scale_control)
       self.scale_control.grid(row=1,column=0,sticky='w')
 
       self.W_control = RefinementParameterControl(self.phase_frame,self.parent,
-         text="Caglioti W",default_round_start=2)
+         3,text="Caglioti W",default_round_start=2)
       self.param_controls.append(self.W_control)
       self.W_control.grid(row=2,column=0,sticky='w')
 
-      self.eta_control = RefinementParameterPolynomControl(
-         self.phase_frame,self.parent,
+      self.eta_control = PolynomRefinementParameterControl(
+         self.phase_frame,self.parent, 4,
          text=u"\u03b7",
          default_order=1,
-         default_round_start=2)
+         default_round_start=2,
+         select_all_round=False)
       self.param_controls.append(self.eta_control)
       self.eta_control.grid(row=3,column=0,sticky='w')
 
       self.V_control = RefinementParameterControl(self.phase_frame,self.parent,
-         text="Caglioti V",
+         5, text="Caglioti V",
          default_round_start=3,
          select_all_rounds=False)
       self.param_controls.append(self.V_control)
       self.V_control.grid(row=4,column=0,sticky='w')
 
       self.U_control = RefinementParameterControl(self.phase_frame,self.parent,
-         text="Caglioti U",
+         6, text="Caglioti U",
          default_round_start=4,
          select_all_rounds=False)
       self.param_controls.append(self.U_control)
       self.U_control.grid(row=5,column=0,sticky='w')
 
       self.lattice_control = \
-         RefinementParameterControl(self.phase_frame,self.parent,
+         RefinementParameterControl(self.phase_frame,self.parent, 7,
          text="Lattice Parameters",
          default_round_start=max_refinement_rounds,
          select_all_rounds=False)
@@ -834,13 +827,13 @@ class ParamFrame(tk.Frame):
       self.phase_nb.add(self.phase_frame,text="Phase Parameters")
       self.phase_nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
 
-      self.labelscale = LabelScale(self,parent,
+      self.iteration_scale = LabelScale(self,parent,
          text="Max number of iterations: ",
          from_=0,
          to=300,
          initial=100,
          length=80)
-      self.labelscale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
+      self.iteration_scale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
 
       self.RefineButton = ttk.Button(self, text='Refine',
          command=self.refine, takefocus=False)
@@ -853,67 +846,85 @@ class ParamFrame(tk.Frame):
    def refine(self):
       global RR, Rt, Rp, x_list, Rt_list
 
-      for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
-         .children.values():
-            if isinstance(rp,RefinementParameterControl) \
-               or isinstance(rp,RefinementParameterPolynomControl):
-               if rp.parameter['labels'][0][0:3] == "uc_":
-                  for i in xrange(len(Rt)):
-                     if rp.state.get() == 1 and \
-                        RR.composition_by_weight[i] >= RR.composition_cutoff:
-                        Rt[i].recompute_peak_positions = True
-                     else: Rt[i].recompute_peak_positions = False
-
-      for i,tab in enumerate(self.nb.tabs()[1:]):
-         for rp in self.nb.children[tab.split('.')[-1]].children.values():
-            if isinstance(rp,RefinementParameterControl):
-               if rp.parameter['labels'][0][0:3] == "uc_" and \
-                  RR.composition_by_weight[i] >= RR.composition_cutoff:
-                  if rp.state.get() == 1:
-                     Rt[i].recompute_peak_positions = True
-
-      maxiter = self.labelscale.scale.get()
+      maxiter = self.iteration_scale.scale.get()
       RR = RietveldRefinery(Rt,Rp,input_weights=RR.composition_by_weight,
          maxiter=maxiter)
-      # RR.mask[0] = True
+      masks = set_refinement_masks()
 
-      for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
-         .children.values():
-            if isinstance(rp,RefinementParameterControl) \
-               or isinstance(rp,RefinementParameterPolynomControl):
-               if rp.state.get() == 1:
-                  for i in xrange(len(Rt)):
-                     # print rp.parameter['labels'][0][0:3]
-                     if RR.composition_by_weight[i] >= RR.composition_cutoff \
-                        or np.any(
-                           np.char.startswith(rp.parameter['labels'],"Amp")) \
-                        or rp.parameter['labels'][0] == "W":
-                        RR.mask = np.logical_or(RR.mask,
-                           np.logical_and(RR.phase_masks[i],
-                           np.char.startswith(RR.x['labels'],
-                              rp.parameter['labels'][0][0:3])))
+      for mask in masks:
+         RR.mask = mask
+         assert len(RR.x) == len(RR.mask)
+         print RR.x[RR.mask]
+         RR.minimize()
 
-      for i,tab in enumerate(self.nb.tabs()[1:]):
-         for rp in self.nb.children[tab.split('.')[-1]].children.values():
-            if isinstance(rp,RefinementParameterControl) or \
-               isinstance(rp,RefinementParameterPolynomControl):
-               if rp.state.get() == 1:
-                  # print rp.parameter['labels'][0][0:3]
-                  if RR.composition_by_weight[i] >= RR.composition_cutoff \
-                     or np.any(
-                           np.char.startswith(rp.parameter['labels'],"Amp")) \
-                     or rp.parameter['labels'][0] == "W":
-                     RR.mask = np.logical_or(RR.mask,
-                        np.logical_and(RR.phase_masks[i],
-                        np.char.startswith(RR.x['labels'],
-                           rp.parameter['labels'][0][0:3])))
 
-      for rp in self.globalnb.children[self.globalnb.tabs()[0].split('.')[-1]] \
-         .children.values():
-         if rp.state.get() == 1:
-            RR.mask = np.logical_or(RR.mask,
-               np.logical_and(RR.global_mask,np.char.startswith(RR.x['labels'],
-                  rp.parameter['labels'][0][0:3])))
+      # print self.children
+      # for child in self.children.values():
+      #    if isinstance(child,ttk.Notebook):
+      #       for control in child.children.values()[0].children.values():
+      #          if isinstance(control,RefinementParameterControl) \
+      #          or isinstance(control,PolynomRefinementParameterControl) \
+      #          or isinstance(control,RadioRefinementParameterControl):
+      #             print 'True'
+      #       print 'Next'
+      # for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
+      #    .children.values():
+      #       if isinstance(rp,RefinementParameterControl) \
+      #          or isinstance(rp,PolynomRefinementParameterControl):
+      #          if rp.parameter['labels'][0][0:3] == "uc_":
+      #             for i in xrange(len(Rt)):
+      #                if rp.state.get() == 1 and \
+      #                   RR.composition_by_weight[i] >= RR.composition_cutoff:
+      #                   Rt[i].recompute_peak_positions = True
+      #                else: Rt[i].recompute_peak_positions = False
+
+      # for i,tab in enumerate(self.nb.tabs()[1:]):
+      #    for rp in self.nb.children[tab.split('.')[-1]].children.values():
+      #       if isinstance(rp,RefinementParameterControl):
+      #          if rp.parameter['labels'][0][0:3] == "uc_" and \
+      #             RR.composition_by_weight[i] >= RR.composition_cutoff:
+      #             if rp.state.get() == 1:
+      #                Rt[i].recompute_peak_positions = True
+
+      # # RR.mask[0] = True
+
+      # for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
+      #    .children.values():
+      #       if isinstance(rp,RefinementParameterControl) \
+      #          or isinstance(rp,PolynomRefinementParameterControl):
+      #          if rp.state.get() == 1:
+      #             for i in xrange(len(Rt)):
+      #                # print rp.parameter['labels'][0][0:3]
+      #                if RR.composition_by_weight[i] >= RR.composition_cutoff \
+      #                   or np.any(
+      #                      np.char.startswith(rp.parameter['labels'],"Amp")) \
+      #                   or rp.parameter['labels'][0] == "W":
+      #                   RR.mask = np.logical_or(RR.mask,
+      #                      np.logical_and(RR.phase_masks[i],
+      #                      np.char.startswith(RR.x['labels'],
+      #                         rp.parameter['labels'][0][0:3])))
+
+      # for i,tab in enumerate(self.nb.tabs()[1:]):
+      #    for rp in self.nb.children[tab.split('.')[-1]].children.values():
+      #       if isinstance(rp,RefinementParameterControl) or \
+      #          isinstance(rp,PolynomRefinementParameterControl):
+      #          if rp.state.get() == 1:
+      #             # print rp.parameter['labels'][0][0:3]
+      #             if RR.composition_by_weight[i] >= RR.composition_cutoff \
+      #                or np.any(
+      #                      np.char.startswith(rp.parameter['labels'],"Amp")) \
+      #                or rp.parameter['labels'][0] == "W":
+      #                RR.mask = np.logical_or(RR.mask,
+      #                   np.logical_and(RR.phase_masks[i],
+      #                   np.char.startswith(RR.x['labels'],
+      #                      rp.parameter['labels'][0][0:3])))
+
+      # for rp in self.globalnb.children[self.globalnb.tabs()[0].split('.')[-1]] \
+      #    .children.values():
+      #    if rp.state.get() == 1:
+      #       RR.mask = np.logical_or(RR.mask,
+      #          np.logical_and(RR.global_mask,np.char.startswith(RR.x['labels'],
+      #             rp.parameter['labels'][0][0:3])))
 
       RR.minimize()
 
@@ -936,7 +947,7 @@ class ParamFrame(tk.Frame):
       self.numruns += 1
 
    def reset(self):
-      self.controller.numPhases = 0
+      self.controller.num_phases = 0
       global Rt, RR, Rp
       Rt = []
       if RR is not None:
@@ -951,17 +962,17 @@ class ParamFrame(tk.Frame):
       self.controller.getCifs(self.controller.filePaths)
 
    def onPhaseSelected(self,event):
-      if self.phase_combobox.current() == 0:
-         self.change_all = True
-      else:
-         self.change_all = False
-      print self.phase_combobox.current()
+      global selections
+      phase_sel = int(self.phase_combobox.current())
+      for i,control in enumerate(self.param_controls):
+         rounds = selections[phase_sel,i,:]
+         control.state.set(int(np.any(selections[phase_sel,i,:])))
+         control.rounds.set_round_selection(rounds)
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
-      # global canvas, onselect, subplot1, span
       global Rp,canvas
       Rp = RietveldPlot()
       canvas = FigureCanvasTkAgg(Rp.fig, master=self)
@@ -973,7 +984,6 @@ class PlotFrame(tk.Frame):
       # canvas._tkcanvas.pack()
       # canvas._tkcanvas.grid()#row=0,column=0)#,sticky='n',pady=10)
       # canvas.show()
-
 
 if __name__ == "__main__":
    root = RietveldGUI()
