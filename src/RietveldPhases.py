@@ -27,7 +27,7 @@ custom_dtype = np.dtype([
    ])
 
 default_bkgd_order = 3
-default_two_theta_0 = np.array([('two_theta_0', 0.0, -0.2, 0.2)],
+default_two_theta_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
                                dtype=custom_dtype)
 default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 

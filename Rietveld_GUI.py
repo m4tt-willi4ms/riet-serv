@@ -48,7 +48,7 @@ mask_list = []
 selections_list = []
 RR = None
 
-max_refinement_rounds = 5
+max_refinement_rounds = 1
 num_displayed_params = 8
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
@@ -62,22 +62,27 @@ def set_refinement_masks():
          mask = set_mask_by_label("bk",mask)
       if selections[0,1,i]:
          mask = set_mask_by_label("tw",mask)
-      print selections.shape
-      for j,phase_mask in enumerate(RR.phase_masks):
-         if selections[j,2,i]:
+      for j, phase_mask in enumerate(RR.phase_masks):
+         if selections[j+1,2,i] or selections[0,2,i]:
             mask = set_mask_by_label("Amp",mask,phase_mask)
-         if selections[j,3,i]:
+         if selections[j+1,3,i] or selections[0,3,i]:
             mask = set_mask_by_label("W",mask,phase_mask)
-         if selections[j,4,i]:
+         if selections[j+1,4,i] or selections[0,4,i]:
             mask = set_mask_by_label("eta",mask,phase_mask)
+         if selections[j+1,5,i] or selections[0,5,i]:
+            mask = set_mask_by_label("V",mask,phase_mask)
+         if selections[j+1,6,i] or selections[0,6,i]:
+            mask = set_mask_by_label("U",mask,phase_mask)
+         if selections[j+1,7,i] or selections[0,7,i]:
+            mask = set_mask_by_label("uc_",mask,phase_mask)
       masks.append(mask)
    return masks
 
 def set_mask_by_label(label,mask,phase_mask=None):
-   label_mask = np.logical_or(np.char.startswith(RR.x['labels'],label),mask)
-   if phase_mask == None:
-      return label_mask
-   return np.logical_and(label_mask,phase_mask)
+   if phase_mask is None:
+      return np.logical_or(np.char.startswith(RR.x['labels'],label),mask)
+   return np.logical_or(
+      np.logical_and(np.char.startswith(RR.x['labels'],label),phase_mask),mask)
 
 class AutoScrollbar(tk.Scrollbar):
     # a scrollbar that hides itself if it's not needed.  only
@@ -483,8 +488,13 @@ class RoundsBoxes(tk.Frame):
 
       combo_sel = int(self.parent.parent.master.master.phase_combobox.current())
       global selections
-      selections[combo_sel,self.parent.index,:] = rounds_mask
+      if self.parent.index < 2: # i.e. is a global parameter control
+         selections[:,self.parent.index,:] = rounds_mask
+      else:
+         selections[combo_sel,self.parent.index,:] = rounds_mask
       # print repr(selections) + '\n'
+      # print repr(selections[0,:,:])
+      # print np.all(np.equal(selections[0,:,:],selections[1,:,:]))
 
    def set_round_selection(self,rounds_mask):
       for i,item in enumerate(rounds_mask):
@@ -493,9 +503,11 @@ class RoundsBoxes(tk.Frame):
                if rounds_mask[i+1]:
                   self.orderMenu.current(RoundsBoxes.rounds_options.index(
                      (i,True)))
+                  break
                else:
                   self.orderMenu.current(RoundsBoxes.rounds_options.index(
                      (i,False)))
+                  break
          elif item:
             self.orderMenu.current(RoundsBoxes.rounds_options.index(
                (i,True)))
@@ -686,16 +698,15 @@ class Dropdown_Int_List(tk.Frame):
 
    def order_selected(self,tmp):
       # print self.order.get()
-      if np.char.startswith(self.parent.parameter['labels'][0],"eta"):
-         global Rt
-         if self.parent.parent.index is not None:
-            Rt[self.parent.parent.index].set_eta_order(int(self.order.get())+1)
-         else:
+      if self.parent.index == 0:
+         RietveldPhases.set_bkgd_order(int(self.order.get())+1)
+      elif self.parent.index == 4:
+         phase_sel = self.parent.parent.master.master.phase_combobox.current()
+         if phase_sel == 0:
             for i in xrange(len(Rt)):
                Rt[i].set_eta_order(int(self.order.get())+1)
-      elif np.char.startswith(self.parent.parameter['labels'][0],"bkgd"):
-         RietveldPhases.set_bkgd_order(int(self.order.get())+1)
-      self.parent.checkbutton_clicked()
+         else:
+            Rt[phase_sel-1].set_eta_order(int(self.order.get())+1)
       self.orderMenu.selection_clear()
 
 class LabelScale(tk.Frame):
@@ -852,99 +863,33 @@ class ParamFrame(tk.Frame):
       masks = set_refinement_masks()
 
       for mask in masks:
-         RR.mask = mask
-         assert len(RR.x) == len(RR.mask)
-         print RR.x[RR.mask]
-         RR.minimize()
+         if np.any(mask):
+            RR.mask = mask
+            assert len(RR.x) == len(RR.mask)
+            # print RR.x[RR.mask]
+            RR.minimize()
+            RR.display_stats(RR.minimize)
 
+            x_list.append(copy.deepcopy(RR.x))
+            mask_list.append(copy.deepcopy(RR.mask))
+            Rt_list.append(copy.deepcopy(Rt))
 
-      # print self.children
-      # for child in self.children.values():
-      #    if isinstance(child,ttk.Notebook):
-      #       for control in child.children.values()[0].children.values():
-      #          if isinstance(control,RefinementParameterControl) \
-      #          or isinstance(control,PolynomRefinementParameterControl) \
-      #          or isinstance(control,RadioRefinementParameterControl):
-      #             print 'True'
-      #       print 'Next'
-      # for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
-      #    .children.values():
-      #       if isinstance(rp,RefinementParameterControl) \
-      #          or isinstance(rp,PolynomRefinementParameterControl):
-      #          if rp.parameter['labels'][0][0:3] == "uc_":
-      #             for i in xrange(len(Rt)):
-      #                if rp.state.get() == 1 and \
-      #                   RR.composition_by_weight[i] >= RR.composition_cutoff:
-      #                   Rt[i].recompute_peak_positions = True
-      #                else: Rt[i].recompute_peak_positions = False
+            # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
+            # RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
 
-      # for i,tab in enumerate(self.nb.tabs()[1:]):
-      #    for rp in self.nb.children[tab.split('.')[-1]].children.values():
-      #       if isinstance(rp,RefinementParameterControl):
-      #          if rp.parameter['labels'][0][0:3] == "uc_" and \
-      #             RR.composition_by_weight[i] >= RR.composition_cutoff:
-      #             if rp.state.get() == 1:
-      #                Rt[i].recompute_peak_positions = True
-
-      # # RR.mask[0] = True
-
-      # for rp in self.nb.children[self.nb.tabs()[0].split('.')[-1]] \
-      #    .children.values():
-      #       if isinstance(rp,RefinementParameterControl) \
-      #          or isinstance(rp,PolynomRefinementParameterControl):
-      #          if rp.state.get() == 1:
-      #             for i in xrange(len(Rt)):
-      #                # print rp.parameter['labels'][0][0:3]
-      #                if RR.composition_by_weight[i] >= RR.composition_cutoff \
-      #                   or np.any(
-      #                      np.char.startswith(rp.parameter['labels'],"Amp")) \
-      #                   or rp.parameter['labels'][0] == "W":
-      #                   RR.mask = np.logical_or(RR.mask,
-      #                      np.logical_and(RR.phase_masks[i],
-      #                      np.char.startswith(RR.x['labels'],
-      #                         rp.parameter['labels'][0][0:3])))
-
-      # for i,tab in enumerate(self.nb.tabs()[1:]):
-      #    for rp in self.nb.children[tab.split('.')[-1]].children.values():
-      #       if isinstance(rp,RefinementParameterControl) or \
-      #          isinstance(rp,PolynomRefinementParameterControl):
-      #          if rp.state.get() == 1:
-      #             # print rp.parameter['labels'][0][0:3]
-      #             if RR.composition_by_weight[i] >= RR.composition_cutoff \
-      #                or np.any(
-      #                      np.char.startswith(rp.parameter['labels'],"Amp")) \
-      #                or rp.parameter['labels'][0] == "W":
-      #                RR.mask = np.logical_or(RR.mask,
-      #                   np.logical_and(RR.phase_masks[i],
-      #                   np.char.startswith(RR.x['labels'],
-      #                      rp.parameter['labels'][0][0:3])))
-
-      # for rp in self.globalnb.children[self.globalnb.tabs()[0].split('.')[-1]] \
-      #    .children.values():
-      #    if rp.state.get() == 1:
-      #       RR.mask = np.logical_or(RR.mask,
-      #          np.logical_and(RR.global_mask,np.char.startswith(RR.x['labels'],
-      #             rp.parameter['labels'][0][0:3])))
-
-      RR.minimize()
-
-      x_list.append(copy.deepcopy(RR.x))
-      mask_list.append(copy.deepcopy(RR.mask))
-      Rt_list.append(copy.deepcopy(Rt))
-
-      # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
-      RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
-
-      self.parent.master.results_box.insert(self.numruns,
-         "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
-         " parameters, GoF = " + str(round(RR.GoF,3)))
-      self.parent.master.results_box.see(tk.END)
-      # self.parent.master.param_string.set(RR.display_parameters())
-      self.parent.master.results_text.config(state=tk.NORMAL)
-      self.parent.master.results_text.delete(0.0,tk.END)
-      self.parent.master.results_text.insert(tk.END,RR.display_parameters())
-      self.parent.master.results_text.config(state=tk.DISABLED)
-      self.numruns += 1
+            self.parent.master.history_frame.results_box.insert(self.numruns,
+               "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
+               " parameters, GoF = " + str(round(RR.GoF,3)))
+            self.parent.master.history_frame.results_box.see(tk.END)
+            # self.parent.master.param_string.set(RR.display_parameters())
+            self.parent.master.history_frame.results_text.config(
+               state=tk.NORMAL)
+            self.parent.master.history_frame.results_text.delete(0.0,tk.END)
+            self.parent.master.history_frame.results_text.insert(
+               tk.END,RR.display_parameters())
+            self.parent.master.history_frame.results_text.config(
+               state=tk.DISABLED)
+            self.numruns += 1
 
    def reset(self):
       self.controller.num_phases = 0
@@ -953,11 +898,6 @@ class ParamFrame(tk.Frame):
       if RR is not None:
          del RR
       RR = None
-      # RietveldPhases.set_profile()
-      for tab in self.nb.tabs():
-         self.nb.hide(tab)
-         self.nb.forget(tab)
-      # Rp.reset_plot_profile()
       Rp.fig.suptitle("")
       self.controller.getCifs(self.controller.filePaths)
 
@@ -967,7 +907,10 @@ class ParamFrame(tk.Frame):
       for i,control in enumerate(self.param_controls):
          rounds = selections[phase_sel,i,:]
          control.state.set(int(np.any(selections[phase_sel,i,:])))
+         control.checkbutton_clicked()
          control.rounds.set_round_selection(rounds)
+      self.phase_combobox.selection_clear()
+      # print repr(selections)
 
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
