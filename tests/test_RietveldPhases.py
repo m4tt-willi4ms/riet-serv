@@ -45,7 +45,7 @@ def test_parameters_exist():
    assert 'U' in tp_dict
    assert 'V' in tp_dict
    assert 'W' in tp_dict
-   assert 'Amplitude' in tp_dict
+   assert 'Scale' in tp_dict
    assert 'eta' in tp_dict
    assert 'lattice_parameters' in tp_dict
 
@@ -77,9 +77,9 @@ def test_U_default():
    assert test_phase.U.dtype == RietveldPhases.custom_dtype
    assert test_phase.U['labels'] == RietveldPhases.default_U['labels']
    assert np.isclose(test_phase.U['values'], RietveldPhases.default_U['values'])
-   assert np.isclose(test_phase.U['l_limits'], 
+   assert np.isclose(test_phase.U['l_limits'],
       RietveldPhases.default_U['l_limits'])
-   assert np.isclose(test_phase.U['u_limits'], 
+   assert np.isclose(test_phase.U['u_limits'],
       RietveldPhases.default_U['u_limits'])
 
 def test_set_vertical_offset():
@@ -92,7 +92,7 @@ def test_set_vertical_offset():
 
 def test_LP_intensity_scaling():
    assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
-   
+
    Rp.two_theta_0['values'] = 0.1
    two_theta = Rp.two_theta - Rp.two_theta_0['values']
    assert np.all(np.isclose(Rp.LP_intensity_scaling(),
@@ -196,7 +196,7 @@ def test_update_params():
    test_val = 100
    tmp_x['values'][mask] = 100
    test_phase.update_params(tmp_x,mask=mask)
-   assert np.isclose(test_phase.Amplitude['values'],test_val)
+   assert np.isclose(test_phase.Scale['values'],test_val)
    mask = np.char.startswith(tmp_x['labels'],'uc_a')
    print tmp_x['values'][mask]
    tmp_x['values'][mask] = 2
@@ -282,8 +282,8 @@ def exercise_RietveldPhases():
    # RR = RietveldRefinery(Rt,minimizer_input_string,
    #    store_intermediate_state=True) #,show_plots=False)
 
-   # # RR.display(RR.minimize_Amplitude_Offset)
-   # RR.display(RR.minimize_Amplitude_Offset_W)
+   # # RR.display(RR.minimize_Scale_Offset)
+   # RR.display(RR.minimize_Scale_Offset_W)
    # RR.display(RR.minimize_All)
 
 

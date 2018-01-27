@@ -38,7 +38,7 @@ def exercise_Rietveld_Refinery_SinglePhase():
 
    RR = RietveldRefinery(Rt,minimizer_input_string,
       store_intermediate_state=True)
-   RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_Scale_Offset)
    RR.display(RR.minimize_All)
    RietveldPhases.empty_x()
 
@@ -54,7 +54,7 @@ def exercise_Rietveld_Refinery_Multiphase():
 
    RR = RietveldRefinery(Rt,minimizer_input_string,
       store_intermediate_state=True)
-   RR.display(RR.minimize_Amplitude_Offset)
+   RR.display(RR.minimize_Scale_Offset)
    RR.display(RR.minimize_All)
    RietveldPhases.empty_x()
 

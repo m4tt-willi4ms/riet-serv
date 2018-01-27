@@ -9,17 +9,18 @@ from scipy.optimize import approx_fprime
 from scipy.optimize import fmin_l_bfgs_b as minimizer
 from scipy.optimize import minimize
 import json,codecs
+import operator
 
 from RietveldPhases import RietveldPhases
 
 default_factr = 1e2
-default_iprint = -1
+default_iprint = 1
 default_maxiter = 150
 default_m = 10
-default_pgtol = 1e-5
-default_epsilon = 1e-14
+default_pgtol = 1e-10
+default_epsilon = 1e-11
 
-default_composition_cutoff = 3
+# default_composition_cutoff = 3
 
 class RietveldRefinery:
    """
@@ -37,8 +38,8 @@ class RietveldRefinery:
       m=default_m,
       pgtol=default_pgtol,
       epsilon=default_epsilon,
-      input_weights=None,
-      composition_cutoff=default_composition_cutoff,
+      # input_weights=None,
+      # composition_cutoff=default_composition_cutoff,
       ):
       """
          Given some list of phases, an instance of the refinery is initialized
@@ -55,7 +56,7 @@ class RietveldRefinery:
       self.m = 15
       self.pgtol = pgtol
       self.epsilon = epsilon
-      self.composition_cutoff = composition_cutoff
+      # self.composition_cutoff = composition_cutoff
 
 
       # if input_string[-4:] == ".txt":
@@ -92,10 +93,12 @@ class RietveldRefinery:
       else:
          self.mask = np.zeros(len(self.x),dtype=bool)
 
-      self.composition_by_volume = np.zeros(len(self.phase_list))
-      if input_weights is not None:
-         self.composition_by_weight = input_weights
-      else: self.composition_by_weight = 100*np.ones(len(self.phase_list))
+      self.set_compositions()
+
+      # self.composition_by_volume = np.zeros(len(self.phase_list))
+      # if input_weights is not None:
+      #    self.composition_by_weight = input_weights
+      # else: self.composition_by_weight = 100*np.ones(len(self.phase_list))
 
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
@@ -219,7 +222,9 @@ class RietveldRefinery:
       # print "post-grad: " + str(self.phase_list[0].phase_x[3])
       return result
 
-   def minimize(self):
+   def minimize(self,callback_functions=None):
+      if callback_functions is not None:
+         self.callback_functions = callback_functions
       self.t0 = time.time()
       # self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
@@ -254,7 +259,7 @@ class RietveldRefinery:
          'gtol': self.pgtol,
          'maxcor': self.m,
          'maxiter': self.maxiter,
-         # 'disp': True,
+         'disp': True,
          }
 
       self.result = \
@@ -277,36 +282,43 @@ class RietveldRefinery:
             self.rietveld_plot.fig.suptitle("Optimization Ended...")
          elif self.result['message'][0:4] == "CONV":
             self.rietveld_plot.fig.suptitle("Optimization Complete.")
+         elif self.result['message'][0:4] == "ABNO":
+            self.rietveld_plot.fig.suptitle("Try Again...")
 
-         Amplitudes = self.x['values'] \
-            [np.char.startswith(self.x['labels'],"Amp")]
-         total = np.sum(Amplitudes)
-         weight_moments = []
-         # print "\n"
-         for i,val in np.ndenumerate(Amplitudes):
-            weight_moments.append(val*self.phase_list[i[0]].crystal_density)
-            self.composition_by_volume[i] = val/total*100
-            # print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
-
-         weight_moments = np.array(weight_moments)
-         weight_total = np.sum(np.array(weight_moments))
-         # print "\nBy weight:"
-         for i,val in np.ndenumerate(weight_moments):
-            self.composition_by_weight[i] = val/weight_total*100
-            # print "Phase " + str(i[0]+1) + ": " + \
-            #    str(val/weight_total*100)  + " %"
+      self.set_compositions()
 
       self.rietveld_plot.updateplotprofile(self.total_profile_state,
          wse=self.relative_differences_state,update_view=True)
       print "\n"
 
+   def set_compositions(self):
+      Scales = self.x['values'] \
+         [np.char.startswith(self.x['labels'],"Sca")]
+      total = np.sum(Scales)
+      weight_moments = []
+      # print "\n"
+      self.composition_by_volume = np.zeros(len(self.phase_list))
+      for i,val in np.ndenumerate(Scales):
+         weight_moments.append(val*self.phase_list[i[0]].crystal_density)
+         self.composition_by_volume[i] = val/total*100
+         # print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
+
+      weight_moments = np.array(weight_moments)
+      weight_total = np.sum(weight_moments)
+      # print "\nBy weight:"
+      self.composition_by_weight = np.zeros(len(self.phase_list))
+      for i,val in np.ndenumerate(weight_moments):
+         self.composition_by_weight[i] = val/weight_total*100
+         # print "Phase " + str(i[0]+1) + ": " + \
+         #    str(val/weight_total*100)  + " %"
+
    def update_phase_list(self):
-      Amp_mask = np.char.startswith(self.x['labels'],"Amp")
-      Amp_vals = self.x['values'][Amp_mask][self.del_mask[Amp_mask]]
-      Amp_total = np.sum(Amp_vals)
+      Scale_mask = np.char.startswith(self.x['labels'],"Sca")
+      Scale_vals = self.x['values'][Scale_mask][self.del_mask[Scale_mask]]
+      Scale_total = np.sum(Scale_vals)
       del_list = []
-      for i,Amp_val in np.ndenumerate(Amp_vals):
-         if Amp_val/Amp_total < 1e-5:
+      for i,Scale_val in np.ndenumerate(Scale_vals):
+         if Scale_val/Scale_total < 1e-5:
             del_list += [False]
             self.del_mask = np.logical_and(self.del_mask, \
                np.invert(np.isin(np.array(range(0,len(RietveldPhases.x))), \
@@ -333,27 +345,29 @@ class RietveldRefinery:
       if not self.bkgd_refine and self.count % 5 == 0:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
+         # map(operator.methodcaller('__call__'),list(self.callback_functions))
       # print self.x[self.mask]
       self.count += 1
+
 
    def minimize_with_mask(self,mask):
       self.mask = mask
       self.minimize()
 
-   def minimize_Amplitude(self,display_plots = True):
-      self.mask = np.char.startswith(self.x['labels'],"Amp")
+   def minimize_Scale(self,display_plots = True):
+      self.mask = np.char.startswith(self.x['labels'],"Scale")
       self.minimize()
 
-   def minimize_Amplitude_Offset(self,display_plots = True):
+   def minimize_Scale_Offset(self,display_plots = True):
       self.mask = np.logical_or( \
-         np.char.startswith(self.x['labels'],"Amp"),
+         np.char.startswith(self.x['labels'],"Scale"),
          np.char.startswith(self.x['labels'],"two_"))
       self.minimize()
       # self.Update_Phase_list()
 
-   def minimize_Amplitude_Offset_unit_cell(self,display_plots = True):
+   def minimize_Scale_Offset_unit_cell(self,display_plots = True):
       self.mask = np.logical_or(np.logical_or( \
-         np.char.startswith(self.x['labels'],"Amp"),
+         np.char.startswith(self.x['labels'],"Scale"),
          np.char.startswith(self.x['labels'],"two_")),
          np.char.startswith(self.x['labels'],"unit_cell"))
       self.minimize()
@@ -367,7 +381,7 @@ class RietveldRefinery:
    def minimize_only_Alite(self,display_plots = True):
       self.mask = np.logical_or( \
                      np.logical_or( \
-                        np.char.startswith(self.x['labels'],"Amp"), \
+                        np.char.startswith(self.x['labels'],"Scale"), \
                         np.char.startswith(self.x['labels'],"two_")),
                      np.isin(np.array(range(0,len(RietveldPhases.x))), \
                np.array(range(self.Phase_list[0].phase_0_index, \
@@ -377,7 +391,7 @@ class RietveldRefinery:
 
    def minimize_First_n_Phases(self,n=1,display_plots = True):
       tmp = np.argsort(self.x['values']
-         [np.char.startswith(self.x['labels'],"Amp")])
+         [np.char.startswith(self.x['labels'],"Scale")])
       n_phases = [self.Phase_list[i] for i in tmp]
 
       tmp = np.zeros(len(self.x),dtype=bool)
@@ -389,22 +403,22 @@ class RietveldRefinery:
                      +n_phases[i].num_params))))
       self.mask = np.logical_or( \
                      np.logical_or( \
-                        np.char.startswith(self.x['labels'],"Amp"), \
+                        np.char.startswith(self.x['labels'],"Scale"), \
                         np.char.startswith(self.x['labels'],"two_")),
                      tmp)
       self.minimize()
 
-   def minimize_Amplitude_Offset_W(self,display_plots = True):
+   def minimize_Scale_Offset_W(self,display_plots = True):
       self.mask = np.logical_or( \
-         np.char.startswith(self.x['labels'],"Amp"), \
+         np.char.startswith(self.x['labels'],"Scale"), \
             np.logical_or(np.char.startswith(self.x['labels'],"two_"), \
                self.x['labels'] == "W"))
       self.minimize()
       # self.Update_Phase_list()
 
-   def minimize_Amplitude_Bkgd_Offset_W(self,display_plots = True):
+   def minimize_Scale_Bkgd_Offset_W(self,display_plots = True):
       self.mask = np.logical_or(
-         np.char.startswith(self.x['labels'],"Amp"),
+         np.char.startswith(self.x['labels'],"Scale"),
             np.logical_or(np.char.startswith(self.x['labels'],"two_"),
                np.logical_or(np.char.startswith(self.x['labels'],"bkgd"),
                   self.x['labels'] == "W")))
@@ -425,16 +439,16 @@ class RietveldRefinery:
       self.mask = np.char.startswith(self.x['labels'],"Bkgd_0")
       self.minimize()
 
-   def minimize_Amplitude_Bkgd_Offset(self,display_plots = True):
+   def minimize_Scale_Bkgd_Offset(self,display_plots = True):
       self.mask = np.logical_or( \
-         np.char.startswith(self.x['labels'],"Amp"), \
+         np.char.startswith(self.x['labels'],"Scale"), \
             np.logical_or(np.char.startswith(self.x['labels'],"bkgd"), \
                np.char.startswith(self.x['labels'],"two_")))
       self.minimize()
 
-   def minimize_Amplitude_Bkgd(self,display_plots = True):
+   def minimize_Scale_Bkgd(self,display_plots = True):
       self.mask = np.logical_or( \
-         np.char.startswith(self.x['labels'],"Amp"), \
+         np.char.startswith(self.x['labels'],"Scale"), \
          np.char.startswith(self.x['labels'],"bkgd"))
       self.minimize()
 
@@ -450,9 +464,9 @@ class RietveldRefinery:
       self.mask = np.ones(len(self.x),dtype=bool)
       self.minimize()
 
-   def minimize_All_except_Amplitude(self,display_plots = True):
+   def minimize_All_except_Scale(self,display_plots = True):
       self.mask = np.invert(np.logical_or(np.zeros(len(self.x),dtype=bool), \
-         np.char.startswith(self.x['labels'],"Amp")))
+         np.char.startswith(self.x['labels'],"Scale")))
       self.minimize()
 
    def display(self,fn,**kwargs):
@@ -561,7 +575,7 @@ class RietveldRefinery:
                + str(self.composition_by_weight[i]) + " %"
          print "\n"
 
-   def show_plot(self,plottitle,scale_factor=1,autohide=True):
+   def show_plot(self,plottitle,Scale_factor=1,autohide=True):
       if autohide:
          plt.ion()
       # fig = plt.figure(figsize=(9,7))
@@ -569,7 +583,7 @@ class RietveldRefinery:
       plt.scatter(self.two_theta,self.I,label='Data',s=1, color='red')
       plt.title(plottitle)
 
-      plt.plot(self.two_theta,scale_factor*self.TotalProfile(), \
+      plt.plot(self.two_theta,Scale_factor*self.TotalProfile(), \
          label=r'$I_{\rm calc}$')
 
       plt.legend(bbox_to_anchor=(.8,.7))
@@ -747,7 +761,7 @@ class RietveldPlot:
          self.subplot2.axes.relim()
          self.subplot2.axes.autoscale_view()
          # self.subplot3.axes.relim()
-         # self.subplot3.axes.autoscale_view()
+         # self.subplot3.axes.autoScale_view()
 
       self.fig.canvas.draw()
 

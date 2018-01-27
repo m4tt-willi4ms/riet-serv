@@ -46,9 +46,10 @@ x_list = []
 Rt_list = []
 mask_list = []
 selections_list = []
+final_params_list = []
 RR = None
 
-max_refinement_rounds = 1
+max_refinement_rounds = 5
 num_displayed_params = 8
 
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
@@ -64,7 +65,7 @@ def set_refinement_masks():
          mask = set_mask_by_label("tw",mask)
       for j, phase_mask in enumerate(RR.phase_masks):
          if selections[j+1,2,i] or selections[0,2,i]:
-            mask = set_mask_by_label("Amp",mask,phase_mask)
+            mask = set_mask_by_label("Sca",mask,phase_mask)
          if selections[j+1,3,i] or selections[0,3,i]:
             mask = set_mask_by_label("W",mask,phase_mask)
          if selections[j+1,4,i] or selections[0,4,i]:
@@ -77,6 +78,28 @@ def set_refinement_masks():
             mask = set_mask_by_label("uc_",mask,phase_mask)
       masks.append(mask)
    return masks
+
+def set_refinement_mask():
+   #assumes a refinement instance has been created
+   mask = copy.deepcopy(RR.mask)
+   if np.any(selections[0,0,:]):
+      mask = set_mask_by_label("bk",mask)
+   if np.any(selections[0,1,:]):
+      mask = set_mask_by_label("tw",mask)
+   for j, phase_mask in enumerate(RR.phase_masks):
+      if np.any(selections[j+1,2,:]) or np.any(selections[0,2,:]):
+         mask = set_mask_by_label("Sca",mask,phase_mask)
+      if np.any(selections[j+1,3,:]) or np.any(selections[0,3,:]):
+         mask = set_mask_by_label("W",mask,phase_mask)
+      if np.any(selections[j+1,4,:]) or np.any(selections[0,4,:]):
+         mask = set_mask_by_label("eta",mask,phase_mask)
+      if np.any(selections[j+1,5,:]) or np.any(selections[0,5,:]):
+         mask = set_mask_by_label("V",mask,phase_mask)
+      if np.any(selections[j+1,6,:]) or np.any(selections[0,6,:]):
+         mask = set_mask_by_label("U",mask,phase_mask)
+      if np.any(selections[j+1,7,:]) or np.any(selections[0,7,:]):
+         mask = set_mask_by_label("uc_",mask,phase_mask)
+   return mask
 
 def set_mask_by_label(label,mask,phase_mask=None):
    if phase_mask is None:
@@ -195,24 +218,24 @@ class RietveldGUI(tk.Tk):
          #    initialdir = "./data/cifs")
       else:
          self.filePaths = filePaths
-      # self.filePaths = [
-      # r".\data\cifs\Cement\1540705-Alite.cif",
-      # r".\data\cifs\Cement\1000039-AluminateCubic.cif",
-      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
-      # r".\data\cifs\Cement\9004096-anhydrite.cif",
-      # r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # r".\data\cifs\Cement\9005521-bassanite.cif",
-      # r".\data\cifs\Cement\9012789-Belite.cif",
-      # r".\data\cifs\Cement\9009667-calcite.cif",
-      # r".\data\cifs\Cement\1200009-Ferrite.cif",
-      # r".\data\cifs\Cement\1011094-FreeLime.cif",
-      # r".\data\cifs\Cement\1000053-Periclase.cif",
-      # r".\data\cifs\Cement\9000113-portlandite.cif",
-      # ]
       self.filePaths = [
-      r".\data\cifs\1000032.cif",
-      r".\data\cifs\9015662-rutile.cif",
+      r".\data\cifs\Cement\1540705-Alite.cif",
+      r".\data\cifs\Cement\1000039-AluminateCubic.cif",
+      r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
+      r".\data\cifs\Cement\9004096-anhydrite.cif",
+      r".\data\cifs\Cement\9007569-Arcanite.cif",
+      r".\data\cifs\Cement\9005521-bassanite.cif",
+      r".\data\cifs\Cement\9012789-Belite.cif",
+      r".\data\cifs\Cement\9009667-calcite.cif",
+      r".\data\cifs\Cement\1200009-Ferrite.cif",
+      r".\data\cifs\Cement\1011094-FreeLime.cif",
+      r".\data\cifs\Cement\1000053-Periclase.cif",
+      r".\data\cifs\Cement\9000113-portlandite.cif",
       ]
+      # self.filePaths = [
+      # r".\data\cifs\1000032.cif",
+      # r".\data\cifs\9015662-rutile.cif",
+      # ]
       # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
       global Rt, selections
@@ -227,6 +250,7 @@ class RietveldGUI(tk.Tk):
          #    RefinementParameterSet(self.param_frame.nb,self.param_frame,index=i),
          #    text=str(i+1)+" ")
          self.num_phases += 1
+
 
       selections = np.zeros(
          (self.num_phases+1,num_displayed_params,max_refinement_rounds),
@@ -250,6 +274,10 @@ class RietveldGUI(tk.Tk):
       RR = RietveldRefinery(Rt,Rp,
          store_intermediate_state=False, show_plots=False)
 
+      # self.history_frame.pie_figure.labels = self.param_frame.phase_names
+      self.history_frame.pie_figure.update_pie_chart(RR.composition_by_weight,
+         self.param_frame.phase_names[1:])
+
       self.param_frame.bkgd_control.state.set(1)
       self.param_frame.bkgd_control.checkbutton_clicked()
       # pdb.set_trace()
@@ -261,14 +289,15 @@ class RietveldGUI(tk.Tk):
       # self.fileName = tkFileDialog.askopenfilename(
       #    initialdir = "./data/profiles")
       # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
-      # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
-      self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
+      self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
+      # self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
       # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" +
          os.path.split(self.fileName)[1]+")")
 
       # RietveldPhases.set_profile(self.fileName, min_two_theta=25)
-      RietveldPhases.set_profile(self.fileName, number_of_columns=2)
+      RietveldPhases.set_profile(self.fileName, min_two_theta=20,
+         number_of_columns=3)
 
       global Rp
       Rp.setplotdata()
@@ -279,6 +308,7 @@ class RietveldGUI(tk.Tk):
 class HistoryFrame(tk.Frame):
    def __init__(self,parent,*args,**kwargs):
       tk.Frame.__init__(self,parent)
+      self.parent = parent
 
       self.results_string = tk.StringVar()
       self.results_title = tk.Label(self,
@@ -286,7 +316,7 @@ class HistoryFrame(tk.Frame):
       self.results_string.set("History")
       self.results_title.grid(row=0,column=0,sticky='n')
 
-      self.results_box_scrollbar = AutoScrollbar(self)
+      self.results_box_scrollbar = tk.Scrollbar(self)
       self.results_box_scrollbar.grid(row=1,column=1,sticky='ns',
          pady=10)
 
@@ -304,20 +334,23 @@ class HistoryFrame(tk.Frame):
 
       self.results_box_scrollbar.config(command=self.results_box.yview)
 
-      self.results_text_scrollbar = AutoScrollbar(self)
-      self.results_text_scrollbar.grid(row=2,column=1,sticky='ns')
+      # self.results_text_scrollbar = tk.Scrollbar(self)
+      # self.results_text_scrollbar.grid(row=2,column=1,sticky='ns')
 
-      self.results_text = tk.Text(self,
-         height=15,
-         width=33,
-         yscrollcommand=self.results_text_scrollbar.set,
-         state=tk.DISABLED,
-         wrap=tk.WORD,
-         )
-      self.results_text.grid(row=2,column=0,sticky='ns')
-      self.results_text.insert(tk.END,"")
+      # self.results_text = tk.Text(self,
+      #    height=15,
+      #    width=33,
+      #    yscrollcommand=self.results_text_scrollbar.set,
+      #    state=tk.DISABLED,
+      #    wrap=tk.WORD,
+      #    )
+      # self.results_text.grid(row=2,column=0,sticky='ns')
+      # self.results_text.insert(tk.END,"")
 
-      self.results_text_scrollbar.config(command=self.results_text.yview)
+      # self.results_text_scrollbar.config(command=self.results_text.yview)
+
+      self.pie_figure = PieFrame(self)
+      self.pie_figure.grid(row=2,column=0,sticky='nesw')
 
       self.grid_rowconfigure(2,minsize=300)
 
@@ -328,17 +361,20 @@ class HistoryFrame(tk.Frame):
       RR = RietveldRefinery(Rt_list[self.results_box.curselection()[0]],
          Rp,
          mask=mask_list[self.results_box.curselection()[0]],
-         input_weights=RR.composition_by_weight)
+         # input_weights=RR.composition_by_weight,
+         )
       RR.revert_to_x(x_list[self.results_box.curselection()[0]])
 
-      self.results_text.config(state=tk.NORMAL)
-      self.results_text.delete(0.0,tk.END)
-      self.results_text.insert(tk.END,RR.display_parameters())
-      self.results_text.config(state=tk.DISABLED)
+      # self.results_text.config(state=tk.NORMAL)
+      # self.results_text.delete(0.0,tk.END)
+      # self.results_text.insert(tk.END,RR.display_parameters())
+      # self.results_text.config(state=tk.DISABLED)
       # self.param_string.set(RR.display_parameters())
 
    def onDoubleClick(self,event):
-      pass
+      global final_params_list
+      text = final_params_list[self.results_box.curselection()[0]]
+      self.popUp = PopUpParamBox(self,text)
 
 # class VarLabelEntry(tk.Frame):
 #    def __init__(self,parent,text,x_label,index,*args, **kwargs):
@@ -728,7 +764,7 @@ class LabelScale(tk.Frame):
       self.vallabel=tk.Label(self,textvariable=self.value)
       self.vallabel.grid(row=0,column=1,sticky='w')
 
-      self.scale = tk.Scale(self,
+      self.Scale = tk.Scale(self,
          from_=from_,
          to=to,
          # tickinterval=tickinterval,
@@ -738,8 +774,8 @@ class LabelScale(tk.Frame):
          showvalue=0,
          resolution=resolution,
          )
-      self.scale.grid(row=0,column=2)
-      self.scale.set(initial)
+      self.Scale.grid(row=0,column=2)
+      self.Scale.set(initial)
 
 
       self.grid_columnconfigure(1,minsize=40)
@@ -764,18 +800,24 @@ class ParamFrame(tk.Frame):
       self.bkgd_control = \
          PolynomRefinementParameterControl(self.global_frame,self,0,
          text="Bkgd.",
-         default_order=2,default_round_start=1)
+         default_order=2,
+         default_round_start=1,
+         select_all_rounds=True,
+         )
       self.param_controls.append(self.bkgd_control)
       self.bkgd_control.grid(row=0,column=0,sticky='w')
 
       self.offset_control = \
          RadioRefinementParameterControl(self.global_frame,self,1,
-         text=u"2\u03b8 Corr.")
+         text=u"2\u03b8 Corr.",
+         default_round_start=1,
+         select_all_rounds=True,
+         )
       self.param_controls.append(self.offset_control)
       self.offset_control.grid(row=1,column=0,sticky='w')
 
       self.global_nb.add(self.global_frame,text="Global Parameters")
-      self.global_nb.grid(row=0,column=0,columnspan=2,padx=10,pady=10)
+      self.global_nb.grid(row=0,column=0,columnspan=3,padx=10,pady=10)
 
       self.phase_nb = ttk.Notebook(self,height=220,width=self.nb_width)
       self.phase_frame = tk.Frame(self.phase_nb,padx=10,pady=10)
@@ -794,36 +836,46 @@ class ParamFrame(tk.Frame):
       self.phase_combobox.bind("<<ComboboxSelected>>",self.onPhaseSelected)
       self.phase_combobox.grid(row=0,column=0,sticky='w')
 
-      self.scale_control = RefinementParameterControl(self.phase_frame,
-         self.parent,2, text="Scale", default_round_start=1)
-      self.param_controls.append(self.scale_control)
-      self.scale_control.grid(row=1,column=0,sticky='w')
+      self.Scale_control = RefinementParameterControl(self.phase_frame,
+         self.parent,2,
+         text="Scale",
+         default_round_start=1,
+         select_all_rounds=False,
+         )
+      self.param_controls.append(self.Scale_control)
+      self.Scale_control.grid(row=1,column=0,sticky='w')
 
       self.W_control = RefinementParameterControl(self.phase_frame,self.parent,
-         3,text="Caglioti W",default_round_start=2)
+         3,text="Caglioti W",
+         default_round_start=2,
+         select_all_rounds=False,
+         )
       self.param_controls.append(self.W_control)
       self.W_control.grid(row=2,column=0,sticky='w')
 
       self.eta_control = PolynomRefinementParameterControl(
          self.phase_frame,self.parent, 4,
          text=u"\u03b7",
-         default_order=1,
+         default_order=2,
          default_round_start=2,
-         select_all_round=False)
+         select_all_round=False,
+         )
       self.param_controls.append(self.eta_control)
       self.eta_control.grid(row=3,column=0,sticky='w')
 
       self.V_control = RefinementParameterControl(self.phase_frame,self.parent,
          5, text="Caglioti V",
          default_round_start=3,
-         select_all_rounds=False)
+         select_all_rounds=False,
+         )
       self.param_controls.append(self.V_control)
       self.V_control.grid(row=4,column=0,sticky='w')
 
       self.U_control = RefinementParameterControl(self.phase_frame,self.parent,
          6, text="Caglioti U",
          default_round_start=4,
-         select_all_rounds=False)
+         select_all_rounds=False,
+         )
       self.param_controls.append(self.U_control)
       self.U_control.grid(row=5,column=0,sticky='w')
 
@@ -831,75 +883,127 @@ class ParamFrame(tk.Frame):
          RefinementParameterControl(self.phase_frame,self.parent, 7,
          text="Lattice Parameters",
          default_round_start=max_refinement_rounds,
-         select_all_rounds=False)
+         select_all_rounds=False,
+         )
       self.param_controls.append(self.lattice_control)
       self.lattice_control.grid(row=6,column=0,sticky='w')
 
       self.phase_nb.add(self.phase_frame,text="Phase Parameters")
-      self.phase_nb.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
+      self.phase_nb.grid(row=1,column=0,columnspan=3,padx=10,pady=10)
 
-      self.iteration_scale = LabelScale(self,parent,
-         text="Max number of iterations: ",
+      self.iteration_Scale = LabelScale(self,parent,
+         text="Max. number of iterations: ",
          from_=0,
          to=300,
          initial=100,
          length=80)
-      self.iteration_scale.grid(row=2,column=0,columnspan=2,padx=10,pady=10)
+      self.iteration_Scale.grid(row=2,column=0,columnspan=3,padx=10,pady=10)
 
       self.RefineButton = ttk.Button(self, text='Refine',
-         command=self.refine, takefocus=False)
+         command=self.refine, takefocus=False, width=9)
       self.RefineButton.grid(row=3,column=0, padx=10, pady=10)
 
+      self.RefineButton = ttk.Button(self, text='Refine All',
+         command=self.refine_all, takefocus=False, width=9)
+      self.RefineButton.grid(row=3,column=1, padx=10, pady=10)
+
       self.CancelButton = ttk.Button(self, text='Reset',
-         command=self.reset, takefocus=False)
-      self.CancelButton.grid(row=3,column=1, padx=10, pady=10)
+         command=self.reset, takefocus=False, width=9)
+      self.CancelButton.grid(row=3,column=2, padx=10, pady=10)
 
-   def refine(self):
-      global RR, Rt, Rp, x_list, Rt_list
+   def refine(self,mask=None):
+      global RR, Rt, Rp, x_list, Rt_list, selections_list, selections, \
+         final_params_list
 
-      maxiter = self.iteration_scale.scale.get()
-      RR = RietveldRefinery(Rt,Rp,input_weights=RR.composition_by_weight,
+      maxiter = self.iteration_Scale.Scale.get()
+      RR = RietveldRefinery(Rt,Rp, #input_weights=RR.composition_by_weight,
          maxiter=maxiter)
+
+      if mask is None:
+         mask = set_refinement_mask()
+
+      RR.mask = mask
+      assert len(RR.x) == len(RR.mask)
+      # print RR.x[RR.mask]
+      RR.minimize(callback_functions=(self.parent.master.update_idletasks,
+         self.parent.master.update))
+
+      final_params_list.append(RR.display_parameters())
+
+      x_list.append(copy.deepcopy(RR.x))
+      mask_list.append(copy.deepcopy(RR.mask))
+      Rt_list.append(copy.deepcopy(Rt))
+      selections_list.append(copy.deepcopy(selections))
+
+      # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
+      RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
+
+      self.parent.master.history_frame.results_box.insert(self.numruns,
+         "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
+         " parameters, GoF = " + str(round(RR.GoF,3)))
+      self.parent.master.history_frame.results_box.see(tk.END)
+
+      self.parent.master.history_frame.pie_figure.update_pie_chart(
+         RR.composition_by_weight)
+      # self.parent.master.param_string.set(RR.display_parameters())
+      # self.parent.master.history_frame.results_text.config(
+      #    state=tk.NORMAL)
+      # self.parent.master.history_frame.results_text.delete(0.0,tk.END)
+      # self.parent.master.history_frame.results_text.insert(
+      #    tk.END,RR.display_parameters())
+      # self.parent.master.history_frame.results_text.config(
+      #    state=tk.DISABLED)
+      self.numruns += 1
+      self.parent.master.update_idletasks()
+      self.parent.master.update()
+
+
+   def refine_all(self):
       masks = set_refinement_masks()
-
       for mask in masks:
-         if np.any(mask):
-            RR.mask = mask
-            assert len(RR.x) == len(RR.mask)
-            # print RR.x[RR.mask]
-            RR.minimize()
-            RR.display_stats(RR.minimize)
-
-            x_list.append(copy.deepcopy(RR.x))
-            mask_list.append(copy.deepcopy(RR.mask))
-            Rt_list.append(copy.deepcopy(Rt))
-
-            # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
-            # RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
-
-            self.parent.master.history_frame.results_box.insert(self.numruns,
-               "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
-               " parameters, GoF = " + str(round(RR.GoF,3)))
-            self.parent.master.history_frame.results_box.see(tk.END)
-            # self.parent.master.param_string.set(RR.display_parameters())
-            self.parent.master.history_frame.results_text.config(
-               state=tk.NORMAL)
-            self.parent.master.history_frame.results_text.delete(0.0,tk.END)
-            self.parent.master.history_frame.results_text.insert(
-               tk.END,RR.display_parameters())
-            self.parent.master.history_frame.results_text.config(
-               state=tk.DISABLED)
-            self.numruns += 1
+         self.refine(mask)
 
    def reset(self):
       self.controller.num_phases = 0
       global Rt, RR, Rp
+      global x_list, mask_list, Rt_list, selections_list, final_params_list
+      del Rt
       Rt = []
       if RR is not None:
          del RR
       RR = None
+
+      del x_list
+      x_list = []
+      del mask_list
+      mask_list = []
+      del Rt_list
+      Rt_list = []
+      del selections_list
+      selections_list = []
+      del final_params_list
+      final_params_list = []
+
+      del self.parent.master.param_frame.phase_names
+      self.parent.master.param_frame.phase_names = ['All']
+
+      # self.parent.master.history_frame.results_text.config(
+      #    state=tk.NORMAL)
+      # self.parent.master.history_frame.results_text.delete(0.0,tk.END)
+      # self.parent.master.history_frame.results_text.config(
+      #    state=tk.DISABLED)
+
+      self.parent.master.history_frame.results_box.delete(0,tk.END)
+      self.parent.master.param_frame.phase_combobox.delete(2,tk.END)
+
+      self.numruns = 0
+
       Rp.fig.suptitle("")
       self.controller.getCifs(self.controller.filePaths)
+
+      for p_c in self.parent.master.param_frame.param_controls:
+         # p_c.state.set(0)
+         p_c.checkbutton_clicked()
 
    def onPhaseSelected(self,event):
       global selections
@@ -916,17 +1020,80 @@ class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
-      global Rp,canvas
+      global Rp
       Rp = RietveldPlot()
-      canvas = FigureCanvasTkAgg(Rp.fig, master=self)
-      canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
+      self.canvas = FigureCanvasTkAgg(Rp.fig, master=self)
+      self.canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
       # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
 
-      toolbar = NavigationToolbar2TkAgg(canvas,self)
+      toolbar = NavigationToolbar2TkAgg(self.canvas,self)
       toolbar.update()
       # canvas._tkcanvas.pack()
       # canvas._tkcanvas.grid()#row=0,column=0)#,sticky='n',pady=10)
       # canvas.show()
+
+class PieFrame(tk.Frame):
+   def __init__(self, parent,*args,**kwargs):
+      tk.Frame.__init__(self,parent,*args,**kwargs)
+      self.parent = parent
+
+      global RR
+      self.labels = ['']
+      self.compositions = [100]
+      self.fig = Figure(figsize=(2.5,2.5),dpi=100)
+      self.fig.suptitle('Composition (by Weight)')
+      self.pie_chart = self.fig.add_subplot(111)
+      self.pie_chart.pie(self.compositions,
+         # labels=self.labels,
+         shadow=True,
+         startangle=90,
+         # autopct='%1.1f%%',
+         )
+      self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+      self.canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
+      # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
+
+      # toolbar = NavigationToolbar2TkAgg(self.canvas,self)
+      # toolbar.update()
+      # canvas._tkcanvas.pack()
+      # canvas._tkcanvas.grid()#row=0,column=0)#,sticky='n',pady=10)
+      # canvas.show()
+
+   def update_pie_chart(self,compositions,labels=None):
+      self.compositions = compositions
+      if labels is not None:
+         self.labels = labels
+
+      sorted_comps_and_labels = zip(*sorted(zip(self.compositions,self.labels),
+                key=lambda x: x[0]))
+      self.pie_chart.clear()
+      patches, texts = self.pie_chart.pie(sorted_comps_and_labels[0],
+         labels=sorted_comps_and_labels[1],
+         shadow=True,
+         startangle=90,
+         autopct='%1.1f%%',
+         )
+      # self.fig.legend(patches,self.labels)
+      # self.fig.tight_layout()
+      self.canvas.draw()
+
+class PopUpParamBox(tk.Toplevel):
+   def __init__(self,parent,text):
+      tk.Toplevel.__init__(self)
+      self.resizable(width=False,height=False)
+      self.parent = parent
+
+      h = int(self.parent.master.winfo_height())
+      w = int(self.parent.master.winfo_width())
+
+
+      self.message = tk.Message(self,text=text)
+      self.message.pack()
+
+      self.ok = tk.Button(self, text="Got it", command=self.destroy)
+      self.ok.pack(pady=10)
+
+      self.geometry('+' + str(int(w/2)) + '+' + str(int(h/2)))
 
 if __name__ == "__main__":
    root = RietveldGUI()

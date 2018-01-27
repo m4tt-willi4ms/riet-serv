@@ -34,7 +34,7 @@ default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 default_U = np.array([('U', 0.00, -0.1, 0.1)], dtype=custom_dtype)
 default_V = np.array([('V', 0.00, -0.1, 0.1)], dtype=custom_dtype)
 default_W = np.array([('W', 0.003, 0.000001, 1)], dtype=custom_dtype)
-default_Amplitude = np.array([('Amplitude', 0.1, 0, float('inf'))],
+default_Scale = np.array([('Scale', 0.1, 0, float('inf'))],
                              dtype=custom_dtype)
 default_delta_theta = 0.5
 default_intensity_cutoff = 0.01
@@ -56,7 +56,7 @@ class RietveldPhases:
 
       I_max : float, optional
          Can be used to specify the maximum intensity relative to which the
-         computed intensities should be scaled. If unspecified, the maximum
+         computed intensities should be Scaled. If unspecified, the maximum
          intensity is determined from profile data (which can be loaded
          using the :func:`~src.RietveldPhases.RietveldPhases.set_profile()`
          class method, described later).
@@ -101,8 +101,8 @@ class RietveldPhases:
 
       Attributes
       ----------
-      Amplitude : np.array (custom dtype)
-         The initial input parameters for the phase scale factor (Amplitude).
+      Scale : np.array (custom dtype)
+         The initial input parameters for the phase Scale factor (Scale).
          Its default label, value, lower- and upper-limit are set to be
 
          .. literalinclude:: ../src/RietveldPhases.py
@@ -156,7 +156,7 @@ class RietveldPhases:
 
    bkgd_order = default_bkgd_order
 
-   Amplitude = default_Amplitude
+   Scale = default_Scale
    U = default_U
    V = default_V
    W = default_W
@@ -335,14 +335,14 @@ class RietveldPhases:
 
       self.compute_relative_intensities()
 
-      self.Amplitude['values'] = self.Amplitude['values']* \
+      self.Scale['values'] = self.Scale['values']* \
          self.I_max/np.amax(self.phase_profile())
 
    def phase_param_gen(self):
       yield self.U
       yield self.V
       yield self.W
-      yield self.Amplitude
+      yield self.Scale
       yield self.eta
       if self.recompute_peak_positions:
          yield self.lattice_parameters
@@ -366,7 +366,7 @@ class RietveldPhases:
       self.U = self.phase_x[0]
       self.V = self.phase_x[1]
       self.W = self.phase_x[2]
-      self.Amplitude = self.phase_x[3]
+      self.Scale = self.phase_x[3]
       self.eta = self.phase_x[4:4+self.eta.shape[0]]
       self.lattice_parameters = self.phase_x[4+self.eta.shape[0]:
                                              4+self.eta.shape[0]
@@ -720,7 +720,7 @@ class RietveldPhases:
                               -self.two_theta_peaks_masked)**2 \
                              /omegaUVW_squareds
 
-      result[self.masks] = self.Amplitude['values'] \
+      result[self.masks] = self.Scale['values'] \
          *self.weighted_intensities_masked \
          *self.LP_factors_masked \
          *(eta_vals/(1+two_thetabar_squared) \
@@ -732,7 +732,7 @@ class RietveldPhases:
       #       -self.two_theta_peaks[i])**2 \
       #       /omegaUVW_squareds[i]
       #    eta = eta_vals[self.masks[i]]
-      #    result[self.masks[i]] += Amplitude*self.weighted_intensities[i]* \
+      #    result[self.masks[i]] += Scale*self.weighted_intensities[i]* \
       #       self.LP_factors[self.masks[i]]* \
       #    (eta/(1 +two_thetabar_squared) +(1-eta) \
       #    *np.exp(-np.log(2)*two_thetabar_squared))
