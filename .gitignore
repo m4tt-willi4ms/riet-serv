@@ -26,3 +26,5 @@ tests/Cement/build/
 tests/Cement/dist/
 build/
 dist/
+.cache/
+classes_UML.pdf

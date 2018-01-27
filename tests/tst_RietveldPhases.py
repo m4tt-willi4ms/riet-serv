@@ -4,6 +4,7 @@ import time
 import matplotlib.pyplot as plt
 from random import randrange
 import profile, pstats
+import unittest
 
 import sys, os
 sys.path.append(os.path.abspath(".."))
@@ -12,7 +13,6 @@ from src.RietveldPhases import RietveldPhases
 from src.RietveldRefinery import RietveldRefinery
 
 from cctbx.eltbx import wavelengths
-
 
 input_strings = ["""\
 U              0.0   -0.1   0.1
@@ -53,15 +53,15 @@ display_plots = False #: Only use to see sample plots
 # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-with open(r"..//data//profiles//Jade-Al2O3-Sim.xye") as file:
-   for line in file.readlines():#[4:]:
-      # two_thetatmp, ytmp, ztmp = line.split()
-      two_thetatmp, ytmp = line.split()
-      # if float(two_thetatmp) < 15:
-      tst_two_theta.append(float(two_thetatmp))
-      tst_y.append(float(ytmp))
-tst_two_theta = np.array(tst_two_theta)
-tst_y = 0.01*np.array(tst_y)
+# with open(r"..//data//profiles//Jade-Al2O3-Sim.xye") as file:
+#    for line in file.readlines():#[4:]:
+#       # two_thetatmp, ytmp, ztmp = line.split()
+#       two_thetatmp, ytmp = line.split()
+#       # if float(two_thetatmp) < 15:
+#       tst_two_theta.append(float(two_thetatmp))
+#       tst_y.append(float(ytmp))
+# tst_two_theta = np.array(tst_two_theta)
+# tst_y = 0.01*np.array(tst_y)
 
 def exercise_RietveldPhases():
    # RietveldPhase.fromstring(input_string)
@@ -217,14 +217,16 @@ def exercise_RietveldPhases():
    # RR.display(RR.minimize_All)
 
 
+
 def run():
-   exercise_RietveldPhases()
+   # exercise_RietveldPhases()
    print "OK"
 
 if (__name__ == "__main__"):
    # pr = profile.Profile()
    # pr.enable()
-   run()
+   # run()
+   unittest.main(warnings='ignore')
    # profile.run('run(); print')
    # pr.disable()
    # s = StringIO.StringIO()
