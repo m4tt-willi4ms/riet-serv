@@ -218,86 +218,70 @@ class RietveldGUI(tk.Tk):
          #    initialdir = "./data/cifs")
       else:
          self.filePaths = filePaths
-      self.filePaths = [
-      r".\data\cifs\Cement\1540705-Alite.cif",
-      r".\data\cifs\Cement\1000039-AluminateCubic.cif",
-      r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
-      r".\data\cifs\Cement\9004096-anhydrite.cif",
-      r".\data\cifs\Cement\9007569-Arcanite.cif",
-      r".\data\cifs\Cement\9005521-bassanite.cif",
-      r".\data\cifs\Cement\9012789-Belite.cif",
-      r".\data\cifs\Cement\9009667-calcite.cif",
-      r".\data\cifs\Cement\1200009-Ferrite.cif",
-      r".\data\cifs\Cement\1011094-FreeLime.cif",
-      r".\data\cifs\Cement\1000053-Periclase.cif",
-      r".\data\cifs\Cement\9000113-portlandite.cif",
-      ]
       # self.filePaths = [
-      # r".\data\cifs\1000032.cif",
-      # r".\data\cifs\9015662-rutile.cif",
+      # r".\data\cifs\Cement\1540705-Alite.cif",
+      # r".\data\cifs\Cement\1000039-AluminateCubic.cif",
+      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
+      # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      # r".\data\cifs\Cement\9007569-Arcanite.cif",
+      # r".\data\cifs\Cement\9005521-bassanite.cif",
+      # r".\data\cifs\Cement\9012789-Belite.cif",
+      # r".\data\cifs\Cement\9009667-calcite.cif",
+      # r".\data\cifs\Cement\1200009-Ferrite.cif",
+      # r".\data\cifs\Cement\1011094-FreeLime.cif",
+      # r".\data\cifs\Cement\1000053-Periclase.cif",
+      # r".\data\cifs\Cement\9000113-portlandite.cif",
       # ]
+      self.filePaths = [
+      r".\data\cifs\1000032.cif",
+      r".\data\cifs\9015662-rutile.cif",
+      ]
       # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
       global Rt, selections
       Rt = []
-      for i,filePath in enumerate(self.filePaths):
+      phase_names = []
+      for filePath in self.filePaths:
          # cif_file_name = os.path.split(filePath)[1]
-         Rt.append(RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
-            delta_theta=0.8,intensity_cutoff=0.01))
-         self.param_frame.phase_names.append(Rt[-1].chemical_name)
-         # if self.num_phases == 0:
-         # self.param_frame.nb.add(
-         #    RefinementParameterSet(self.param_frame.nb,self.param_frame,index=i),
-         #    text=str(i+1)+" ")
+         phase = RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
+            delta_theta=0.8,intensity_cutoff=0.01)
+         Rt.append(phase)
+         phase_names.append(phase.chemical_name)
          self.num_phases += 1
-
 
       selections = np.zeros(
          (self.num_phases+1,num_displayed_params,max_refinement_rounds),
          dtype=bool) # +1 -> All
 
-      # Update drop-down phase list
-      self.param_frame.phase_combobox.grid_remove()
-      self.param_frame.phase_combobox = ttk.Combobox(
-         self.param_frame.phase_frame,
-         textvariable=self.param_frame.selection,
-         values=self.param_frame.phase_names,
-         state='readonly',
-         exportselection=0,
-         width=min(len(max(self.param_frame.phase_names,key=len)),30),
-         )
-      self.param_frame.phase_combobox.bind(
-         "<<ComboboxSelected>>",self.param_frame.onPhaseSelected)
-      self.param_frame.phase_combobox.grid(row=0,column=0,sticky='w')
+      self.param_frame.update_phase_combobox(phase_names)
 
       global RR,Rp
       RR = RietveldRefinery(Rt,Rp,
          store_intermediate_state=False, show_plots=False)
 
-      # self.history_frame.pie_figure.labels = self.param_frame.phase_names
       self.history_frame.pie_figure.update_pie_chart(RR.composition_by_weight,
-         self.param_frame.phase_names[1:])
+         phase_names)
+      # Rp.updateplotprofile(RR.total_profile_state)
 
       self.param_frame.bkgd_control.state.set(1)
       self.param_frame.bkgd_control.checkbutton_clicked()
       # pdb.set_trace()
 
-      Rp.updateplotprofile(RR.total_profile_state)
 
 
    def getProfile(self):
       # self.fileName = tkFileDialog.askopenfilename(
       #    initialdir = "./data/profiles")
       # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
-      self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
-      # self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
+      # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
+      self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
       # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" +
          os.path.split(self.fileName)[1]+")")
 
       # RietveldPhases.set_profile(self.fileName, min_two_theta=25)
       RietveldPhases.set_profile(self.fileName, min_two_theta=20,
-         number_of_columns=3)
+         number_of_columns=2)
 
       global Rp
       Rp.setplotdata()
@@ -358,12 +342,15 @@ class HistoryFrame(tk.Frame):
       global RR,Rt,Rp,x_list,Rt_list
       # print self.results_box.curselection()[0]
       # pdb.set_trace()
-      RR = RietveldRefinery(Rt_list[self.results_box.curselection()[0]],
+      selected_index = self.results_box.curselection()[0]
+      RR = RietveldRefinery(Rt_list[selected_index],
          Rp,
-         mask=mask_list[self.results_box.curselection()[0]],
+         # mask=mask_list[selected_index],
          # input_weights=RR.composition_by_weight,
          )
-      RR.revert_to_x(x_list[self.results_box.curselection()[0]])
+      RR.revert_to_x(x_list[selected_index])
+
+      self.pie_figure.update_pie_chart(RR.composition_by_weight)
 
       # self.results_text.config(state=tk.NORMAL)
       # self.results_text.delete(0.0,tk.END)
@@ -729,20 +716,23 @@ class Dropdown_Int_List(tk.Frame):
       self.orderMenu.bind("<<ComboboxSelected>>", self.order_selected)
       self.orderMenu.grid(row=0,column=1)
 
+      self.order_selected(None)
+
       # self.grid_columnconfigure(0,minsize=30)
       # self.grid_columnconfigure(1,minsize=50)
 
    def order_selected(self,tmp):
       # print self.order.get()
+      order = int(self.order.get())+1
       if self.parent.index == 0:
-         RietveldPhases.set_bkgd_order(int(self.order.get())+1)
+         RietveldPhases.set_bkgd_order(order)
       elif self.parent.index == 4:
          phase_sel = self.parent.parent.master.master.phase_combobox.current()
          if phase_sel == 0:
             for i in xrange(len(Rt)):
-               Rt[i].set_eta_order(int(self.order.get())+1)
+               Rt[i].set_eta_order(order)
          else:
-            Rt[phase_sel-1].set_eta_order(int(self.order.get())+1)
+            Rt[phase_sel-1].set_eta_order(order)
       self.orderMenu.selection_clear()
 
 class LabelScale(tk.Frame):
@@ -927,6 +917,9 @@ class ParamFrame(tk.Frame):
       # print RR.x[RR.mask]
       RR.minimize(callback_functions=(self.parent.master.update_idletasks,
          self.parent.master.update))
+      time.sleep(0.1)
+      # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
+      RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
 
       final_params_list.append(RR.display_parameters())
 
@@ -935,8 +928,6 @@ class ParamFrame(tk.Frame):
       Rt_list.append(copy.deepcopy(Rt))
       selections_list.append(copy.deepcopy(selections))
 
-      # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
-      RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
 
       self.parent.master.history_frame.results_box.insert(self.numruns,
          "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
@@ -985,7 +976,7 @@ class ParamFrame(tk.Frame):
       final_params_list = []
 
       del self.parent.master.param_frame.phase_names
-      self.parent.master.param_frame.phase_names = ['All']
+      self.parent.master.param_frame.update_phase_combobox([])
 
       # self.parent.master.history_frame.results_text.config(
       #    state=tk.NORMAL)
@@ -994,7 +985,6 @@ class ParamFrame(tk.Frame):
       #    state=tk.DISABLED)
 
       self.parent.master.history_frame.results_box.delete(0,tk.END)
-      self.parent.master.param_frame.phase_combobox.delete(2,tk.END)
 
       self.numruns = 0
 
@@ -1016,41 +1006,69 @@ class ParamFrame(tk.Frame):
       self.phase_combobox.selection_clear()
       # print repr(selections)
 
+   def update_phase_combobox(self,phase_names):
+      self.phase_names = ['All'] + phase_names
+      self.phase_combobox.grid_remove()
+      self.phase_combobox = ttk.Combobox(
+         self.phase_frame,
+         textvariable=self.selection,
+         values=self.phase_names,
+         state='readonly',
+         exportselection=0,
+         width=min(len(max(self.phase_names,key=len))+1,30),
+         )
+      self.phase_combobox.bind(
+         "<<ComboboxSelected>>",self.onPhaseSelected)
+      self.phase_combobox.grid(row=0,column=0,sticky='w')
+
 class PlotFrame(tk.Frame):
    def __init__(self, parent,controller,*args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
 
       global Rp
-      Rp = RietveldPlot()
+      Rp = RietveldPlot(width=5.5,height=4.5)
       self.canvas = FigureCanvasTkAgg(Rp.fig, master=self)
       self.canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
       # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
 
       toolbar = NavigationToolbar2TkAgg(self.canvas,self)
       toolbar.update()
+      # toolbar.set_message("try this out")
       # canvas._tkcanvas.pack()
       # canvas._tkcanvas.grid()#row=0,column=0)#,sticky='n',pady=10)
       # canvas.show()
 
 class PieFrame(tk.Frame):
-   def __init__(self, parent,*args,**kwargs):
+   def __init__(self, parent,
+      size=3, #the chart size, in inches
+      *args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
       self.parent = parent
 
       global RR
       self.labels = ['']
       self.compositions = [100]
-      self.fig = Figure(figsize=(2.5,2.5),dpi=100)
+      self.fig = Figure(figsize=(size,size),dpi=100)
       self.fig.suptitle('Composition (by Weight)')
       self.pie_chart = self.fig.add_subplot(111)
-      self.pie_chart.pie(self.compositions,
-         # labels=self.labels,
-         shadow=True,
-         startangle=90,
-         # autopct='%1.1f%%',
-         )
+
       self.canvas = FigureCanvasTkAgg(self.fig, master=self)
       self.canvas.get_tk_widget().pack(side=tk.TOP,anchor='n')
+
+      self.phase_label = matplotlib.offsetbox.AnchoredText('Test',
+         loc=8, frameon=True)
+      self.phase_label.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+      self.phase_label.set_visible(False)
+
+      self.update_pie_chart(self.compositions,labels=self.labels)
+      self.canvas.mpl_connect('motion_notify_event',self.pick)
+      self.canvas.mpl_connect('pick_event', self.hover)
+      self.canvas.mpl_connect('axes_leave_event', self.leave)
+
+      # self.pie_chart.annotate('test',xy=(0,0),xytext=(10,10))
+      # self.phase_label
+      # self.pie_chart.add_artist(self.phase_label)
+      self.canvas.show()
       # canvas.get_tk_widget().grid(row=0,column=0,sticky='n')
 
       # toolbar = NavigationToolbar2TkAgg(self.canvas,self)
@@ -1059,23 +1077,66 @@ class PieFrame(tk.Frame):
       # canvas._tkcanvas.grid()#row=0,column=0)#,sticky='n',pady=10)
       # canvas.show()
 
-   def update_pie_chart(self,compositions,labels=None):
-      self.compositions = compositions
-      if labels is not None:
-         self.labels = labels
+   def pick(self,event):
+      self.canvas.pick(event)
 
-      sorted_comps_and_labels = zip(*sorted(zip(self.compositions,self.labels),
+   def hover(self,event):
+      if isinstance(event.artist,matplotlib.patches.Wedge):
+         # print event.artist.get_label()
+         self.phase_label.get_children()[0].set_text(event.artist.get_label())
+         self.phase_label.set_visible(True)
+         self.canvas.draw()
+         # for wedge in self.pie_chart_props:
+         #    if event.artist.url == wedge[0].url:
+         #       wedge[1].set_visible(True)
+
+      #    print event.artist.properties()['label']
+         # print event.artist.get_gid()
+      # if event.inaxes == self.pie_chart:
+      #    for prop in self.pie_chart_props:
+      #       if prop[0].contains(event):
+      #          print prop[1].get_text()
+
+   def leave(self,event):
+      self.phase_label.set_visible(False)
+      self.canvas.draw()
+
+   def update_pie_chart(self,compositions,labels=None):
+      if labels is None:
+         labels = self.labels
+      else:
+         self.labels = labels
+      assert len(compositions) == len(labels)
+      sorted_comps_and_labels = zip(*sorted(zip(compositions,labels),
                 key=lambda x: x[0]))
+      # self.compositions = sorted_comps_and_labels[0]
+      # self.labels = sorted_comps_and_labels[1]
+
       self.pie_chart.clear()
-      patches, texts = self.pie_chart.pie(sorted_comps_and_labels[0],
-         labels=sorted_comps_and_labels[1],
+
+      self.pie_chart_props = zip(*self.pie_chart.pie(sorted_comps_and_labels[0],
+         labels=list(sorted_comps_and_labels[1]),
          shadow=True,
          startangle=90,
-         autopct='%1.1f%%',
-         )
+         wedgeprops={ 'picker': True }, #'clip_on': False,
+         autopct=self.autopct_cutoff,
+         ))
+
+      for item in self.pie_chart_props:
+         item[1].set_visible(False)
+
+      self.pie_chart.add_artist(self.phase_label)
+
       # self.fig.legend(patches,self.labels)
       # self.fig.tight_layout()
-      self.canvas.draw()
+      self.canvas.draw_idle()
+
+   def picker(self,wedge,event):
+      print 'here'
+      return wedge.contains(event), dict()
+
+   def autopct_cutoff(self,percents,cutoff=5):
+      return ('%1.1f%%'% percents) if percents > cutoff else ''
 
 class PopUpParamBox(tk.Toplevel):
    def __init__(self,parent,text):

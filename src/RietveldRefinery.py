@@ -189,6 +189,7 @@ class RietveldRefinery:
    def revert_to_x(self,x):
       self.x = x
       self.update_state()
+      self.set_compositions()
       self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
 
@@ -345,7 +346,7 @@ class RietveldRefinery:
       if not self.bkgd_refine and self.count % 5 == 0:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
-         # map(operator.methodcaller('__call__'),list(self.callback_functions))
+         map(operator.methodcaller('__call__'),list(self.callback_functions))
       # print self.x[self.mask]
       self.count += 1
 
@@ -505,7 +506,7 @@ class RietveldRefinery:
       self.current_profile_masked.set_ydata(self.total_profile_state
          [self.pltmask])
       self.residuals.set_ydata(self.weighted_squared_errors_state)
-      self.fig.canvas.draw()
+      self.fig.canvas.draw_idle()
 
    def display_parameters(self,fn=None):
       if fn is not None:
@@ -653,12 +654,21 @@ class RietveldPlot:
    matplotlib plots used in displaying the results of RietveldRefinery
    instances.
    """
-   def __init__(self):
-      self.fig = Figure(dpi=100)
+   def __init__(self,
+      width=4,height=3, #the figure width and height, in inches
+      ):
+      self.fig = Figure(figsize=(width,height),dpi=100)
       # self.subplot1 = self.fig.subplot2grid((3,1),(0,0),rowspan=2)
       # self.subplot1 = self.fig.subplot2grid((3,1),(0,2),rowspan=2)
       self.subplot1 = self.fig.add_subplot(2,1,1)
       self.subplot2 = self.fig.add_subplot(2,1,2)
+
+      # def format_coord(x,y):
+      #    return 'test'
+
+      # self.subplot1.format_coord = format_coord
+      # self.subplot2.format_coord = format_coord
+
       # self.subplot3 = self.fig.add_subplot(313)
       # self.canvas = canvas
       # self.span = None
@@ -750,7 +760,7 @@ class RietveldPlot:
          self.subplot2.axes.set_ylim(
             top=1.07*max(np.max(profile[indmin:indmax]),
                np.max(RietveldPhases.I[indmin:indmax])))
-         self.fig.canvas.draw()
+         self.fig.canvas.draw_idle()
 
       self.span = SpanSelector(self.subplot1, onselect, 'horizontal',
                     rectprops=dict(alpha=0.5, facecolor='green'))
@@ -763,7 +773,7 @@ class RietveldPlot:
          # self.subplot3.axes.relim()
          # self.subplot3.axes.autoScale_view()
 
-      self.fig.canvas.draw()
+      self.fig.canvas.draw_idle()
 
    def reset_plot_profile(self):
       if len(self.subplot1.axes.lines) is not 0:
@@ -772,4 +782,4 @@ class RietveldPlot:
                line.remove()
       self.fig.suptitle("")
       self.subplot1.axes.legend_.remove()
-      self.fig.canvas.draw()
+      self.fig.canvas.draw_idle()
