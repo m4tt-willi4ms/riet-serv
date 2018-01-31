@@ -192,7 +192,7 @@ def test_assemble_phase_x():
 
 def test_update_params():
    tmp_x = np.copy(test_phase.phase_x)
-   mask = np.char.startswith(tmp_x['labels'],'Amp')
+   mask = np.char.startswith(tmp_x['labels'],'Sca')
    test_val = 100
    tmp_x['values'][mask] = 100
    test_phase.update_params(tmp_x,mask=mask)

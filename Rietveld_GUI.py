@@ -52,6 +52,10 @@ RR = None
 max_refinement_rounds = 5
 num_displayed_params = 8
 
+selections = np.zeros(
+         (1,num_displayed_params,max_refinement_rounds),
+         dtype=bool)
+
 CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
 
 def set_refinement_masks():
@@ -81,6 +85,7 @@ def set_refinement_masks():
 
 def set_refinement_mask():
    #assumes a refinement instance has been created
+   global RR
    mask = copy.deepcopy(RR.mask)
    if np.any(selections[0,0,:]):
       mask = set_mask_by_label("bk",mask)
@@ -107,20 +112,25 @@ def set_mask_by_label(label,mask,phase_mask=None):
    return np.logical_or(
       np.logical_and(np.char.startswith(RR.x['labels'],label),phase_mask),mask)
 
-class AutoScrollbar(tk.Scrollbar):
-    # a scrollbar that hides itself if it's not needed.  only
-    # works if you use the grid geometry manager.
-    def set(self, lo, hi):
-        if float(lo) <= 0.0 and float(hi) >= 1.0:
-            # grid_remove is currently missing from Tkinter!
-            self.tk.call("grid", "remove", self)
-        else:
-            self.grid()
-        tk.Scrollbar.set(self, lo, hi)
-    def pack(self, **kw):
-        raise TclError, "cannot use pack with this widget"
-    def place(self, **kw):
-        raise TclError, "cannot use place with this widget"
+def set_checkbutton_states(selections,phase_index=None):
+   if phase_index is None:
+      phase_index = 0
+   assert type(phase_index) == int
+
+# class AutoScrollbar(tk.Scrollbar):
+#     # a scrollbar that hides itself if it's not needed.  only
+#     # works if you use the grid geometry manager.
+#     def set(self, lo, hi):
+#         if float(lo) <= 0.0 and float(hi) >= 1.0:
+#             # grid_remove is currently missing from Tkinter!
+#             self.tk.call("grid", "remove", self)
+#         else:
+#             self.grid()
+#         tk.Scrollbar.set(self, lo, hi)
+#     def pack(self, **kw):
+#         raise TclError, "cannot use pack with this widget"
+#     def place(self, **kw):
+#         raise TclError, "cannot use place with this widget"
 
 class RietveldGUI(tk.Tk):
    def __init__(self, *args, **kwargs):
@@ -218,24 +228,24 @@ class RietveldGUI(tk.Tk):
          #    initialdir = "./data/cifs")
       else:
          self.filePaths = filePaths
-      # self.filePaths = [
-      # r".\data\cifs\Cement\1540705-Alite.cif",
-      # r".\data\cifs\Cement\1000039-AluminateCubic.cif",
-      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
-      # r".\data\cifs\Cement\9004096-anhydrite.cif",
-      # r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # r".\data\cifs\Cement\9005521-bassanite.cif",
-      # r".\data\cifs\Cement\9012789-Belite.cif",
-      # r".\data\cifs\Cement\9009667-calcite.cif",
-      # r".\data\cifs\Cement\1200009-Ferrite.cif",
-      # r".\data\cifs\Cement\1011094-FreeLime.cif",
-      # r".\data\cifs\Cement\1000053-Periclase.cif",
-      # r".\data\cifs\Cement\9000113-portlandite.cif",
-      # ]
       self.filePaths = [
-      r".\data\cifs\1000032.cif",
-      r".\data\cifs\9015662-rutile.cif",
+      r".\data\cifs\Cement\1540705-Alite.cif",
+      r".\data\cifs\Cement\1000039-AluminateCubic.cif",
+      r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
+      # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      r".\data\cifs\Cement\9007569-Arcanite.cif",
+      # r".\data\cifs\Cement\9005521-bassanite.cif",
+      r".\data\cifs\Cement\9012789-Belite.cif",
+      # r".\data\cifs\Cement\9009667-calcite.cif",
+      r".\data\cifs\Cement\1200009-Ferrite.cif",
+      r".\data\cifs\Cement\1011094-FreeLime.cif",
+      r".\data\cifs\Cement\1000053-Periclase.cif",
+      # r".\data\cifs\Cement\9000113-portlandite.cif",
       ]
+      # self.filePaths = [
+      # r".\data\cifs\1000032.cif",
+      # r".\data\cifs\9015662-rutile.cif",
+      # ]
       # self.filePaths = [r".\data\cifs\9015662-rutile.cif"]
 
       global Rt, selections
@@ -244,14 +254,10 @@ class RietveldGUI(tk.Tk):
       for filePath in self.filePaths:
          # cif_file_name = os.path.split(filePath)[1]
          phase = RietveldPhases(filePath, #I_max=I_max/len(self.filePaths),
-            delta_theta=0.8,intensity_cutoff=0.01)
+            delta_theta=0.5,intensity_cutoff=0.01)
          Rt.append(phase)
          phase_names.append(phase.chemical_name)
          self.num_phases += 1
-
-      selections = np.zeros(
-         (self.num_phases+1,num_displayed_params,max_refinement_rounds),
-         dtype=bool) # +1 -> All
 
       self.param_frame.update_phase_combobox(phase_names)
 
@@ -263,6 +269,9 @@ class RietveldGUI(tk.Tk):
          phase_names)
       # Rp.updateplotprofile(RR.total_profile_state)
 
+      selections = np.copy(np.broadcast_to(selections,
+         (self.num_phases+1,)+selections.shape[1:]))
+
       self.param_frame.bkgd_control.state.set(1)
       self.param_frame.bkgd_control.checkbutton_clicked()
       # pdb.set_trace()
@@ -272,16 +281,18 @@ class RietveldGUI(tk.Tk):
    def getProfile(self):
       # self.fileName = tkFileDialog.askopenfilename(
       #    initialdir = "./data/profiles")
-      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
       # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
-      self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
+      # self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
       # self.fileName = r".\\data\\profiles\\d5_05005.xye"
       self.winfo_toplevel().title("Rietveld Refinement (" +
          os.path.split(self.fileName)[1]+")")
 
       # RietveldPhases.set_profile(self.fileName, min_two_theta=25)
-      RietveldPhases.set_profile(self.fileName, min_two_theta=20,
-         number_of_columns=2)
+      RietveldPhases.set_profile(self.fileName,
+         min_two_theta=25,
+         # number_of_columns=2,
+         )
 
       global Rp
       Rp.setplotdata()
@@ -339,7 +350,7 @@ class HistoryFrame(tk.Frame):
       self.grid_rowconfigure(2,minsize=300)
 
    def onClick(self,event):
-      global RR,Rt,Rp,x_list,Rt_list
+      global RR,Rt,Rp,x_list,Rt_list,selections_list
       # print self.results_box.curselection()[0]
       # pdb.set_trace()
       selected_index = self.results_box.curselection()[0]
@@ -823,7 +834,7 @@ class ParamFrame(tk.Frame):
          exportselection=0,
          width=min(len(max(self.phase_names,key=len)),30),
          )
-      self.phase_combobox.bind("<<ComboboxSelected>>",self.onPhaseSelected)
+      self.phase_combobox.bind("<<ComboboxSelected>>",self.on_phase_selected)
       self.phase_combobox.grid(row=0,column=0,sticky='w')
 
       self.Scale_control = RefinementParameterControl(self.phase_frame,
@@ -948,7 +959,6 @@ class ParamFrame(tk.Frame):
       self.parent.master.update_idletasks()
       self.parent.master.update()
 
-
    def refine_all(self):
       masks = set_refinement_masks()
       for mask in masks:
@@ -956,7 +966,7 @@ class ParamFrame(tk.Frame):
 
    def reset(self):
       self.controller.num_phases = 0
-      global Rt, RR, Rp
+      global Rt, RR, Rp, selections
       global x_list, mask_list, Rt_list, selections_list, final_params_list
       del Rt
       Rt = []
@@ -970,6 +980,7 @@ class ParamFrame(tk.Frame):
       mask_list = []
       del Rt_list
       Rt_list = []
+      selections = copy.deepcopy(selections_list[-1])
       del selections_list
       selections_list = []
       del final_params_list
@@ -991,11 +1002,14 @@ class ParamFrame(tk.Frame):
       Rp.fig.suptitle("")
       self.controller.getCifs(self.controller.filePaths)
 
-      for p_c in self.parent.master.param_frame.param_controls:
-         # p_c.state.set(0)
-         p_c.checkbutton_clicked()
+      # for p_c in self.parent.master.param_frame.param_controls:
+      #    # p_c.state.set(0)
+      #    p_c.checkbutton_clicked()
 
-   def onPhaseSelected(self,event):
+      self.on_phase_selected(None)
+
+
+   def on_phase_selected(self,event):
       global selections
       phase_sel = int(self.phase_combobox.current())
       for i,control in enumerate(self.param_controls):
@@ -1004,7 +1018,6 @@ class ParamFrame(tk.Frame):
          control.checkbutton_clicked()
          control.rounds.set_round_selection(rounds)
       self.phase_combobox.selection_clear()
-      # print repr(selections)
 
    def update_phase_combobox(self,phase_names):
       self.phase_names = ['All'] + phase_names
@@ -1018,7 +1031,7 @@ class ParamFrame(tk.Frame):
          width=min(len(max(self.phase_names,key=len))+1,30),
          )
       self.phase_combobox.bind(
-         "<<ComboboxSelected>>",self.onPhaseSelected)
+         "<<ComboboxSelected>>",self.on_phase_selected)
       self.phase_combobox.grid(row=0,column=0,sticky='w')
 
 class PlotFrame(tk.Frame):
@@ -1041,9 +1054,11 @@ class PlotFrame(tk.Frame):
 class PieFrame(tk.Frame):
    def __init__(self, parent,
       size=3, #the chart size, in inches
+      pct_cutoff=5, #the percent cutoff when displaying compositions
       *args,**kwargs):
       tk.Frame.__init__(self,parent,*args,**kwargs)
       self.parent = parent
+      self.pct_cutoff = pct_cutoff
 
       global RR
       self.labels = ['']
@@ -1085,6 +1100,10 @@ class PieFrame(tk.Frame):
          # print event.artist.get_label()
          self.phase_label.get_children()[0].set_text(event.artist.get_label())
          self.phase_label.set_visible(True)
+
+         self.set_percent_visibilities(sel=self.wedges.index(event.artist))
+         # else:
+         #    self.percents[index].set_visible(False)
          self.canvas.draw()
          # for wedge in self.pie_chart_props:
          #    if event.artist.url == wedge[0].url:
@@ -1114,16 +1133,18 @@ class PieFrame(tk.Frame):
 
       self.pie_chart.clear()
 
-      self.pie_chart_props = zip(*self.pie_chart.pie(sorted_comps_and_labels[0],
-         labels=list(sorted_comps_and_labels[1]),
-         shadow=True,
-         startangle=90,
-         wedgeprops={ 'picker': True }, #'clip_on': False,
-         autopct=self.autopct_cutoff,
-         ))
+      self.wedges, self.wedge_names, self.percents = \
+         self.pie_chart.pie(sorted_comps_and_labels[0],
+            labels=list(sorted_comps_and_labels[1]),
+            shadow=True,
+            startangle=90,
+            wedgeprops={ 'picker': True }, #'clip_on': False,
+            autopct='%.1f%%',
+            )
 
-      for item in self.pie_chart_props:
-         item[1].set_visible(False)
+      for name in self.wedge_names:
+         name.set_visible(False)
+      self.set_percent_visibilities()
 
       self.pie_chart.add_artist(self.phase_label)
 
@@ -1131,12 +1152,22 @@ class PieFrame(tk.Frame):
       # self.fig.tight_layout()
       self.canvas.draw_idle()
 
+   def set_percent_visibilities(self,sel=None):
+      if sel is not None:
+         assert type(sel) == int
+         sel_pct = self.percents[sel].get_text()[:-1]
+      else: sel_pct = '0'
+      for pct in self.percents:
+         if float(pct.get_text()[:-1]) < self.pct_cutoff \
+         and not pct.get_text()[:-1] == sel_pct:
+            pct.set_visible(False)
+         else: pct.set_visible(True)
+
    def picker(self,wedge,event):
-      print 'here'
       return wedge.contains(event), dict()
 
-   def autopct_cutoff(self,percents,cutoff=5):
-      return ('%1.1f%%'% percents) if percents > cutoff else ''
+   # def autopct_cutoff(self,percents,cutoff=5):
+   #    return ('%1.1f%%'% percents) if percents > cutoff else ''
 
 class PopUpParamBox(tk.Toplevel):
    def __init__(self,parent,text):
@@ -1147,12 +1178,26 @@ class PopUpParamBox(tk.Toplevel):
       h = int(self.parent.master.winfo_height())
       w = int(self.parent.master.winfo_width())
 
+      self.results_text_scrollbar = tk.Scrollbar(self)
+      self.results_text_scrollbar.grid(row=0,column=1,sticky='ns')
 
-      self.message = tk.Message(self,text=text)
-      self.message.pack()
+      self.results_text = tk.Text(self,
+         height=25,
+         width=35,
+         yscrollcommand=self.results_text_scrollbar.set,
+         wrap=tk.WORD,
+         )
+      self.results_text_scrollbar.config(command=self.results_text.yview)
+      self.results_text.grid(row=0,column=0,sticky='ns')
+
+      self.results_text.insert(tk.END,text)
+      self.results_text.config(state=tk.DISABLED)
+
+      # self.message = tk.Message(self,text=text)
+      # self.message.pack()
 
       self.ok = tk.Button(self, text="Got it", command=self.destroy)
-      self.ok.pack(pady=10)
+      self.ok.grid(row=1,column=0,columnspan=2)
 
       self.geometry('+' + str(int(w/2)) + '+' + str(int(h/2)))
 

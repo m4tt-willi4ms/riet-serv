@@ -26,6 +26,7 @@ custom_dtype = np.dtype([
    # ('round','i4')
    ])
 
+
 default_bkgd_order = 3
 default_two_theta_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
                                dtype=custom_dtype)
@@ -33,7 +34,7 @@ default_vertical_offset = False #:False = angular offset; True = Vertical Offset
 
 default_U = np.array([('U', 0.00, -0.1, 0.1)], dtype=custom_dtype)
 default_V = np.array([('V', 0.00, -0.1, 0.1)], dtype=custom_dtype)
-default_W = np.array([('W', 0.003, 0.000001, 1)], dtype=custom_dtype)
+default_W = np.array([('W', 0.002, 0.000001, 1)], dtype=custom_dtype)
 default_Scale = np.array([('Scale', 0.1, 0, float('inf'))],
                              dtype=custom_dtype)
 default_delta_theta = 0.5
@@ -146,8 +147,8 @@ class RietveldPhases:
          .. literalinclude:: ../src/RietveldPhases.py
             :lines: 42
 
-      Notes
-      -----
+      Note
+      ----
       This class contains many classmethods, which can be used by any of the
       RietveldPhases instances.
 
@@ -174,7 +175,28 @@ class RietveldPhases:
 
    @classmethod
    def set_bkgd_order(cls, order):
-      assert isinstance(order, int) == True
+      r'''
+      This method sets the order of the background polynomial, `bkgd`.
+
+      (Strictly speaking, `order` is the number of parameters :math:`c_i` in
+      the polynomial
+
+      .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
+
+      not its degree.)
+
+      Parameters
+      -----------
+      order : int
+         The number of coefficients (:math:`N`) appearing in :math:`P(2\theta)`.
+
+      Returns
+      -------
+      bkgd : np.array (custom dtype)
+         A numpy array containing the coefficients :math:`c_i of the background
+         polynomial.
+      '''
+      assert isinstance(order, int)
       if order > cls.max_polynom_order:
          order = cls.max_polynom_order
       elif order < 1:
@@ -247,14 +269,12 @@ class RietveldPhases:
    def background_polynomial(cls):
       r""" Returns a numpy array populated by the values of a background
       polynomial, :math:`P(2\theta)`, with input parameters :math:`c_i` stored
-      in the class variable ``RietveldPhases.x`` with label ``Bkgd_i``:
+      in the class variable ``RietveldPhases.x`` with label ``bkgd_i``:
 
       .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
 
       where *N* is the length of the numpy array ``RietveldPhases.Bkgd``.
 
-      :param np.array two_theta: a list of :math:`2\theta` values at which to
-         evaluate :math:`P(2\theta)`
       :return: the values of the background polynomial at points in
          ``two_theta``
       :rtype: np.array
