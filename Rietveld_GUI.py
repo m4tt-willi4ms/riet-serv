@@ -896,7 +896,7 @@ class ParamFrame(tk.Frame):
          text="Max. number of iterations: ",
          from_=0,
          to=300,
-         initial=100,
+         initial=150,
          length=80)
       self.iteration_Scale.grid(row=2,column=0,columnspan=3,padx=10,pady=10)
 
@@ -930,15 +930,14 @@ class ParamFrame(tk.Frame):
          self.parent.master.update))
       time.sleep(0.1)
       # RR.display_parameters(RR.minimize)#mplitude_Bkgd_Offset)
-      RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
+      stats = RR.display_stats(RR.minimize)#mplitude_Bkgd_Offset)
 
-      final_params_list.append(RR.display_parameters())
+      final_params_list.append(RR.display_parameters() + stats)
 
       x_list.append(copy.deepcopy(RR.x))
       mask_list.append(copy.deepcopy(RR.mask))
       Rt_list.append(copy.deepcopy(Rt))
       selections_list.append(copy.deepcopy(selections))
-
 
       self.parent.master.history_frame.results_box.insert(self.numruns,
          "Run " + str(self.numruns+1) + ": " + str(RR.num_params) +
