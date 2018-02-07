@@ -250,7 +250,7 @@ class RietveldPhases:
                    number_of_columns=3,
                    min_two_theta=0,
                    max_two_theta=180,
-                   wavelength=None):
+                   target='Cu'):
       two_theta = []
       I = []
       sigma = []
@@ -277,10 +277,10 @@ class RietveldPhases:
       cls.sigma = cls.sigma[min_max_mask]
       cls.two_theta = cls.two_theta[min_max_mask]
 
-      CU_wavelength = wavelengths.characteristic(RietveldPhases.lambdas[0]) \
-         .as_angstrom()
-      cls.d_min = CU_wavelength/2/np.sin(np.pi/360*cls.two_theta[-1])
-      cls.d_max = CU_wavelength/2/np.sin(np.pi/360*cls.two_theta[0])
+      cls.set_wavelength(target)
+
+      cls.d_min = cls.wavelength[1]/2/np.sin(np.pi/360*cls.two_theta[-1])
+      cls.d_max = cls.wavelength[0]/2/np.sin(np.pi/360*cls.two_theta[0])
 
       cls.two_theta_powers = np.power(cls.two_theta, np.array(
          xrange(0, cls.max_polynom_order)).reshape(cls.max_polynom_order, 1))
@@ -370,9 +370,7 @@ class RietveldPhases:
 
       self.recompute_peak_positions = recompute_peak_positions
 
-      assert target in self.targets
-      self.set_wavelength(target)
-      assert profile in self.profiles
+      assert profile in RietveldPhases.profiles
       self.profile = profile
 
       self.load_cif(fn_cif, d_min=RietveldPhases.d_min)
@@ -593,7 +591,7 @@ class RietveldPhases:
       self.structure.scattering_type_registry(table="it1992") #,  "it1992",
          # "wk1995" "n_gaussian"\
       self.structure.set_inelastic_form_factors( \
-         photon=wavelengths.characteristic(self.lambdas[0]), table="sasaki")
+         self.wavelength[0], table="sasaki")
 
       f_calc = self.structure.structure_factors(d_min=RietveldPhases.d_min,
                                                 anomalous_flag=anomalous_flag
@@ -645,14 +643,12 @@ class RietveldPhases:
    def set_two_theta_peaks(self):
       self.two_theta_peaks = np.concatenate((
          self.unit_cell.two_theta(self.f_miller_set.indices(),
-                                  wavelengths.characteristic(self.lambdas[0]
-                                                            ).as_angstrom(),
-                                  deg=True
+                                  self.wavelength[0],
+                                  deg=True,
                                  ).as_numpy_array()[self.d_mask],
          self.unit_cell.two_theta(self.f_miller_set.indices(),
-                                  wavelengths.characteristic(self.lambdas[1]
-                                                            ).as_angstrom(),
-                                  deg=True
+                                  self.wavelength[1],
+                                  deg=True,
                                  ).as_numpy_array()[self.d_mask]
          ))
       self.two_theta_peaks.shape = (self.two_theta_peaks.shape[0], 1)

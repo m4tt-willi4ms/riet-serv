@@ -90,6 +90,13 @@ def test_set_vertical_offset():
    assert 'cos_theta' in Rp.__dict__
    assert np.isclose(Rp.cos_theta[-1],-360/np.pi/np.sqrt(2))
 
+def test_set_wavelength():
+   Rp.set_wavelength('Co')
+   assert np.isclose(test_phase.wavelength[0],Rp.wavelengths_dict['CoA1'])
+   Rp.set_wavelength('Cu')
+   assert np.isclose(test_phase.wavelength[0],Rp.wavelengths_dict['CuA1'])
+   assert pytest.raises(AssertionError,Rp.set_wavelength,'P')
+
 def test_LP_intensity_scaling():
    assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
 
