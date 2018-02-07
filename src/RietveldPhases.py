@@ -180,23 +180,20 @@ class RietveldPhases:
    for w in wavelengths.characteristic_iterator():
       wavelengths_dict[w.label()] = w.as_angstrom()
 
-   targets = ('Ag','Mo','Cu','Cr','Fe','Co')
-
    wavelength = []
-   set_wavelength('Cu')
-   profile = 'PV'
 
+   targets = ('Ag','Mo','Cu','Cr','Fe','Co')
    profiles = {
-      'PV': pseudo_voigt,
-      'Lor': lorentz,
-      'Gau': gaussian,
+      'PV': 'pseudo_voigt',
+      'Lor': 'lorentz',
+      'Gau': 'gaussian',
    }
 
    @classmethod
    def set_wavelength(cls,target):
       assert target in cls.targets
       cls.wavelength = \
-         [cls.wavelengths[target+"A1"],cls.wavelengths[target+"A2"]]
+         [cls.wavelengths_dict[target+"A1"],cls.wavelengths_dict[target+"A2"]]
 
    @classmethod
    def set_bkgd_order(cls, order):
@@ -355,8 +352,8 @@ class RietveldPhases:
                 intensity_cutoff=DEFAULT_INTENSITY_CUTOFF,
                 lattice_dev=DEFAULT_LATTICE_DEV,
                 recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
-                target=None,
-                profile=None,
+                target='Cu',
+                profile='PV',
                ):
 
       self.fn_cif = fn_cif
@@ -373,11 +370,10 @@ class RietveldPhases:
 
       self.recompute_peak_positions = recompute_peak_positions
 
-      if target is not None:
-         self.set_wavelength(target)
-      if profile is not None:
-         assert profile in self.profiles
-         self.profile = profile
+      assert target in self.targets
+      self.set_wavelength(target)
+      assert profile in self.profiles
+      self.profile = profile
 
       self.load_cif(fn_cif, d_min=RietveldPhases.d_min)
 
