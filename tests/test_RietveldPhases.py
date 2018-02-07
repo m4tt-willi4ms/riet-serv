@@ -74,13 +74,13 @@ def test_background_polynomial():
       np.zeros(len(Rp.two_theta),dtype=float)))
 
 def test_U_default():
-   assert test_phase.U.dtype == RietveldPhases.custom_dtype
-   assert test_phase.U['labels'] == RietveldPhases.default_U['labels']
-   assert np.isclose(test_phase.U['values'], RietveldPhases.default_U['values'])
+   assert test_phase.U.dtype == RietveldPhases.CUSTOM_DTYPE
+   assert test_phase.U['labels'] == RietveldPhases.DEFAULT_U['labels']
+   assert np.isclose(test_phase.U['values'], RietveldPhases.DEFAULT_U['values'])
    assert np.isclose(test_phase.U['l_limits'],
-      RietveldPhases.default_U['l_limits'])
+      RietveldPhases.DEFAULT_U['l_limits'])
    assert np.isclose(test_phase.U['u_limits'],
-      RietveldPhases.default_U['u_limits'])
+      RietveldPhases.DEFAULT_U['u_limits'])
 
 def test_set_vertical_offset():
    assert test_phase.vertical_offset == False

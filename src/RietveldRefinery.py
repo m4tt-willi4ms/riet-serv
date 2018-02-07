@@ -339,10 +339,10 @@ class RietveldRefinery:
 
       sys.stdout.write('.')
       sys.stdout.flush()
-      if self.show_plots:
-         self.update_plot()
-      elif self.store_intermediate_state:
-         self.update_state()
+      # if self.show_plots:
+      #    self.update_plot()
+      # elif self.store_intermediate_state:
+      #    self.update_state()
       if not self.bkgd_refine and self.count % 5 == 0:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
@@ -541,7 +541,7 @@ class RietveldRefinery:
                   + ('%.4g' % value) + " (" \
                   + ('%.4g' % l) + ", " \
                   + ('%.4g' % u) + ")\n"
-      print param_list
+      # print param_list
       return param_list
 
    def display_stats(self,fn=None):
@@ -554,27 +554,30 @@ class RietveldRefinery:
       self.num_params = np.sum(self.mask)
       self.GoF = R_wp/R_e
 
+      output = ''
+
       if fn is not None:
-         # print self.result
-         print "\n" + self.result['message']
-         print "\nTime taken to run " + fn.__name__ + " with " \
+         output += "\n" + self.result['message'] +"\n"
+         output +=  "\nTime taken to run " + fn.__name__ + " with " \
             + str(self.num_params) + " parameters: " \
-            + str(round(self.t1-self.t0,3)) + " seconds"
-      print "R_wp: " + str(R_wp)
-      print "R_e: " + str(R_e)
-      print "Goodness-of-Fit: " + str(self.GoF)
+            + str(round(self.t1-self.t0,3)) + " seconds" +"\n"
+      output +=  "R_wp: " + str(R_wp) +"\n"
+      output +=  "R_e: " + str(R_e) +"\n"
+      output +=  "Goodness-of-Fit: " + str(self.GoF) +"\n"
 
       if not self.bkgd_refine:
-         print "\n"
+         output +=  "\n"
          for i in xrange(len(self.phase_list)):
-            print "Phase " + str(i+1) + ": " \
-               + str(self.composition_by_volume[i]) + " %"
+            output +=  "Phase " + str(i+1) + ": " \
+               + ('%.3g' % self.composition_by_volume[i]) + " %\n"
 
-         print "\nBy weight:"
+         output +=  "\nBy weight:\n"
          for i in xrange(len(self.phase_list)):
-            print "Phase " + str(i+1) + ": " \
-               + str(self.composition_by_weight[i]) + " %"
-         print "\n"
+            output +=  "Phase " + str(i+1) + ": " \
+               + ('%.3g' % self.composition_by_weight[i]) + " %\n"
+         output +=  "\n"
+      # print output
+      return output
 
    def show_plot(self,plottitle,Scale_factor=1,autohide=True):
       if autohide:
