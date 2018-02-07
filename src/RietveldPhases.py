@@ -10,7 +10,7 @@ from scipy.optimize import approx_fprime
 import matplotlib.pyplot as plt
 import jsonpickle
 
-import src.paths
+# import src.paths
 
 import iotbx.cif
 from cctbx import xray, miller, crystal, uctbx
@@ -18,7 +18,7 @@ from cctbx.eltbx import wavelengths
 from libtbx import easy_pickle
 from scitbx import lbfgsb
 
-custom_dtype = np.dtype([
+CUSTOM_DTYPE = np.dtype([
    ('labels', 'S12'),
    ('values', 'f8'),
    ('l_limits', 'f8'),
@@ -27,21 +27,21 @@ custom_dtype = np.dtype([
    ])
 
 
-default_bkgd_order = 3
-default_two_theta_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
-                               dtype=custom_dtype)
-default_vertical_offset = False #:False = angular offset; True = Vertical Offset
+DEFAULT_BKGD_ORDER = 3
+DEFAULT_TWO_THETA_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
+                               dtype=CUSTOM_DTYPE)
+DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 
-default_U = np.array([('U', 0.00, -0.1, 0.1)], dtype=custom_dtype)
-default_V = np.array([('V', 0.00, -0.1, 0.1)], dtype=custom_dtype)
-default_W = np.array([('W', 0.002, 0.000001, 1)], dtype=custom_dtype)
-default_Scale = np.array([('Scale', 0.1, 0, float('inf'))],
-                             dtype=custom_dtype)
-default_delta_theta = 0.5
-default_intensity_cutoff = 0.01
-default_eta_order = 2
-default_lattice_dev = 0.01
-default_recompute_peak_positions = True
+DEFAULT_U = np.array([('U', 0.00, -0.1, 0.1)], dtype=CUSTOM_DTYPE)
+DEFAULT_V = np.array([('V', 0.00, -0.1, 0.1)], dtype=CUSTOM_DTYPE)
+DEFAULT_W = np.array([('W', 0.002, 0.000001, 1)], dtype=CUSTOM_DTYPE)
+DEFAULT_SCALE = np.array([('Scale', 0.1, 0, float('inf'))],
+                             dtype=CUSTOM_DTYPE)
+DEFAULT_DELTA_THETA = 0.5
+DEFAULT_INTENSITY_CUTOFF = 0.01
+DEFAULT_ETA_ORDER = 2
+DEFAULT_LATTICE_DEV = 0.01
+DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
 
 class RietveldPhases:
    r"""
@@ -153,18 +153,18 @@ class RietveldPhases:
       RietveldPhases instances.
 
    """
-   custom_dtype = custom_dtype
+   custom_dtype = CUSTOM_DTYPE
 
-   bkgd_order = default_bkgd_order
+   bkgd_order = DEFAULT_BKGD_ORDER
 
-   Scale = default_Scale
-   U = default_U
-   V = default_V
-   W = default_W
-   eta_order = default_eta_order
+   Scale = DEFAULT_SCALE
+   U = DEFAULT_U
+   V = DEFAULT_V
+   W = DEFAULT_W
+   eta_order = DEFAULT_ETA_ORDER
 
-   two_theta_0 = default_two_theta_0
-   vertical_offset = default_vertical_offset
+   two_theta_0 = DEFAULT_TWO_THETA_0
+   vertical_offset = DEFAULT_VERTICAL_OFFSET
 
    max_polynom_order = 5
    '''The maximum number of parameters allowed in any parameter represented
@@ -172,6 +172,31 @@ class RietveldPhases:
 
    lambdas = ["CUA1", "CUA2"] #: Default values
    K_alpha_factors = [1, 0.48]  #: Default values
+
+   wavelengths_dict = {
+      "CoA1": 1.788965,
+      "CoA2": 1.792850,
+   }
+   for w in wavelengths.characteristic_iterator():
+      wavelengths_dict[w.label()] = w.as_angstrom()
+
+   targets = ('Ag','Mo','Cu','Cr','Fe','Co')
+
+   wavelength = []
+   set_wavelength('Cu')
+   profile = 'PV'
+
+   profiles = {
+      'PV': pseudo_voigt,
+      'Lor': lorentz,
+      'Gau': gaussian,
+   }
+
+   @classmethod
+   def set_wavelength(cls,target):
+      assert target in cls.targets
+      cls.wavelength = \
+         [cls.wavelengths[target+"A1"],cls.wavelengths[target+"A2"]]
 
    @classmethod
    def set_bkgd_order(cls, order):
@@ -213,12 +238,12 @@ class RietveldPhases:
          cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
    @classmethod
-   def bkgd_param_gen(cls, order=default_bkgd_order):
+   def bkgd_param_gen(cls, order=DEFAULT_BKGD_ORDER):
       n = 0
       while n < order:
          # if cls.bkgd == None:
          yield np.array([('bkgd_'+str(n), 0.0, -float('inf'), float('inf'))],
-                        dtype=custom_dtype)
+                        dtype=CUSTOM_DTYPE)
          # else:
          #    yield cls.bkgd[n]
          n += 1
@@ -263,7 +288,7 @@ class RietveldPhases:
       cls.two_theta_powers = np.power(cls.two_theta, np.array(
          xrange(0, cls.max_polynom_order)).reshape(cls.max_polynom_order, 1))
 
-      cls.set_bkgd_order(default_bkgd_order)
+      cls.set_bkgd_order(DEFAULT_BKGD_ORDER)
 
    @classmethod
    def background_polynomial(cls):
@@ -326,10 +351,12 @@ class RietveldPhases:
 
    def __init__(self, fn_cif,
                 I_max=None,
-                delta_theta=default_delta_theta,
-                intensity_cutoff=default_intensity_cutoff,
-                lattice_dev=default_lattice_dev,
-                recompute_peak_positions=default_recompute_peak_positions,
+                delta_theta=DEFAULT_DELTA_THETA,
+                intensity_cutoff=DEFAULT_INTENSITY_CUTOFF,
+                lattice_dev=DEFAULT_LATTICE_DEV,
+                recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
+                target=None,
+                profile=None,
                ):
 
       self.fn_cif = fn_cif
@@ -345,6 +372,12 @@ class RietveldPhases:
       self.lattice_dev = lattice_dev
 
       self.recompute_peak_positions = recompute_peak_positions
+
+      if target is not None:
+         self.set_wavelength(target)
+      if profile is not None:
+         assert profile in self.profiles
+         self.profile = profile
 
       self.load_cif(fn_cif, d_min=RietveldPhases.d_min)
 
@@ -449,18 +482,11 @@ class RietveldPhases:
          a = self.lattice_parameters['values'][0]
          self.unit_cell = uctbx.unit_cell((a, a, a, 90, 90, 90))
 
-   def load_cif(self, fn, d_min=1.0, lammbda="CUA1"):
+   def load_cif(self, fn, d_min=1.0):
       """Reads in a crystal structure, unit cell from iotbx
 
          :param str fn: The file name
          :param float d_min: Minimum d-spacing
-         :param str lammbda: Wavelength label; one of: {"CrA1", 2.28970},
-            {"CrA2", 2.29361}, {"Cr", 2.2909}, {"FeA1", 1.93604},
-            {"FeA2", 1.93998}, {"Fe", 1.9373}, {"CuA1", 1.54056},
-            {"CuA2", 1.54439}, {"Cu", 1.5418}, {"MoA1", 0.70930},
-            {"MoA2", 0.71359}, {"Mo", 0.7107}, {"AgA1", 0.55941},
-            {"AgA2", 0.56380}, {"Ag", 0.5608}, {"", 0}
-            (c.f. eltbx/wavelengths_ext.cpp)
 
       """
       with open(fn, 'r') as file:
@@ -528,7 +554,7 @@ class RietveldPhases:
 
       assert len(self.uc_mask) == 6
       self.lattice_parameters = np.array(
-         [x for x in self.unit_cell_parameter_gen()], dtype=custom_dtype)
+         [x for x in self.unit_cell_parameter_gen()], dtype=CUSTOM_DTYPE)
 
    def unit_cell_parameter_gen(self):
       """returns all unit cell parameters specified by the mask
@@ -549,7 +575,7 @@ class RietveldPhases:
 
       """
       self.lattice_parameters = np.array(
-         [x for x in self.unit_cell_parameter_gen()], dtype=custom_dtype)
+         [x for x in self.unit_cell_parameter_gen()], dtype=CUSTOM_DTYPE)
       return self.lattice_parameters
 
    def compute_relative_intensities(self, anomalous_flag=True):
@@ -685,10 +711,10 @@ class RietveldPhases:
          limit = np.power(0.001, n)
          if n == 0:
             yield np.array([('eta_'+str(n), 0.5, 0, 1)],
-                           dtype=custom_dtype)
+                           dtype=CUSTOM_DTYPE)
          else:
             yield np.array([('eta_'+str(n), 0.0, -limit, limit)],
-                           dtype=custom_dtype)
+                           dtype=CUSTOM_DTYPE)
          n += 1
 
    def eta_polynomial(self):

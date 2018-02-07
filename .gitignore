@@ -1,6 +1,7 @@
 *.pyc
 *.profile
 *.pyproj
+*.ipynb
 .ipynb_checkpoints/
 1000032-Jade.hkl
 1000032-powdercell.pdf

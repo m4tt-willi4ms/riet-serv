@@ -217,31 +217,31 @@ class RietveldGUI(tk.Tk):
       self.param_frame.grid(row=0,column=2)
 
       # temp. to allow for auto-loading of profile
-      self.getProfile()
-      self.getCifs()
+      # self.getProfile()
+      # self.getCifs()
       # self.param_frame.refine()
 
    def getCifs(self,filePaths=None):
       if filePaths is None:
-         pass
-         # self.filePaths = tkFileDialog.askopenfilenames(
-         #    initialdir = "./data/cifs")
+         # pass
+         self.filePaths = tkFileDialog.askopenfilenames(
+            initialdir = "./data/cifs")
       else:
          self.filePaths = filePaths
-      self.filePaths = [
-      r".\data\cifs\Cement\1540705-Alite.cif",
-      r".\data\cifs\Cement\1000039-AluminateCubic.cif",
-      r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
-      # r".\data\cifs\Cement\9004096-anhydrite.cif",
-      r".\data\cifs\Cement\9007569-Arcanite.cif",
-      # r".\data\cifs\Cement\9005521-bassanite.cif",
-      r".\data\cifs\Cement\9012789-Belite.cif",
-      # r".\data\cifs\Cement\9009667-calcite.cif",
-      r".\data\cifs\Cement\1200009-Ferrite.cif",
-      r".\data\cifs\Cement\1011094-FreeLime.cif",
-      r".\data\cifs\Cement\1000053-Periclase.cif",
-      # r".\data\cifs\Cement\9000113-portlandite.cif",
-      ]
+      # self.filePaths = [
+      # r".\data\cifs\Cement\1540705-Alite.cif",
+      # r".\data\cifs\Cement\1000039-AluminateCubic.cif",
+      # r".\data\cifs\Cement\9014308-AluminateOrtho.cif",
+      # # r".\data\cifs\Cement\9004096-anhydrite.cif",
+      # r".\data\cifs\Cement\9007569-Arcanite.cif",
+      # # r".\data\cifs\Cement\9005521-bassanite.cif",
+      # r".\data\cifs\Cement\9012789-Belite.cif",
+      # # r".\data\cifs\Cement\9009667-calcite.cif",
+      # r".\data\cifs\Cement\1200009-Ferrite.cif",
+      # r".\data\cifs\Cement\1011094-FreeLime.cif",
+      # r".\data\cifs\Cement\1000053-Periclase.cif",
+      # # r".\data\cifs\Cement\9000113-portlandite.cif",
+      # ]
       # self.filePaths = [
       # r".\data\cifs\1000032.cif",
       # r".\data\cifs\9015662-rutile.cif",
@@ -279,9 +279,9 @@ class RietveldGUI(tk.Tk):
 
 
    def getProfile(self):
-      # self.fileName = tkFileDialog.askopenfilename(
-      #    initialdir = "./data/profiles")
-      self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
+      self.fileName = tkFileDialog.askopenfilename(
+         initialdir = "./data/profiles")
+      # self.fileName = r".\\data\\profiles\\cement_15_03_11_0028.xye"
       # self.fileName = r".\\data\\profiles\\17_11_15_0004_CEMI425R_d6.xye"
       # self.fileName = r".\\data\\profiles\\Jade-Al2O3-Sim.xye"
       # self.fileName = r".\\data\\profiles\\d5_05005.xye"
@@ -290,7 +290,7 @@ class RietveldGUI(tk.Tk):
 
       # RietveldPhases.set_profile(self.fileName, min_two_theta=25)
       RietveldPhases.set_profile(self.fileName,
-         min_two_theta=25,
+         # min_two_theta=25,
          # number_of_columns=2,
          )
 
