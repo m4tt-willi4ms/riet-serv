@@ -183,10 +183,21 @@ class RietveldPhases:
    wavelength = []
 
    targets = ('Ag','Mo','Cu','Cr','Fe','Co')
+
+   def pseudo_voigt(x_squared,eta):
+      return (eta/(1+x_squared) \
+            +(1-eta)*np.exp(-np.log(2)*x_squared))
+
+   def gaussian(x_squared,eta=None):
+      return np.exp(-np.log(2)*x_squared)
+
+   def lorentz(x_squared,eta=None):
+      return 1/(1+x_squared)
+
    profiles = {
-      'PV': 'pseudo_voigt',
-      'Lor': 'lorentz',
-      'Gau': 'gaussian',
+      'PV': pseudo_voigt,
+      'Lorentz': lorentz,
+      'Gaussian': gaussian,
    }
 
    @classmethod
@@ -194,6 +205,9 @@ class RietveldPhases:
       assert target in cls.targets
       cls.wavelength = \
          [cls.wavelengths_dict[target+"A1"],cls.wavelengths_dict[target+"A2"]]
+
+      cls.d_max = cls.wavelength[0]/2/np.sin(np.pi/360*cls.two_theta[0])
+      cls.d_min = cls.wavelength[1]/2/np.sin(np.pi/360*cls.two_theta[-1])
 
    @classmethod
    def set_bkgd_order(cls, order):
@@ -277,13 +291,10 @@ class RietveldPhases:
       cls.sigma = cls.sigma[min_max_mask]
       cls.two_theta = cls.two_theta[min_max_mask]
 
-      cls.set_wavelength(target)
-
-      cls.d_min = cls.wavelength[1]/2/np.sin(np.pi/360*cls.two_theta[-1])
-      cls.d_max = cls.wavelength[0]/2/np.sin(np.pi/360*cls.two_theta[0])
-
       cls.two_theta_powers = np.power(cls.two_theta, np.array(
          xrange(0, cls.max_polynom_order)).reshape(cls.max_polynom_order, 1))
+
+      cls.set_wavelength(target)
 
       cls.set_bkgd_order(DEFAULT_BKGD_ORDER)
 
@@ -418,6 +429,7 @@ class RietveldPhases:
       self.lattice_parameters = self.phase_x[4+self.eta.shape[0]:
                                              4+self.eta.shape[0]
                                              +self.lattice_parameters.shape[0]]
+      self.compute_relative_intensities()
 
    def update_params(self, phase_x, mask=None):
       if mask is None:
@@ -590,8 +602,8 @@ class RietveldPhases:
       # Let's use scattering factors from the International Tables
       self.structure.scattering_type_registry(table="it1992") #,  "it1992",
          # "wk1995" "n_gaussian"\
-      self.structure.set_inelastic_form_factors( \
-         self.wavelength[0], table="sasaki")
+      self.structure.set_inelastic_form_factors(self.wavelength[0],
+         table="sasaki")
 
       f_calc = self.structure.structure_factors(d_min=RietveldPhases.d_min,
                                                 anomalous_flag=anomalous_flag
@@ -679,6 +691,26 @@ class RietveldPhases:
          np.broadcast_to(self.weighted_intensities,
                          (len(self.two_theta_peaks), len(self.two_theta))
                         )[self.masks]
+      self.eta_masked = \
+         np.broadcast_to(self.eta_polynomial(),
+                         (len(self.two_theta_peaks), len(self.two_theta))
+                        )[self.masks]
+
+      if RietveldPhases.vertical_offset:
+         self.two_theta_0_masked = \
+            np.broadcast_to(RietveldPhases.cos_theta*
+                            RietveldPhases.two_theta_0['values'],
+                            (len(self.two_theta_peaks), len(self.two_theta))
+                           )[self.masks]
+      else:
+         self.two_theta_0_masked = \
+            np.broadcast_to(RietveldPhases.two_theta_0['values'],
+                            (len(self.two_theta_peaks), len(self.two_theta))
+                           )[self.masks]
+
+      self.two_theta_all_squared = (self.two_theta_masked
+                                    -self.two_theta_0_masked
+                                    -self.two_theta_peaks_masked)**2
 
    def update_two_thetas(self, anomalous_flag=False):
 
@@ -733,36 +765,20 @@ class RietveldPhases:
          self.update_two_thetas()
       # print "called phase_profile()", inspect.stack()[1][3]
       result = np.zeros((len(self.two_theta_peaks), len(self.two_theta)))
-      eta_vals = np.broadcast_to(self.eta_polynomial(), \
-                                 (len(self.two_theta_peaks),
-                                  len(self.two_theta))
-                                )[self.masks]
-
-      if RietveldPhases.vertical_offset:
-         two_theta_0_vals = \
-            np.broadcast_to(RietveldPhases.cos_theta*
-                            RietveldPhases.two_theta_0['values'],
-                            (len(self.two_theta_peaks), len(self.two_theta))
-                           )[self.masks]
-      else:
-         two_theta_0_vals = \
-            np.broadcast_to(RietveldPhases.two_theta_0['values'],
-                            (len(self.two_theta_peaks), len(self.two_theta))
-                           )[self.masks]
 
       omegaUVW_squareds = \
          np.abs(self.U['values']*self.tan_two_theta_peaks_sq_masked
                 +self.V['values']*self.tan_two_theta_peaks_masked
                 +self.W['values'])
-      two_thetabar_squared = (self.two_theta_masked-two_theta_0_vals
-                              -self.two_theta_peaks_masked)**2 \
-                             /omegaUVW_squareds
+      two_thetabar_squared = self.two_theta_all_squared/omegaUVW_squareds
 
       result[self.masks] = self.Scale['values'] \
          *self.weighted_intensities_masked \
          *self.LP_factors_masked \
-         *(eta_vals/(1+two_thetabar_squared) \
-            +(1-eta_vals)*np.exp(-np.log(2)*two_thetabar_squared))
+         *RietveldPhases.profiles[self.profile](
+            two_thetabar_squared,self.eta_masked)
+         # *(self.eta_masked/(1+two_thetabar_squared) \
+         #    +(1-self.eta_masked)*np.exp(-np.log(2)*two_thetabar_squared))
       # print result[self.masks]
       # print np.sum(result,axis=0)
       # for i in xrange(0,len(self.two_theta_peaks)):

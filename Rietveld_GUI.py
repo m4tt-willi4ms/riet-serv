@@ -33,7 +33,6 @@ from src.RietveldPhases import RietveldPhases
 from src.RietveldRefinery import RietveldRefinery, RietveldPlot
 
 from scitbx import lbfgsb
-from cctbx.eltbx import wavelengths
 from cctbx.sgtbx import lattice_symmetry
 
 import Tkinter as tk
@@ -55,8 +54,6 @@ num_displayed_params = 8
 selections = np.zeros(
          (1,num_displayed_params,max_refinement_rounds),
          dtype=bool)
-
-CU_wavelength = wavelengths.characteristic("CU").as_angstrom()
 
 def set_refinement_masks():
    #assumes a refinement instance has been created
