@@ -1,0 +1,51 @@
+data_cif_Titanium Aluminum Nitrogen
+_audit_creation_date              'October 16, 2017, 12:53 PM'
+_audit_creation_method            'MDI-Jade (2010)'
+
+_chemical_name_common
+;
+Titanium Aluminum Nitrogen
+;
+_chemical_formula_sum             Ti0.5Al0.5N
+
+_publ_section_references
+;
+Calculated from LPF using POWD-12++, Inamura S., Nobugai K., Kanamaru F.,
+J. Solid State Chem., v68 p124 (1987)
+;
+_publ_section_comment
+;
+ANX: AX. LPF Collection Code: 542637. Sample Preparation: Compound
+Preparation: prepared by sputtering method.  Minor Warning: No e.s.d
+reported/abstracted on the cell dimension. No R factor
+reported/abstracted. LPF Editor Comment: editor deduced probable site
+occupation from nominal composition. Unit Cell Data Source: Powder
+Diffraction.
+;
+
+_symmetry_cell_setting            Cubic
+_symmetry_space_group_name_H-M    F m -3 m
+_symmetry_Int_Tables_number       225
+
+_cell_length_a                    4.19
+_cell_length_b                    4.19
+_cell_length_c                    4.19
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 90.0
+_cell_volume                      73.56
+_cell_formula_units_Z             4.0
+
+loop_
+ _atom_site_label
+ _atom_site_type_symbol
+ _atom_site_symmetry_multiplicity
+ _atom_site_occupancy
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_B_iso_or_equiv
+ _atom_site_thermal_displace_type
+ Ti   Ti   4   0.5   0.0      0.0      0.0      0.5      Biso
+ Al   Al   4   0.5   0.0      0.0      0.0      0.5      Biso
+ N    N    4   1.0   0.5      0.5      0.5      0.5      Biso

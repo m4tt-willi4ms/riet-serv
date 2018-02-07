@@ -1,0 +1,50 @@
+data_cif_Vanadium Nitride
+_audit_creation_date              'October 16, 2017, 1:12 PM'
+_audit_creation_method            'MDI-Jade (2010)'
+
+_chemical_name_common
+;
+Vanadium Nitride
+;
+_chemical_formula_sum             VN
+
+_publ_section_references
+;
+Calculated from LPF using POWD-12++, Yen C.M., Toth L.E., Shy Y.M.,
+Anderson D.E., Rosner L.G., J. Appl. Phys., v38 p2268 (1967)
+;
+_publ_section_comment
+;
+LPF Collection Code: 530644. Sample Preparation: Compound Preparation:
+powder metallurgical technique.  Minor Warning: No e.s.d
+reported/abstracted on the cell dimension. No R factor
+reported/abstracted. LPF Editor Comment: editor deduced probable site
+occupation from nominal composition. Unit Cell Data Source: Powder
+Diffraction.
+;
+
+_symmetry_cell_setting            Cubic
+_symmetry_space_group_name_H-M    F m -3 m
+_symmetry_Int_Tables_number       225
+
+_cell_length_a                    4.12
+_cell_length_b                    4.12
+_cell_length_c                    4.12
+_cell_angle_alpha                 90.0
+_cell_angle_beta                  90.0
+_cell_angle_gamma                 90.0
+_cell_volume                      69.93
+_cell_formula_units_Z             4.0
+
+loop_
+ _atom_site_label
+ _atom_site_type_symbol
+ _atom_site_symmetry_multiplicity
+ _atom_site_occupancy
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_B_iso_or_equiv
+ _atom_site_thermal_displace_type
+ V    V    4   1.0   0.0      0.0      0.0      0.5      Biso
+ N    N    4   1.0   0.5      0.5      0.5      0.5      Biso
