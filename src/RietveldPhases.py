@@ -201,7 +201,7 @@ class RietveldPhases:
    }
 
    @classmethod
-   def set_wavelength(cls,target):
+   def set_wavelength(cls, target):
       assert target in cls.targets
       cls.wavelength = \
          [cls.wavelengths_dict[target+"A1"],cls.wavelengths_dict[target+"A2"]]

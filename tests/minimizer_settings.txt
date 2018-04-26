@@ -1,6 +1,0 @@
-approx_grad True
-factr       1e10
-iprint      10
-m           5
-pgtol       1e-5
-epsilon     1e-8
