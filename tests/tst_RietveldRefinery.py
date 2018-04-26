@@ -7,8 +7,8 @@ from random import randrange
 import sys, os
 sys.path.append(os.path.abspath(".."))
 
-from RietveldPhases import RietveldPhases
-from RietveldRefinery import RietveldRefinery
+from src.RietveldPhases import RietveldPhases
+from src.RietveldRefinery import RietveldRefinery
 
 from cctbx.eltbx import wavelengths
 from libtbx import test_utils
@@ -53,7 +53,7 @@ display_plots = True #: Only use to see sample plots
 # with open(r"17_05_23_0014_NIST SRM 1976b.xye") as file:
 # with open(r"16_01_07_0010_Aspirin_HighRez.xye") as file:
 # with open(r"16_03_09_0015_Silver Behenate.xye") as file:
-with open(r"Jade-Al2O3-Sim.xye") as file:
+with open(r"..//data//profiles//Jade-Al2O3-Sim.xye") as file:
    for line in file.readlines():#[4:]:
       # two_thetatmp, ytmp, ztmp = line.split()
       two_thetatmp, ytmp = line.split()
@@ -73,7 +73,8 @@ def exercise_Rietveld_Refinery_SinglePhase():
       tst_two_theta,tst_y)
 
    Rt = []
-   Rt.append(RietveldPhases(cifs[0],input_strings[0],d_min,d_max, \
+   Rt.append(RietveldPhases(r"..//data//cifs//" + cifs[0],
+      d_min,d_max, input_string_or_file_name=input_strings[0],
       delta_theta=2.0,Intensity_Cutoff=0.005))
 
    RR = RietveldRefinery(Rt,minimizer_input_string,
@@ -88,7 +89,8 @@ def exercise_Rietveld_Refinery_Multiphase():
 
    Rt = []
    for cif,input_string in zip(cifs,input_strings):
-      Rt.append(RietveldPhases(cif,input_string,d_min,d_max, \
+      Rt.append(RietveldPhases(r"..//data//cifs//" + cif, d_min,d_max, 
+         input_string_or_file_name=input_string,
          delta_theta=2.0,Intensity_Cutoff=0.005))
 
    RR = RietveldRefinery(Rt,minimizer_input_string,
