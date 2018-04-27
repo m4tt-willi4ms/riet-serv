@@ -11,7 +11,7 @@ from scipy.optimize import minimize
 import json,codecs
 import operator
 
-from RietveldPhases import RietveldPhases
+from rietveld_phases import RietveldPhases
 
 default_factr = 1e2
 default_iprint = 1

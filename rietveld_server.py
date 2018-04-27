@@ -5,12 +5,14 @@ from twisted.python import log
 import json
 import sys, os
 
-import src.RietveldPhases as rietveld_phases
-import src.RietveldRefinery as rietveld_refinery
+import src.rietveld_phases as rp
+import src.rietveld_refinery as rr
 
 class RietveldServer(basic.LineReceiver):
    delimiter = b'\n'
    calc_flag = False
+   err_flag = False
+   phase_list = []
 
    def connectionMade(self):
       self.sendLine(b'Connected. Type <help> [command] for info.')
@@ -36,8 +38,8 @@ class RietveldServer(basic.LineReceiver):
             print command, args
             method(*args)
          except Exception as e:
-            pass
-            # self.sendLine(b'Error: ' + str(e).encode("ascii"))
+            # pass
+            self.sendLine(b'Error: ' + str(e).encode("ascii"))
 
    def call_exit(self):
       """exit: shuts down the TCP server"""
@@ -45,10 +47,36 @@ class RietveldServer(basic.LineReceiver):
       self.transport.loseConnection()
       # reactor.stop()
 
+   def call_load_profile(self, profile_path):
+      try:
+         assert type(profile_path) == unicode
+         rp.RietveldPhases.set_profile(profile_path)
+         profile_filename = os.path.split(profile_path)[1]
+         self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
+      except:
+         log.err()
+
+   def call_add_phase(self, cif_path):
+      """add_phase: appends a phase to the server's phase list"""
+      try:
+         assert type(cif_path) == unicode
+         self.phase_list.append(rp.RietveldPhases(cif_path))
+         self.sendLine(b'Added {0} to the server\'s phase list'.format(
+            self.phase_list[-1].chemical_name))
+      except:
+         log.err()
+
+   def call_get_phase_info(self, index):
+      """get_phase_info: returns a json-serialized dictionary containing
+   relevant phase information"""
+      index = int(index)
+      info = json.dumps(self.phase_list[index].get_phase_info())
+      self.sendLine(info)
+
    def call_reset(self):
-      """reset: drops the loaded list of images, roi's and sets the image
-parameters to their defaults"""
-      self.sendLine(b'''Resetting''')
+      """reset: drops the loaded list of phases"""
+      self.phase_list = []
+      self.sendLine(b'Resetting')
 
    def call_help(self, command=None):
       """help [command]: List commands, or show help on the given command"""

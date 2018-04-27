@@ -17,10 +17,12 @@ class EchoClient(LineReceiver):
     """Once connected, send a message, then print the result."""
     messages = [
         'help',
-        'help reset',
+        # 'help reset',
+        'load_profile .\data\profiles\d5_05005.xye',
+        'add_phase .\data\cifs\9015662-rutile.cif',
         # 'writeJSON',
-        'loadJSON',
-        'reset',
+        # 'loadJSON',
+        # 'reset',
         # 'exit',
         ]
 
@@ -29,16 +31,15 @@ class EchoClient(LineReceiver):
 
     def connectionMade(self):
         self.setRawMode()
-        reactor.callLater(0,self.sendMessage, self.messages.pop(0))
 
     def rawDataReceived(self, data):
-    #     # "As soon as any data is received, write it back."
         print "Received:", data
         self.clearLineBuffer()
+        delay = 0.2
         if len(self.messages) > 0:
-            reactor.callLater(0.2,self.sendMessage, self.messages.pop(0))
+            reactor.callLater(delay,self.sendMessage, self.messages.pop(0))
         else:
-            self.transport.loseConnection()
+            reactor.callLater(delay,self.transport.loseConnection)
 
     def connectionLost(self, reason):
         print "connection lost"

@@ -840,3 +840,6 @@ class RietveldPhases:
       return np.abs(
          self.two_theta-RietveldPhases.two_theta_0['values']
          - self.two_theta_peaks) < self.delta_theta
+
+   def get_phase_info(self):
+      return dict(("placeholder", 2))
