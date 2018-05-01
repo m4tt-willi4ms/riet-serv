@@ -1,26 +1,18 @@
 from __future__ import division
 import numpy as np
 import time
-import matplotlib.pyplot as plt
 from random import randrange
 import profile, pstats
 import pytest
 import copy
 
-import sys, os
-sys.path.append(os.path.abspath(".."))
+from src.rietveld_phases import RietveldPhases as Rp
+from src.rietveld_refinery import RietveldRefinery
 
-import src.RietveldPhases as RietveldPhases
-from src.RietveldPhases import RietveldPhases as Rp
-from src.RietveldRefinery import RietveldRefinery
+import src.cctbx_dep.target_wavelengths
 
-from cctbx.eltbx import wavelengths
-
-# class RietveldPhasesTest(unittest.TestCase):
-
-#    def setUp(self):
 Rp.set_profile(
-   r"./data/profiles/Jade-Al2O3-Sim.xye",number_of_columns=2)
+   r"./data/profiles/Jade-Al2O3-Sim.xye", number_of_columns=2)
 
 def test_data_read_in():
    assert len(Rp.two_theta) == 4250

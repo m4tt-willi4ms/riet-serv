@@ -13,13 +13,14 @@ from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineReceiver
 
 
-class EchoClient(LineReceiver):
+class RietveldClient(LineReceiver):
     """Once connected, send a message, then print the result."""
     messages = [
         'help',
         # 'help reset',
         'load_profile .\data\profiles\d5_05005.xye',
         'add_phase .\data\cifs\9015662-rutile.cif',
+        'get_phase_info',
         # 'writeJSON',
         # 'loadJSON',
         # 'reset',
@@ -44,8 +45,8 @@ class EchoClient(LineReceiver):
     def connectionLost(self, reason):
         print "connection lost"
 
-class EchoFactory(ClientFactory):
-    protocol = EchoClient
+class RietveldClientFactory(ClientFactory):
+    protocol = RietveldClient
 
     def clientConnectionFailed(self, connector, reason):
         print "Connection failed - goodbye!"
@@ -58,7 +59,7 @@ class EchoFactory(ClientFactory):
 
 # this connects the protocol to a server running on port 8000
 def main():
-    f = EchoFactory()
+    f = RietveldClientFactory()
     reactor.connectTCP("localhost", 8007, f)
     reactor.run()
 
