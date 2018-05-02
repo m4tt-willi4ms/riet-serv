@@ -6,6 +6,7 @@ import profile, pstats
 import pytest
 import copy
 
+import src.rietveld_phases as r_p
 from src.rietveld_phases import RietveldPhases as Rp
 from src.rietveld_refinery import RietveldRefinery
 
@@ -16,8 +17,8 @@ Rp.set_profile(
 
 def test_data_read_in():
    assert len(Rp.two_theta) == 4250
-   assert np.isclose(Rp.d_min,1.08934)
-   assert np.isclose(Rp.d_max,17.58881)
+   assert np.isclose(Rp.phase_settings["d_min"], 1.09205)
+   assert np.isclose(Rp.phase_settings["d_max"], 17.58881)
    assert len(Rp.I) == 4250
    assert np.isclose(Rp.two_theta[-1],90)
    assert len(Rp.sigma) == 4250
@@ -29,7 +30,6 @@ def test_global_parameters_exist():
    assert 'bkgd' in Rp_dict
 
 test_phase = Rp("./data/cifs/1000032.cif")
-uc = (4.7605, 4.7605, 12.9956, 90, 90, 120)
 
 def test_parameters_exist():
    tp_dict = test_phase.__dict__
@@ -66,13 +66,13 @@ def test_background_polynomial():
       np.zeros(len(Rp.two_theta),dtype=float)))
 
 def test_U_default():
-   assert test_phase.U.dtype == RietveldPhases.CUSTOM_DTYPE
-   assert test_phase.U['labels'] == RietveldPhases.DEFAULT_U['labels']
-   assert np.isclose(test_phase.U['values'], RietveldPhases.DEFAULT_U['values'])
+   assert test_phase.U.dtype == r_p.CUSTOM_DTYPE
+   assert test_phase.U['labels'] == r_p.DEFAULT_U['labels']
+   assert np.isclose(test_phase.U['values'], r_p.DEFAULT_U['values'])
    assert np.isclose(test_phase.U['l_limits'],
-      RietveldPhases.DEFAULT_U['l_limits'])
+      r_p.DEFAULT_U['l_limits'])
    assert np.isclose(test_phase.U['u_limits'],
-      RietveldPhases.DEFAULT_U['u_limits'])
+      r_p.DEFAULT_U['u_limits'])
 
 def test_set_vertical_offset():
    assert test_phase.vertical_offset == False
@@ -81,13 +81,6 @@ def test_set_vertical_offset():
    assert test_phase.vertical_offset == True
    assert 'cos_theta' in Rp.__dict__
    assert np.isclose(Rp.cos_theta[-1],-360/np.pi/np.sqrt(2))
-
-def test_set_wavelength():
-   Rp.set_wavelength('Co')
-   assert np.isclose(test_phase.wavelength[0],Rp.wavelengths_dict['CoA1'])
-   Rp.set_wavelength('Cu')
-   assert np.isclose(test_phase.wavelength[0],Rp.wavelengths_dict['CuA1'])
-   assert pytest.raises(AssertionError,Rp.set_wavelength,'P')
 
 def test_LP_intensity_scaling():
    assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
@@ -133,7 +126,7 @@ def test_load_cif():
    labels = ['Al1','O1']
    element_symbols = ['Al','O']
    occupancy = 1.0
-   for x,l,s in zip(test_phase.structure.scatterers(),labels,element_symbols):
+   for x,l,s in zip(test_phase.structure.scatterers(), labels, element_symbols):
       assert x.label == l
       assert np.isclose(x.occupancy,occupancy)
       assert x.element_symbol() == s

@@ -127,8 +127,8 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
 
 def set_two_theta_peaks(phase_settings, phase_intensities):
    unit_cell = phase_settings["unit_cell"]
-   f_miller_set = phase_intensities["f_miller_set"]
    wavelengths = phase_settings["wavelengths"]
+   f_miller_set = phase_intensities["f_miller_set"]
    d_mask = phase_intensities["d_mask"]
    two_theta_peaks = np.concatenate((
       unit_cell.two_theta(f_miller_set.indices(), wavelengths[0], deg=True
