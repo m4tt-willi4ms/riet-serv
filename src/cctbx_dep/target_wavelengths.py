@@ -26,22 +26,23 @@ def set_wavelength(phase_settings, target='Cu', wavelength_mode=2):
    elif type(target) == float:
       assert target > 0
       wavelengths = [target]
+   _set_wavelength_only(phase_settings, wavelengths)
 
-   phase_settings["wavelengths"].clear()
-   phase_settings["wavelengths"] = wavelengths
-   phase_settings["K_alpha_factors"].clear()
    phase_settings["K_alpha_factors"] = K_alpha_factors
 
    epsilon = 0.05
    for bound, default_val in zip(("min_two_theta", "max_two_theta"),
-      (0 + epsilon, 180 - epsilon)):
-      try:
+                                 (0 + epsilon, 180 - epsilon)):
+      if bound in phase_settings:
          exec(bound + " = {}".format(phase_settings[bound]))
-      except KeyError:
+      else:
          phase_settings[bound] = default_val
          exec(bound + " = {}".format(default_val))
 
    phase_settings["d_max"] = wavelengths[0]/2/np.sin(np.pi/360*min_two_theta)
    phase_settings["d_min"] = wavelengths[-1]/2/np.sin(np.pi/360*max_two_theta)
 
-def _set_wavelength_only(phase_settings)
+def _set_wavelength_only(phase_settings, wavelength_list):
+   if "wavelengths" in phase_settings:
+      phase_settings["wavelengths"] = []
+   phase_settings["wavelengths"] = wavelength_list

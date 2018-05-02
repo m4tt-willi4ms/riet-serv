@@ -91,10 +91,14 @@ def get_unit_cell_mask(phase_structure_dict):
    assert len(uc_mask) == 6
    return uc_mask
 
-def unit_cell_parameter_gen(uc_params, uc_mask, lattice_dev):
+# def unit_cell_parameter_gen(uc_params, uc_mask, lattice_dev):
+def unit_cell_parameter_gen(phase_settings):
    """returns all unit cell parameters specified by the mask
    (a list of six booleans)
    """
+   uc_params = phase_settings["unit_cell"].parameters()
+   uc_mask = phase_settings["uc_mask"]
+   lattice_dev = phase_settings["lattice_dev"]
    uc_labels = ["a", "b", "c", "alpha", "beta", "gamma"]
    for i in xrange(6):
       if uc_mask[i]:
@@ -111,12 +115,8 @@ def assemble_lattice_params(phase_settings, d_type):
    """
    uc_mask = get_unit_cell_mask(phase_settings)
    phase_settings["uc_mask"] = uc_mask
-   lattice_dev = phase_settings["lattice_dev"]
-   uc_params = phase_settings["unit_cell"].parameters()
-   return np.array(
-      [x for x in unit_cell_parameter_gen(uc_params, uc_mask, lattice_dev)],
+   return np.array([x for x in unit_cell_parameter_gen(phase_settings)],
       dtype=d_type)
-
 
 def set_lattice_parameters(self):
    """Returns a numpy array consisting of the lattice parameters

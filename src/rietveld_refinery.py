@@ -300,7 +300,8 @@ class RietveldRefinery:
       # print "\n"
       self.composition_by_volume = np.zeros(len(self.phase_list))
       for i,val in np.ndenumerate(Scales):
-         density = self.phase_list[i[0]].phase_settings["crystal_density"]
+         print self.phase_list[i[0]].phase_settings.keys()
+         density = self.phase_list[i[0]].phase_data["crystal_density"]
          weight_moments.append(val*density)
          self.composition_by_volume[i] = val/total*100
          # print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"

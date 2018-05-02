@@ -1,5 +1,4 @@
 from __future__ import division
-from collections import namedtuple
 import os
 import time
 import inspect
@@ -149,10 +148,10 @@ class RietveldPhases:
         RietveldPhases instances.
 
     """
-    refinement_parameter = namedtuple(
-        'refinement_parameter', ['value', 'refine', 'l_limit', 'u_limit'])
+    # refinement_parameter = namedtuple(
+    #     'refinement_parameter', ['value', 'refine', 'l_limit', 'u_limit'])
 
-    U_TUP = refinement_parameter(*DEFAULT_U_TUP)
+    # U_TUP = refinement_parameter(*DEFAULT_U_TUP)
 
     custom_dtype = CUSTOM_DTYPE
 
@@ -178,28 +177,7 @@ class RietveldPhases:
     two_theta = None
     I = None
 
-    # @classmethod
-    # def set_wavelength(cls, target='Cu', mode=2):
-    #    import src.target_wavelengths as wv
-    #    if type(target) == str:
-    #       assert target in wv.targets
-    #       if mode == 1:
-    #          wavelengths = [wv.wavelengths_dict[target+"A1"]]
-    #       if mode == 2:
-    #          wavelengths = [
-    #             wv.wavelengths_dict[target+"A1"],
-    #             wv.wavelengths_dict[target+"A2"],
-    #             ]
-    #    elif type(target) == float:
-    #       assert target > 0
-    #       wavelengths = [target]
-
-    #    cls.phase_settings["wavelengths"] = wavelengths
-
-    #    cls.phase_settings["d_max"] = \
-    #       wavelengths[0]/2/np.sin(np.pi/360*cls.two_theta[0])
-    #    cls.phase_settings["d_min"] = \
-    #       wavelengths[-1]/2/np.sin(np.pi/360*cls.two_theta[-1])
+    bkgd = None
 
     @classmethod
     def set_bkgd_order(cls, order):
@@ -300,8 +278,6 @@ class RietveldPhases:
         target_wavelengths.set_wavelength(cls.phase_settings,
             target=target, wavelength_mode=wavelength_mode)
 
-        cls.set_bkgd_order(DEFAULT_BKGD_ORDER)
-
     @classmethod
     def background_polynomial(cls):
         r""" Returns a numpy array populated by the values of a background
@@ -341,6 +317,7 @@ class RietveldPhases:
 
     @classmethod
     def assemble_global_x(cls):
+        #TODO: generate dynamically
         cls.global_x = np.hstack((x for x in cls.global_param_gen()))
         cls.global_x_no_bkgd_mask = np.invert(
             np.char.startswith(cls.global_x['labels'], 'bkgd'))
@@ -372,6 +349,8 @@ class RietveldPhases:
 
         self.file_path_cif = file_path_cif
 
+        self.set_bkgd_order(DEFAULT_BKGD_ORDER)
+
         if I_max is not None:
             self.I_max = I_max
         else:
@@ -402,8 +381,9 @@ class RietveldPhases:
         RietveldPhases.assemble_global_x()
         self.assemble_phase_x()
 
-        self.Scale['values'] = self.Scale['values']* \
-            self.I_max/np.amax(self.phase_profile())
+        if RietveldPhases.two_theta is not None:
+            self.Scale['values'] = self.Scale['values']* \
+                self.I_max/np.amax(self.phase_profile())
 
     def phase_param_gen(self):
         yield self.U
@@ -440,24 +420,26 @@ class RietveldPhases:
         self.lattice_parameters = self.phase_x[4+self.eta.shape[0]:
                                                4+self.eta.shape[0]
                                             +self.lattice_parameters.shape[0]]
-        self.phase_intensities = phase_from_cif.compute_relative_intensities(
+        self.phase_data = phase_from_cif.compute_relative_intensities(
             self.phase_settings)
-        self.masks = peak_masking.peak_masks(self.two_theta,
-            self.two_theta_0['values'],
-            self.phase_intensities["two_theta_peaks"],
-            self.phase_settings["delta_theta"])
+        if RietveldPhases.two_theta is not None:
+            self.masks = peak_masking.peak_masks(self.two_theta,
+                self.two_theta_0['values'],
+                self.phase_data["two_theta_peaks"],
+                self.phase_settings["delta_theta"])
 
     def update_params(self, phase_x, mask=None):
         if mask is None:
             self.phase_x = phase_x
         else:
             self.phase_x[mask] = phase_x[mask]
-        if self.recompute_peak_positions:
+        if self.phase_settings["recompute_peak_positions"]:
             #TODO: only update if lattice parameter is updated
-            self.update_unit_cell()
+            unit_cell.update_unit_cell(self.phase_settings,
+                self.lattice_parameters)
 
     def set_masked_arrays(self):
-        two_theta_peaks = self.phase_intensities["two_theta_peaks"]
+        two_theta_peaks = self.phase_data["two_theta_peaks"]
         two_theta = RietveldPhases.two_theta
         masks = self.masks
         dim = (len(two_theta_peaks), len(two_theta))
@@ -468,7 +450,7 @@ class RietveldPhases:
         self.two_theta_peaks_masked = peak_masking.get_masked_array(
             two_theta_peaks, dim, masks)
 
-        tan_two_theta_peaks = self.phase_intensities["tan_two_theta_peaks"]
+        tan_two_theta_peaks = self.phase_data["tan_two_theta_peaks"]
         self.tan_two_theta_peaks_masked = peak_masking.get_masked_array(
             tan_two_theta_peaks, dim, masks)
         self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2
@@ -476,7 +458,7 @@ class RietveldPhases:
         self.LP_factors_masked = peak_masking.get_masked_array(
             RietveldPhases.LP_intensity_scaling(), dim, masks)
 
-        weighted_intensities = self.phase_intensities["weighted_intensities"]
+        weighted_intensities = self.phase_data["weighted_intensities"]
         self.weighted_intensities_masked = peak_masking.get_masked_array(
             weighted_intensities, dim, masks)
         self.eta_masked = peak_masking.get_masked_array(
@@ -497,9 +479,10 @@ class RietveldPhases:
     def update_two_thetas(self, anomalous_flag=False):
         unit_cell.update_unit_cell(self.phase_settings, self.lattice_parameters)
         phase_from_cif.set_two_theta_peaks(self.phase_settings,
-            self.phase_intensities)
+            self.phase_data)
         # self.masks = self.peak_masks()
-        self.set_masked_arrays()
+        if RietveldPhases.two_theta is not None:
+            self.set_masked_arrays()
 
     def set_eta_order(self, order):
         self.eta_order = RietveldPhases.validate_order(order)
@@ -541,7 +524,7 @@ class RietveldPhases:
         if self.phase_settings["recompute_peak_positions"]:
             self.update_two_thetas()
         # print "called phase_profile()", inspect.stack()[1][3]
-        two_theta_peaks = self.phase_intensities["two_theta_peaks"]
+        two_theta_peaks = self.phase_data["two_theta_peaks"]
         result = np.zeros((len(two_theta_peaks), len(self.two_theta)))
 
         omegaUVW_squareds = \
@@ -608,8 +591,6 @@ class RietveldPhases:
 
         # print np.sum(result, axis=1)
         return result
-
-
 
     def get_phase_info(self):
         d = {}

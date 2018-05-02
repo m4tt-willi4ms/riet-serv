@@ -92,6 +92,10 @@ def test_LP_intensity_scaling():
          /np.sin(np.pi/360*two_theta) \
          /np.sin(np.pi/180*two_theta)))
    Rp.two_theta_0['values'] = 0.0
+   assert not np.all(np.isclose(Rp.LP_intensity_scaling(),
+      (1+np.cos(np.pi/180*two_theta)**2) \
+         /np.sin(np.pi/360*two_theta) \
+         /np.sin(np.pi/180*two_theta)))
 
 def test_assemble_global_x():
    #assemble_global_x() is called in RietveldPhases' __init__
@@ -118,50 +122,6 @@ def test_phase_param_gen():
    for x in test_phase.phase_param_gen():
       count += 1
    assert count == 6
-
-def test_load_cif():
-   #load_cif() is called in RietveldPhases' __init__
-   tp_dict = test_phase.__dict__
-   assert 'structure' in tp_dict
-   labels = ['Al1','O1']
-   element_symbols = ['Al','O']
-   occupancy = 1.0
-   for x,l,s in zip(test_phase.structure.scatterers(), labels, element_symbols):
-      assert x.label == l
-      assert np.isclose(x.occupancy,occupancy)
-      assert x.element_symbol() == s
-      print x.report_details(test_phase.unit_cell,'')
-
-   assert 'unit_cell' in tp_dict
-   print test_phase.unit_cell.parameters()
-   for x,y in zip(test_phase.unit_cell.parameters(), uc):
-      assert np.isclose(x,y)
-
-   assert 'crystal_system' in tp_dict
-   assert type(test_phase.crystal_system) is str
-   test_phase.load_cif(test_phase.fn_cif,d_min = Rp.d_min)
-   assert test_phase.crystal_system == 'Trigonal'
-   test_phase.assemble_lattice_params()
-   assert test_phase.crystal_system == 'HTrigonal'
-
-   assert 'chemical_name' in tp_dict
-   assert test_phase.chemical_name == 'Corundum'
-
-def test_assemble_lattice_params():
-   assert 'uc_mask' in test_phase.__dict__
-   assert len(test_phase.uc_mask) == 6
-
-def test_unit_cell_parameter_gen():
-   tp_uc_gen = test_phase.unit_cell_parameter_gen()
-   assert next(tp_uc_gen)[0] == 'uc_a'
-   assert np.isclose(next(tp_uc_gen)[1],test_phase.unit_cell.parameters()[2])
-
-   uc_mask = copy.deepcopy(test_phase.uc_mask)
-   test_phase.uc_mask = np.ones(6,dtype=bool)
-   uc_params = test_phase.unit_cell.parameters()
-   for i,x in enumerate(test_phase.unit_cell_parameter_gen()):
-      assert np.isclose(uc_params[i],x[1])
-   test_phase.uc_mask = uc_mask
 
 def test_assemble_phase_x():
    #assemble_phase_x() is called in RietveldPhases' __init__
@@ -194,10 +154,10 @@ def test_update_params():
    tmp_x['values'][mask] = 2
    print tmp_x['values'][mask]
    test_phase.update_params(tmp_x)
-   print test_phase.recompute_peak_positions
-   print test_phase.phase_x
-   print test_phase.lattice_parameters
-   print test_phase.unit_cell.parameters()
+   # print test_phase.recompute_peak_positions
+   # print test_phase.phase_x
+   # print test_phase.lattice_parameters
+   # print test_phase.unit_cell.parameters()
    #assert False TODO: fix lattice_parameter part of test
 
 def test_eta_polynomial():
@@ -211,19 +171,20 @@ def test_eta_polynomial():
    test_phase.eta['values'] = np.array([0.5,0])
 
 def test_compute_relative_intensities():
-   tp_dict = test_phase.__dict__
-   assert 'f_miller_set' in tp_dict
+   tp_dict = test_phase.phase_data
    assert 'crystal_density' in tp_dict
+   assert 'f_miller_set' in tp_dict
    assert 'd_spacings' in tp_dict
    assert 'relative_intensities' in tp_dict
 
-   assert np.all(np.isclose(test_phase.d_spacings, np.array(
+   assert np.all(np.isclose(test_phase.phase_data["d_spacings"], np.array(
       [ 3.48114434,  2.55177292,  2.38025   ,  2.0860757 ,  1.74057217,
         1.60196736,  1.54715716,  1.51527741,  1.51135808,  1.40499663,
         1.37423798,  1.3364588 ,  1.27588646,  1.23944057,  1.23455034,
         1.19354167,  1.190125  ,  1.14760201,  1.12613194,  1.12452033,
         1.09932894])))
-   assert np.all(np.isclose(test_phase.relative_intensities, np.array(
+   assert np.all(np.isclose(test_phase.phase_data["relative_intensities"],
+      np.array(
       [ 0.19906132,  0.61069362,  0.29855677,  1.18211397,  0.86296333,
         2.11656703,  0.05664854,  0.08304719,  0.18443051,  1.14926644,
         1.85168419,  0.03841942,  0.0587068 ,  0.69865033,  0.35418387,

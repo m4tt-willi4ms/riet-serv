@@ -55,7 +55,7 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
       :rtype: numpy array
 
    """
-   phase_intensity_dict = {}
+   phase_data = {}
 
    structure = phase_settings["structure"]
    unit_cell = phase_settings["unit_cell"]
@@ -73,7 +73,7 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
                                         anomalous_flag=anomalous_flag
                                        ).f_calc().sort()
 
-   phase_intensity_dict["crystal_density"] = structure.crystal_density()
+   phase_data["crystal_density"] = structure.crystal_density()
    unit_cell_volume = unit_cell.volume()
 
    f_calc_sq = f_calc.as_intensity_array().sort().data() \
@@ -96,10 +96,10 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
       d_spacings = d_spacings[d_mask]
       relative_intensities = relative_intensities[d_mask]
 
-   phase_intensity_dict["f_miller_set"] = f_miller_set
-   phase_intensity_dict["d_spacings"] = d_spacings
-   phase_intensity_dict["relative_intensities"] = relative_intensities
-   phase_intensity_dict["d_mask"] = d_mask
+   phase_data["f_miller_set"] = f_miller_set
+   phase_data["d_spacings"] = d_spacings
+   phase_data["relative_intensities"] = relative_intensities
+   phase_data["d_mask"] = d_mask
 
    # two_thetas = np.zeros((2,len(self.d_spacings)))
    # # factors = np.zeros((2,len(self.d_spacings)))
@@ -117,19 +117,19 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
        K_alpha_factors[1]*relative_intensities))
    weighted_intensities.shape = (weighted_intensities.shape[0], 1)
 
-   phase_intensity_dict["weighted_intensities"] = weighted_intensities
+   phase_data["weighted_intensities"] = weighted_intensities
 
-   set_two_theta_peaks(phase_settings, phase_intensity_dict)
+   set_two_theta_peaks(phase_settings, phase_data)
    # self.masks = self.peak_masks()
    # self.set_masked_arrays()
 
-   return phase_intensity_dict
+   return phase_data
 
-def set_two_theta_peaks(phase_settings, phase_intensities):
+def set_two_theta_peaks(phase_settings, phase_data):
    unit_cell = phase_settings["unit_cell"]
    wavelengths = phase_settings["wavelengths"]
-   f_miller_set = phase_intensities["f_miller_set"]
-   d_mask = phase_intensities["d_mask"]
+   f_miller_set = phase_data["f_miller_set"]
+   d_mask = phase_data["d_mask"]
    two_theta_peaks = np.concatenate((
       unit_cell.two_theta(f_miller_set.indices(), wavelengths[0], deg=True
                          ).as_numpy_array()[d_mask],
@@ -141,5 +141,5 @@ def set_two_theta_peaks(phase_settings, phase_intensities):
    tan_two_theta_peaks = np.tan(np.pi/360.0*two_theta_peaks)
    tan_two_theta_peaks.shape = (tan_two_theta_peaks.shape[0], 1)
 
-   phase_intensities["two_theta_peaks"] = two_theta_peaks
-   phase_intensities["tan_two_theta_peaks"] = tan_two_theta_peaks
+   phase_data["two_theta_peaks"] = two_theta_peaks
+   phase_data["tan_two_theta_peaks"] = tan_two_theta_peaks
