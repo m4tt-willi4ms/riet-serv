@@ -29,8 +29,7 @@ def test_load_cif():
 
    assert 'crystal_system' in test_phase_settings
    assert type(test_phase_settings["crystal_system"]) is str
-   d_min = test_phase_settings["d_min"]
-   pfc.load_cif(test_phase.file_path_cif, d_min = d_min)
+   pfc.load_cif(test_phase.file_path_cif)
    assert test_phase_settings["crystal_system"] == 'Trigonal'
    unit_cell.assemble_lattice_params(test_phase.phase_settings, Rp.custom_dtype)
    assert test_phase_settings["crystal_system_trigonal"] == 'H'

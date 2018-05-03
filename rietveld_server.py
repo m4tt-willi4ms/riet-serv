@@ -47,9 +47,9 @@ class RietveldServer(basic.LineReceiver):
       self.transport.loseConnection()
       # reactor.stop()
 
-   def get_target():
+   # def get_target():
 
-      self.sendLine()
+   #    self.sendLine()
 
    def call_set_wavelength(self, target, mode):
       try:
@@ -73,17 +73,26 @@ class RietveldServer(basic.LineReceiver):
          assert type(cif_path) == unicode
          self.phase_list.append(rp.RietveldPhases(cif_path))
          self.sendLine(b'Added {0} to the server\'s phase list'.format(
-            self.phase_list[-1].chemical_name))
+            self.phase_list[-1].phase_settings["chemical_name"]))
       except:
          log.err()
 
    def call_get_phase_info(self, index=u'-1'):
       """get_phase_info [index]: returns a json-serialized dictionary containing
-   relevant phase information. If no index is specified, information for the
-   most-recently loaded phase is returned"""
+relevant phase information. If no index is specified, information for the
+most-recently loaded phase is returned"""
       index = int(index)
       info = json.dumps(self.phase_list[index].get_phase_info(), indent=4)
       self.sendLine(info)
+
+   def call_get_phase_profile(self, index=u'-1'):
+      """get_phase_profile [index]: returns a json-serialized list containing
+the phase profile data. If no index is specified, information for the
+most-recently loaded phase is returned"""
+      index = int(index)
+      profile = json.dumps(list(self.phase_list[index].phase_profile()),
+         indent=4)
+      self.sendLine(profile)
 
    def call_reset(self):
       """reset: drops the loaded list of phases"""

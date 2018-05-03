@@ -176,6 +176,7 @@ class RietveldPhases:
 
     two_theta = None
     I = None
+    sigma = None
 
     bkgd = None
 
@@ -268,15 +269,22 @@ class RietveldPhases:
         cls.sigma = cls.sigma[min_max_mask]
         cls.two_theta = cls.two_theta[min_max_mask]
 
+        cls.set_two_theta_powers_and_limits()
+        cls.set_wavelength(target, wavelength_mode)
+
+    @classmethod
+    def set_wavelength(cls, target, wavelength_mode):
+        target_wavelengths.set_wavelength(cls.phase_settings,
+            target=target, wavelength_mode=wavelength_mode)
+
+    @classmethod
+    def set_two_theta_powers_and_limits(cls):
         cls.phase_settings["min_two_theta"] = cls.two_theta[0]
         cls.phase_settings["max_two_theta"] = cls.two_theta[-1]
 
         max_polynom_order = cls.phase_settings["max_polynom_order"]
         cls.two_theta_powers = np.power(cls.two_theta, np.array(
             xrange(0, max_polynom_order)).reshape(max_polynom_order, 1))
-
-        target_wavelengths.set_wavelength(cls.phase_settings,
-            target=target, wavelength_mode=wavelength_mode)
 
     @classmethod
     def background_polynomial(cls):
@@ -363,7 +371,8 @@ class RietveldPhases:
         self.phase_settings["lattice_dev"] = lattice_dev
 
         assert type(recompute_peak_positions) == bool
-        self.phase_settings["recompute_peak_positions"] = recompute_peak_positions
+        self.phase_settings["recompute_peak_positions"] = \
+            recompute_peak_positions
 
         assert profile in profiles.profiles
         self.profile = profile
@@ -372,18 +381,21 @@ class RietveldPhases:
         assert delta_theta > 0
         self.phase_settings["delta_theta"] = delta_theta
 
-        phase_structure_dict = phase_from_cif.load_cif(file_path_cif,
-                d_min=self.phase_settings["d_min"])
+        phase_structure_dict = phase_from_cif.load_cif(file_path_cif)
         self.phase_settings.update(phase_structure_dict)
 
         # self.uc_mask = [True,True,True,True,True,True,]
         # self.lattice_parameters = self.set_lattice_parameters()
+
+        if RietveldPhases.two_theta is None:
+            RietveldPhases.two_theta = np.linspace(0.05, 100, num=1000)
+            RietveldPhases.set_two_theta_powers_and_limits()
+
         RietveldPhases.assemble_global_x()
         self.assemble_phase_x()
 
-        if RietveldPhases.two_theta is not None:
-            self.Scale['values'] = self.Scale['values']* \
-                self.I_max/np.amax(self.phase_profile())
+        self.Scale['values'] = self.Scale['values']* \
+            self.I_max/np.amax(self.phase_profile())
 
     def phase_param_gen(self):
         yield self.U
@@ -422,11 +434,10 @@ class RietveldPhases:
                                             +self.lattice_parameters.shape[0]]
         self.phase_data = phase_from_cif.compute_relative_intensities(
             self.phase_settings)
-        if RietveldPhases.two_theta is not None:
-            self.masks = peak_masking.peak_masks(self.two_theta,
-                self.two_theta_0['values'],
-                self.phase_data["two_theta_peaks"],
-                self.phase_settings["delta_theta"])
+        self.masks = peak_masking.peak_masks(self.two_theta,
+            self.two_theta_0['values'],
+            self.phase_data["two_theta_peaks"],
+            self.phase_settings["delta_theta"])
 
     def update_params(self, phase_x, mask=None):
         if mask is None:
@@ -481,8 +492,7 @@ class RietveldPhases:
         phase_from_cif.set_two_theta_peaks(self.phase_settings,
             self.phase_data)
         # self.masks = self.peak_masks()
-        if RietveldPhases.two_theta is not None:
-            self.set_masked_arrays()
+        self.set_masked_arrays()
 
     def set_eta_order(self, order):
         self.eta_order = RietveldPhases.validate_order(order)

@@ -21,6 +21,7 @@ class RietveldClient(LineReceiver):
         'load_profile .\data\profiles\d5_05005.xye',
         'add_phase .\data\cifs\9015662-rutile.cif',
         'get_phase_info',
+        'get_phase_profile',
         # 'writeJSON',
         # 'loadJSON',
         # 'reset',

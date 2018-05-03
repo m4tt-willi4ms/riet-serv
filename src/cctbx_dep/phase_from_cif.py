@@ -1,38 +1,39 @@
+"""
+   This module gathers together code used to populate the phase_settings
+   dictionary using cctbx's iotbx.cif module.
+"""
 import os
 import numpy as np
 
 import iotbx.cif
-# from cctbx import xray, miller #, crystal, uctbx
 
-def load_cif(file_path, d_min=1.0):
-   """Reads in a unit cell, crystal structure from iotbx
+def load_cif(file_path):
+   """Reads in a unit cell, crystal structure, crystal system from iotbx
 
       :param str file_path: The file name
-      :param float d_min: Minimum d-spacing
 
    """
-   phase_structure_dict = {}
-   with open(file_path, 'r') as file:
-      as_cif = file.read()
+   phase_settings = {}
+   with open(file_path, 'r') as opened_file:
+      as_cif = opened_file.read()
    cif_reader = iotbx.cif.reader(input_string=as_cif)
    structure = cif_reader.build_crystal_structures() \
       [os.path.split(file_path)[1][0:7]]
-   phase_structure_dict["structure"] = structure
-   phase_structure_dict["unit_cell"] = structure.unit_cell()
-   phase_structure_dict["crystal_system"] = \
+   phase_settings["structure"] = structure
+   phase_settings["unit_cell"] = structure.unit_cell()
+   phase_settings["crystal_system"] = \
       structure.space_group().crystal_system()
 
    cif_model = cif_reader.model()
    try:
-      # print cif_model[os.path.split(file_path)[1][0:7]]['_chemical_name_mineral']
-      phase_structure_dict["chemical_name"] = \
+      phase_settings["chemical_name"] = \
          cif_model[os.path.split(file_path)[1][0:7]]['_chemical_name_mineral']
    except KeyError:
       try:
-         phase_structure_dict["chemical_name"] = cif_model[os.path.split(
+         phase_settings["chemical_name"] = cif_model[os.path.split(
             file_path)[1][0:7]]['_chemical_name_systematic']
       except KeyError:
-         phase_structure_dict["chemical_name"] = os.path.split(file_path)[1]
+         phase_settings["chemical_name"] = os.path.split(file_path)[1]
 
    for scatterer in structure.scatterers():
       if scatterer.scattering_type == "O-2":
@@ -42,7 +43,7 @@ def load_cif(file_path, d_min=1.0):
       if scatterer.scattering_type == "Si+4":
          scatterer.scattering_type = "Si4+"
 
-   return phase_structure_dict
+   return phase_settings
 
 def compute_relative_intensities(phase_settings, anomalous_flag=True):
    r"""Returns squared structure factors, weighted by the multiplicity of

@@ -12,9 +12,9 @@ class ClientCalculationTestCase(unittest.TestCase):
 
     def _test(self, cmd, expected, result=None):
         cmd_parts = cmd.split()
+        self.tr.clear()
         d = getattr(self.proto, 'call_' + cmd_parts[0])(*cmd_parts[1:])
         self.assertEqual(self.tr.value(), expected)
-        self.tr.clear()
         return d
 
 #     def test_help(self):

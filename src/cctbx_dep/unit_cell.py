@@ -1,8 +1,19 @@
+'''
+This module groups together some custom methods used for masking, updating
+the unit-cell parameters.
+'''
 import numpy as np
 
 from cctbx import uctbx
 
 def update_unit_cell(phase_settings, lattice_parameters):
+   '''
+      This function takes in a phase_settings dict containing the keywords
+      `crystal_system` (and possibly `crystal_system_trigonal`), `uc_mask` ---
+      as well as a numpy array of lattice parameters --- and updates the
+      `unit_cell` phase_setting according to the values in `lattice_parameters`.
+
+   '''
    crystal_system = phase_settings["crystal_system"]
    uc_mask = phase_settings["uc_mask"]
 
@@ -56,9 +67,15 @@ def update_unit_cell(phase_settings, lattice_parameters):
 
    phase_settings["unit_cell"] = unit_cell
 
-def get_unit_cell_mask(phase_structure_dict):
-   uc_params = phase_structure_dict["unit_cell"].parameters()
-   crystal_system = phase_structure_dict["crystal_system"]
+def get_unit_cell_mask(phase_settings):
+   '''
+      Given a phase_settings dictionary with the entries `unit_cell` and
+      `crystal_system`, a unit-cell mask is generated to filter only those
+      unit-cell parameters which are independently-refinable.
+
+   '''
+   uc_params = phase_settings["unit_cell"].parameters()
+   crystal_system = phase_settings["crystal_system"]
    if crystal_system == "Triclinic":
       uc_mask = [True, True, True, True, True, True]
    elif crystal_system == "Monoclinic":
@@ -79,10 +96,10 @@ def get_unit_cell_mask(phase_structure_dict):
       if np.isclose(uc_params[3], uc_params[4]) and \
          np.isclose(uc_params[3], uc_params[5]):
          uc_mask = [True, False, False, True, False, False]
-         phase_structure_dict["crystal_system_trigonal"] = "R"
+         phase_settings["crystal_system_trigonal"] = "R"
       else:
          uc_mask = [True, False, True, False, False, False]
-         phase_structure_dict["crystal_system_trigonal"] = "H"
+         phase_settings["crystal_system_trigonal"] = "H"
    elif crystal_system == "Hexagonal":
       uc_mask = [True, False, True, False, False, False]
    elif crystal_system == "Cubic":
@@ -91,7 +108,6 @@ def get_unit_cell_mask(phase_structure_dict):
    assert len(uc_mask) == 6
    return uc_mask
 
-# def unit_cell_parameter_gen(uc_params, uc_mask, lattice_dev):
 def unit_cell_parameter_gen(phase_settings):
    """returns all unit cell parameters specified by the mask
    (a list of six booleans)
@@ -116,12 +132,4 @@ def assemble_lattice_params(phase_settings, d_type):
    uc_mask = get_unit_cell_mask(phase_settings)
    phase_settings["uc_mask"] = uc_mask
    return np.array([x for x in unit_cell_parameter_gen(phase_settings)],
-      dtype=d_type)
-
-def set_lattice_parameters(self):
-   """Returns a numpy array consisting of the lattice parameters
-
-   """
-   self.lattice_parameters = np.array(
-      [x for x in self.unit_cell_parameter_gen()], dtype=CUSTOM_DTYPE)
-   return self.lattice_parameters
+                   dtype=d_type)
