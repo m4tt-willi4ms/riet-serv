@@ -11,6 +11,7 @@ import peak_masking
 import src.cctbx_dep.phase_from_cif as phase_from_cif
 import src.cctbx_dep.unit_cell as unit_cell
 import src.cctbx_dep.target_wavelengths as target_wavelengths
+from global_parameters import GlobalParameters
 
 CUSTOM_DTYPE = np.dtype([
     ('labels', 'S12'),
@@ -20,7 +21,7 @@ CUSTOM_DTYPE = np.dtype([
     # ('round','i4')
     ])
 
-
+DEFAULT_MAX_POLYNOM_ORDER = 5
 DEFAULT_BKGD_ORDER = 3
 DEFAULT_TWO_THETA_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
                                          dtype=CUSTOM_DTYPE)
@@ -37,6 +38,14 @@ DEFAULT_INTENSITY_CUTOFF = 0.01
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01
 DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
+
+def validate_order(order, max_polynom_order=DEFAULT_MAX_POLYNOM_ORDER):
+    assert isinstance(order, int)
+    if order > max_polynom_order:
+        order = max_polynom_order
+    elif order < 1:
+        order = 1
+    return order
 
 class RietveldPhases:
     r"""
@@ -148,14 +157,12 @@ class RietveldPhases:
         RietveldPhases instances.
 
     """
-    # refinement_parameter = namedtuple(
-    #     'refinement_parameter', ['value', 'refine', 'l_limit', 'u_limit'])
 
-    # U_TUP = refinement_parameter(*DEFAULT_U_TUP)
+    global_params = GlobalParameters(validate_order_func=validate_order)
 
     custom_dtype = CUSTOM_DTYPE
 
-    bkgd_order = DEFAULT_BKGD_ORDER
+    # bkgd_order = DEFAULT_BKGD_ORDER
 
     Scale = DEFAULT_SCALE
     U = DEFAULT_U
@@ -163,8 +170,8 @@ class RietveldPhases:
     W = DEFAULT_W
     eta_order = DEFAULT_ETA_ORDER
 
-    two_theta_0 = DEFAULT_TWO_THETA_0
-    vertical_offset = DEFAULT_VERTICAL_OFFSET
+    # two_theta_0 = DEFAULT_TWO_THETA_0
+    # vertical_offset = DEFAULT_VERTICAL_OFFSET
 
     phase_settings = {}
 
@@ -178,62 +185,62 @@ class RietveldPhases:
     I = None
     sigma = None
 
-    bkgd = None
+    # bkgd = None
 
-    @classmethod
-    def set_bkgd_order(cls, order):
-        r'''
-        This method sets the order of the background polynomial, `bkgd`.
+    # @classmethod
+    # def set_bkgd_order(cls, order):
+    #     r'''
+    #     This method sets the order of the background polynomial, `bkgd`.
 
-        (Strictly speaking, `order` is the number of parameters :math:`c_i` in
-        the polynomial
+    #     (Strictly speaking, `order` is the number of parameters :math:`c_i` in
+    #     the polynomial
 
-        .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
+    #     .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
 
-        not its degree.)
+    #     not its degree.)
 
-        Parameters
-        -----------
-        order : int
-            The number of coefficients (:math:`N`) appearing in :math:`P(2\theta)`.
+    #     Parameters
+    #     -----------
+    #     order : int
+    #         The number of coefficients (:math:`N`) appearing in :math:`P(2\theta)`.
 
-        Returns
-        -------
-        bkgd : np.array (custom dtype)
-            A numpy array containing the coefficients :math:`c_i of the background
-            polynomial.
-        '''
+    #     Returns
+    #     -------
+    #     bkgd : np.array (custom dtype)
+    #         A numpy array containing the coefficients :math:`c_i of the background
+    #         polynomial.
+    #     '''
 
-        cls.bkgd_order = cls.validate_order(order)
-        cls.bkgd = np.hstack((x for x in cls.bkgd_param_gen(order)))
-        return cls.bkgd
+    #     cls.bkgd_order = cls.validate_order(order)
+    #     cls.bkgd = np.hstack((x for x in cls.bkgd_param_gen(order)))
+    #     return cls.bkgd
 
-    @classmethod
-    def validate_order(cls, order):
-        assert isinstance(order, int)
-        if order > cls.phase_settings["max_polynom_order"]:
-            order = cls.phase_settings["max_polynom_order"]
-        elif order < 1:
-            order = 1
-        return order
+    # @classmethod
+    # def validate_order(cls, order):
+    #     assert isinstance(order, int)
+    #     if order > cls.phase_settings["max_polynom_order"]:
+    #         order = cls.phase_settings["max_polynom_order"]
+    #     elif order < 1:
+    #         order = 1
+    #     return order
 
-    @classmethod
-    def set_vertical_offset(cls, value):
-        assert type(value) == bool
-        cls.vertical_offset = value
-        if value:
-            cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
+    # @classmethod
+    # def set_vertical_offset(cls, value):
+    #     assert type(value) == bool
+    #     cls.vertical_offset = value
+    #     if value:
 
-    @classmethod
-    def bkgd_param_gen(cls, order=DEFAULT_BKGD_ORDER):
-        n = 0
-        while n < order:
-            # if cls.bkgd == None:
-            yield np.array([('bkgd_'+str(n), 0.0, -float('inf'), float('inf'))],
-                                dtype=CUSTOM_DTYPE)
-            # else:
-            #    yield cls.bkgd[n]
-            n += 1
+
+    # @classmethod
+    # def bkgd_param_gen(cls, order=DEFAULT_BKGD_ORDER):
+    #     n = 0
+    #     while n < order:
+    #         # if cls.bkgd == None:
+    #         yield np.array([('bkgd_'+str(n), 0.0, -float('inf'), float('inf'))],
+    #                             dtype=CUSTOM_DTYPE)
+    #         # else:
+    #         #    yield cls.bkgd[n]
+    #         n += 1
 
     @classmethod
     def set_profile(cls, filename,
@@ -285,6 +292,8 @@ class RietveldPhases:
         max_polynom_order = cls.phase_settings["max_polynom_order"]
         cls.two_theta_powers = np.power(cls.two_theta, np.array(
             xrange(0, max_polynom_order)).reshape(max_polynom_order, 1))
+        #TODO: set cls.cos_theta
+        # cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
     def background_polynomial(cls):
@@ -318,7 +327,7 @@ class RietveldPhases:
 
         """
         two_theta = RietveldPhases.two_theta \
-            - RietveldPhases.two_theta_0['values']
+            - RietveldPhases.two_theta_0
         return (1+np.cos(np.pi/180*two_theta)**2) \
             /np.sin(np.pi/360*two_theta) \
             /np.sin(np.pi/180*two_theta)
@@ -326,24 +335,27 @@ class RietveldPhases:
     @classmethod
     def assemble_global_x(cls):
         #TODO: generate dynamically
-        cls.global_x = np.hstack((x for x in cls.global_param_gen()))
+        global_x = cls.global_params.assemble_x()
+        cls.global_x = global_x['values']
+        for label, value in zip(global_x['labels'], global_x['values']):
+            setattr(cls, label, value)
         cls.global_x_no_bkgd_mask = np.invert(
-            np.char.startswith(cls.global_x['labels'], 'bkgd'))
+            np.char.startswith(global_x['labels'], 'bkgd'))
 
-        cls.two_theta_0 = cls.global_x[0]
-        cls.bkgd = cls.global_x[1:1+cls.bkgd.shape[0]]
+    #     cls.two_theta_0 = cls.global_x[0]
+    #     cls.bkgd = cls.global_x[1:1+cls.bkgd.shape[0]]
 
-    @classmethod
-    def update_global_x(cls, global_x, mask=None):
-        if mask is None:
-            cls.global_x = global_x
-        else:
-            cls.global_x[mask] = global_x[mask]
+    # @classmethod
+    # def update_global_x(cls, global_x, mask=None):
+    #     if mask is None:
+    #         cls.global_x = global_x
+    #     else:
+    #         cls.global_x[mask] = global_x[mask]
 
-    @classmethod
-    def global_param_gen(cls):
-        yield cls.two_theta_0
-        yield cls.bkgd
+    # @classmethod
+    # def global_param_gen(cls):
+    #     yield cls.two_theta_0
+    #     yield cls.bkgd
 
     def __init__(self, file_path_cif,
                      I_max=None,
@@ -357,12 +369,14 @@ class RietveldPhases:
 
         self.file_path_cif = file_path_cif
 
-        self.set_bkgd_order(DEFAULT_BKGD_ORDER)
+        # self.set_bkgd_order(DEFAULT_BKGD_ORDER)
 
         if I_max is not None:
             self.I_max = I_max
+        elif RietveldPhases.I is not None:
+            self.I_max = np.amax(RietveldPhases.I)
         else:
-            self.I_max = 100 #np.amax(RietveldPhases.I)
+            self.I_max = 100
 
         assert intensity_cutoff <= 1 and intensity_cutoff >= 0
         self.phase_settings["intensity_cutoff"] = intensity_cutoff
@@ -374,7 +388,7 @@ class RietveldPhases:
         self.phase_settings["recompute_peak_positions"] = \
             recompute_peak_positions
 
-        assert profile in profiles.profiles
+        assert profile in profiles.PROFILES
         self.profile = profile
         self.eta = self.set_eta_order(self.eta_order)
 
@@ -414,7 +428,8 @@ class RietveldPhases:
 
         global_x_no_bkgd = RietveldPhases.global_x \
             [RietveldPhases.global_x_no_bkgd_mask]
-        self.global_and_phase_x = np.hstack((global_x_no_bkgd, self.phase_x))
+        self.global_and_phase_x = np.hstack((global_x_no_bkgd,
+            self.phase_x['values']))
 
         self.global_mask_no_bkgd = np.hstack((
             np.ones(len(global_x_no_bkgd), dtype=bool),
@@ -435,7 +450,7 @@ class RietveldPhases:
         self.phase_data = phase_from_cif.compute_relative_intensities(
             self.phase_settings)
         self.masks = peak_masking.peak_masks(self.two_theta,
-            self.two_theta_0['values'],
+            self.two_theta_0,
             self.phase_data["two_theta_peaks"],
             self.phase_settings["delta_theta"])
 
@@ -475,13 +490,14 @@ class RietveldPhases:
         self.eta_masked = peak_masking.get_masked_array(
             self.eta_polynomial(), dim, masks)
 
-        if RietveldPhases.vertical_offset:
+        if RietveldPhases.global_params.vertical_offset:
+            vals = -360/np.pi*np.cos(np.pi/360*RietveldPhases.two_theta) \
+                * RietveldPhases.two_theta_0
             self.two_theta_0_masked = peak_masking.get_masked_array(
-                RietveldPhases.cos_theta*RietveldPhases.two_theta_0['values'],
-                dim, masks)
+                vals, dim, masks)
         else:
             self.two_theta_0_masked = peak_masking.get_masked_array(
-                RietveldPhases.two_theta_0['values'], dim, masks)
+                RietveldPhases.two_theta_0, dim, masks)
 
         self.two_theta_all_squared = (self.two_theta_masked
                                                 -self.two_theta_0_masked
@@ -491,11 +507,10 @@ class RietveldPhases:
         unit_cell.update_unit_cell(self.phase_settings, self.lattice_parameters)
         phase_from_cif.set_two_theta_peaks(self.phase_settings,
             self.phase_data)
-        # self.masks = self.peak_masks()
         self.set_masked_arrays()
 
     def set_eta_order(self, order):
-        self.eta_order = RietveldPhases.validate_order(order)
+        self.eta_order = validate_order(order)
         self.eta = np.hstack((x for x in self.eta_param_gen(order)))
         return self.eta
 
@@ -546,7 +561,7 @@ class RietveldPhases:
         result[self.masks] = self.Scale['values'] \
             *self.weighted_intensities_masked \
             *self.LP_factors_masked \
-            *profiles.profiles[self.profile](
+            *profiles.PROFILES[self.profile](
                 two_thetabar_squared,self.eta_masked)
             # *(self.eta_masked/(1+two_thetabar_squared) \
             #    +(1-self.eta_masked)*np.exp(-np.log(2)*two_thetabar_squared))
@@ -566,11 +581,11 @@ class RietveldPhases:
         return self.phase_profile_state
 
     def update_global_and_phase_x(self, x, mask):
-        self.global_and_phase_x['values'][mask] = x
-        RietveldPhases.global_x['values'][RietveldPhases.global_x_no_bkgd_mask] \
-            = self.global_and_phase_x['values'][self.global_mask_no_bkgd]
+        self.global_and_phase_x[mask] = x
+        RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
+            = self.global_and_phase_x[self.global_mask_no_bkgd]
         self.phase_x['values'] = \
-            self.global_and_phase_x['values'][self.phase_mask]
+            self.global_and_phase_x[self.phase_mask]
 
     def phase_profile_x(self, x, mask):
         self.update_global_and_phase_x(x, mask)
@@ -582,13 +597,13 @@ class RietveldPhases:
         epsilons = epsilon*np.identity(num_params)
         self.global_and_phase_x = np.hstack(
             (RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask],
-             self.phase_x))
+             self.phase_x['values']))
         self.prev_state = np.copy(self.phase_profile_state)
 
         for i, eps in enumerate(epsilons):
             # print eps
             self.update_global_and_phase_x(
-                self.global_and_phase_x['values'][mask]+eps, mask)
+                self.global_and_phase_x[mask]+eps, mask)
             result[i, :] = (
                 # self.phase_profile_x(self.global_and_phase_x['values'][mask]+eps,
                 #   mask)
@@ -597,7 +612,7 @@ class RietveldPhases:
                 #    mask)
                 )/epsilon
             self.update_global_and_phase_x(
-                self.global_and_phase_x['values'][mask]-eps, mask)
+                self.global_and_phase_x[mask]-eps, mask)
 
         # print np.sum(result, axis=1)
         return result
@@ -611,3 +626,9 @@ class RietveldPhases:
                 float(x['u_limits']),
                 )
         return d
+
+if __name__ == '__main__':
+    RietveldPhases.set_profile('./data/profiles/d5_05005.xye')
+    phase = RietveldPhases('./data/cifs/9015662-rutile.cif')
+    profile = phase.phase_profile()
+    profile_grad = phase.phase_profile_grad(1)
