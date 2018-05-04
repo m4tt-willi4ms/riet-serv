@@ -108,12 +108,13 @@ def get_unit_cell_mask(phase_settings):
    assert len(uc_mask) == 6
    return uc_mask
 
-def unit_cell_parameter_gen(phase_settings):
+def unit_cell_parameter_gen(phase_settings, uc_mask=None):
    """returns all unit cell parameters specified by the mask
    (a list of six booleans)
    """
    uc_params = phase_settings["unit_cell"].parameters()
-   uc_mask = phase_settings["uc_mask"]
+   if uc_mask is None:
+      uc_mask = phase_settings["uc_mask"]
    lattice_dev = phase_settings["lattice_dev"]
    uc_labels = ["a", "b", "c", "alpha", "beta", "gamma"]
    for i in xrange(6):

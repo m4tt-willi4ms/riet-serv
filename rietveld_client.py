@@ -7,6 +7,7 @@
 An example client. Run simpleserv.py first before running this.
 """
 import time
+import json
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
@@ -15,13 +16,14 @@ from twisted.protocols.basic import LineReceiver
 
 class RietveldClient(LineReceiver):
     """Once connected, send a message, then print the result."""
+    phase_info = json.dumps({'input_cif_path': '.\data\cifs\9015662-rutile.cif'})
     messages = [
         'help',
         # 'help reset',
-        'load_profile .\data\profiles\d5_05005.xye',
-        'add_phase .\data\cifs\9015662-rutile.cif',
-        'get_phase_info',
-        'get_phase_profile',
+        # 'load_profile .\data\profiles\d5_05005.xye',
+        'add_phase;' + phase_info
+        # 'get_phase_info',
+        # 'get_phase_profile',
         # 'writeJSON',
         # 'loadJSON',
         # 'reset',

@@ -618,13 +618,30 @@ class RietveldPhases:
         return result
 
     def get_phase_info(self):
-        d = {}
+        phase_params = {}
         for x in np.nditer(self.phase_x):
-            d[str(x['labels'])] = (
+            phase_params[str(x['labels'])] = (
                 float(x['values']),
                 float(x['l_limits']),
                 float(x['u_limits']),
                 )
+        eta = []
+        lattice_parameters = []
+        for param in unit_cell.unit_cell_parameter_gen(self.phase_settings,
+            np.ones(6,dtype=bool)):
+            lattice_parameters.append((param[1], param[2], param[3]))
+        d = {}
+        d['cif_path'] = self.file_path_cif
+        d['phase_name'] = self.phase_settings['chemical_name']
+        d['scale'] = phase_params['Scale']
+        d['cagliotti_u'] = phase_params['U']
+        d['cagliotti_v'] = phase_params['V']
+        d['cagliotti_w'] = phase_params['W']
+        d['eta'] = eta
+        d['lattice_parameters'] = lattice_parameters
+        d['lattice_parameter_tolerances'] = \
+            [float(self.phase_settings["lattice_dev"])]*6
+
         return d
 
 if __name__ == '__main__':

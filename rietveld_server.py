@@ -10,6 +10,7 @@ import src.rietveld_refinery as rr
 
 class RietveldServer(basic.LineReceiver):
    delimiter = b'\n'
+   split_character = ';'
    calc_flag = False
    err_flag = False
    phase_list = []
@@ -25,7 +26,8 @@ class RietveldServer(basic.LineReceiver):
       data = data.decode("ascii")
 
       # Parse the command
-      commandParts = data.split()
+      commandParts = [x.strip() for x in data.split(self.split_character)]
+      print commandParts
       command = commandParts[0]#.lower()
       args = commandParts[1:]
 
@@ -67,13 +69,22 @@ class RietveldServer(basic.LineReceiver):
       except:
          log.err()
 
-   def call_add_phase(self, cif_path):
-      """add_phase: appends a phase to the server's phase list"""
+   def call_add_phase(self, json_string):
+      """add_phase: appends a phase to the server's phase list, given a
+PhaseParameters object in json-serialized form.
+      """
       try:
+         phase_dict = json.loads(json_string)
+         try:
+            cif_path = phase_dict["cif_path"]
+         except KeyError:
+            cif_path = phase_dict["input_cif_path"]
          assert type(cif_path) == unicode
          self.phase_list.append(rp.RietveldPhases(cif_path))
-         self.sendLine(b'Added {0} to the server\'s phase list'.format(
-            self.phase_list[-1].phase_settings["chemical_name"]))
+         print json.dumps(self.phase_list[-1].get_phase_info())
+         self.sendLine(json.dumps(self.phase_list[-1].get_phase_info()))
+         # self.sendLine(b'Added {0} to the server\'s phase list'.format(
+         #    self.phase_list[-1].phase_settings["chemical_name"]))
       except:
          log.err()
 
