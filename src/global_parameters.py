@@ -1,9 +1,10 @@
+from collections import OrderedDict
 import numpy as np
 
 from refinement_parameters import RefinementParameters
 
 DEFAULT_BKGD_ORDER = 3
-DEFAULT_TWO_THETA_0 = ('two_theta_0', 0.0, True, -0.1, 0.1)
+DEFAULT_TWO_THETA_0 = ('two_theta_0', 0.0, [True, False], -0.1, 0.1)
 DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 
 class GlobalParameters(RefinementParameters):
@@ -11,10 +12,13 @@ class GlobalParameters(RefinementParameters):
     A class used to keep track of global parameters used in computing powder
     diffraction profiles.
     '''
-    def __init__(self, validate_order_func=lambda x: x):
-        self.validate_order_func = validate_order_func
-        self.bkgd_order = DEFAULT_BKGD_ORDER
-        self.two_theta_0 = DEFAULT_TWO_THETA_0
+    def __init__(self,
+        two_theta_0=DEFAULT_TWO_THETA_0,
+        bkgd_order=DEFAULT_BKGD_ORDER,
+        ):
+        RefinementParameters.__init__(self)
+        self.bkgd_order = bkgd_order
+        self.two_theta_0 = two_theta_0
         self.bkgd = [x for x in self.bkgd_param_gen()]
         self.vertical_offset = DEFAULT_VERTICAL_OFFSET
 
@@ -41,25 +45,31 @@ class GlobalParameters(RefinementParameters):
             polynomial.
         '''
 
-        self.bkgd_order = self.validate_order_func(order)
-        self.bkgd = [x for x in self.bkgd_param_gen(order)]
+        self.bkgd_order = self.validate_order(order)
+        self.bkgd = [x for x in self.bkgd_param_gen()]
 
     def bkgd_param_gen(self):
         n = 0
         while n < self.bkgd_order:
             # if cls.bkgd == None:
-            yield ('bkgd_'+str(n), 0.0, True, -float('inf'), float('inf'))
+            yield ('bkgd_'+str(n), 0.0, [True], -float('inf'), float('inf'))
             # else:
             #    yield cls.bkgd[n]
             n += 1
 
     def param_gen(self):
-        yield self.two_theta_0
-        yield self.bkgd
+        d = OrderedDict()
+        d['two_theta_0'] = self.two_theta_0
+        d['bkgd'] = self.bkgd
+        # yield self.two_theta_0
+        # yield self.bkgd
+        return d.iteritems()
+        # for bkgd_param in self.bkgd_param_n():
+        #     yield bkgd_param
 
     def set_vertical_offset(self, value):
         assert type(value) == bool
-        cls.vertical_offset = value
+        self.vertical_offset = value
 
 if __name__ == "__main__":
     t = GlobalParameters()

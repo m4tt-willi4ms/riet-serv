@@ -14,8 +14,10 @@ class RietveldServer(basic.LineReceiver):
    calc_flag = False
    err_flag = False
    phase_list = []
+   phase_dict_list = []
 
    def connectionMade(self):
+      # pass
       self.sendLine(b'Connected. Type <help> [command] for info.')
       # self.setLineMode()
       # print self.__dict__
@@ -81,10 +83,11 @@ PhaseParameters object in json-serialized form.
             cif_path = phase_dict["input_cif_path"]
          assert type(cif_path) == unicode
          self.phase_list.append(rp.RietveldPhases(cif_path))
-         print json.dumps(self.phase_list[-1].get_phase_info())
-         self.sendLine(json.dumps(self.phase_list[-1].get_phase_info()))
-         # self.sendLine(b'Added {0} to the server\'s phase list'.format(
-         #    self.phase_list[-1].phase_settings["chemical_name"]))
+         self.phase_dict_list.append(phase_dict)
+         # print json.dumps(self.phase_list[-1].get_phase_info())
+         # self.sendLine(json.dumps(self.phase_list[-1].get_phase_info()))
+         self.sendLine(b'Added {0} to the server\'s phase list'.format(
+            self.phase_list[-1].phase_settings["chemical_name"]))
       except:
          log.err()
 
@@ -93,7 +96,10 @@ PhaseParameters object in json-serialized form.
 relevant phase information. If no index is specified, information for the
 most-recently loaded phase is returned"""
       index = int(index)
-      info = json.dumps(self.phase_list[index].get_phase_info(), indent=4)
+      self.phase_list[index].update_phase_info(
+         self.phase_dict_list[index])
+      # info = json.dumps(self.phase_list[index].get_phase_info(), indent=4)
+      info = json.dumps(self.phase_dict_list[index], indent=4)
       self.sendLine(info)
 
    def call_get_phase_profile(self, index=u'-1'):

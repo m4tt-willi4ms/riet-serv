@@ -12,6 +12,7 @@ import src.cctbx_dep.phase_from_cif as phase_from_cif
 import src.cctbx_dep.unit_cell as unit_cell
 import src.cctbx_dep.target_wavelengths as target_wavelengths
 from global_parameters import GlobalParameters
+import refinement_parameters
 
 CUSTOM_DTYPE = np.dtype([
     ('labels', 'S12'),
@@ -22,10 +23,10 @@ CUSTOM_DTYPE = np.dtype([
     ])
 
 DEFAULT_MAX_POLYNOM_ORDER = 5
-DEFAULT_BKGD_ORDER = 3
-DEFAULT_TWO_THETA_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
-                                         dtype=CUSTOM_DTYPE)
-DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
+# DEFAULT_BKGD_ORDER = 3
+# DEFAULT_TWO_THETA_0 = np.array([('two_theta_0', 0.0, -0.1, 0.1)],
+#                                          dtype=CUSTOM_DTYPE)
+# DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 
 DEFAULT_U = np.array([('U', 0.00, -0.1, 0.1)], dtype=CUSTOM_DTYPE)
 DEFAULT_U_TUP = (0.00, True, -0.1, 0.1)
@@ -158,7 +159,7 @@ class RietveldPhases:
 
     """
 
-    global_params = GlobalParameters(validate_order_func=validate_order)
+    global_params = GlobalParameters()
 
     custom_dtype = CUSTOM_DTYPE
 
@@ -293,7 +294,7 @@ class RietveldPhases:
         cls.two_theta_powers = np.power(cls.two_theta, np.array(
             xrange(0, max_polynom_order)).reshape(max_polynom_order, 1))
         #TODO: set cls.cos_theta
-        # cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
+        cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
     def background_polynomial(cls):
@@ -311,7 +312,7 @@ class RietveldPhases:
 
         """
         dim = len(cls.bkgd)
-        return np.dot(cls.bkgd['values'], cls.two_theta_powers[:dim, :])
+        return np.dot(cls.bkgd, cls.two_theta_powers[:dim, :])
 
     @classmethod
     def LP_intensity_scaling(self):
@@ -335,12 +336,26 @@ class RietveldPhases:
     @classmethod
     def assemble_global_x(cls):
         #TODO: generate dynamically
-        global_x = cls.global_params.assemble_x()
-        cls.global_x = global_x['values']
-        for label, value in zip(global_x['labels'], global_x['values']):
-            setattr(cls, label, value)
+        cls.global_params.assemble_x()
+        # for name, param in zip(cls.global_params.param_names,
+        #     list(cls.global_params.param_gen())):
+        #     setattr(cls, name, param)
+        # cls.global_x_names = global_x['labels']
+        cls.global_x = cls.global_params.x['values']
+        cls.two_theta_0 = cls.global_params.two_theta_0
+        cls.bkgd = cls.global_params.bkgd
+        # cls.two_theta_0 = cls.global_x[cls.global_x_names == 'two_theta_0']
+        # cls.two_theta_0 = cls.global_x[0:1]
+        # cls.bkgd = cls.global_x[1:4]
+        # cls.bkgd = cls.global_x[np.char.startswith(cls.global_x_names,
+        #     'bkgd')]
+
+        # cls.two_theta_0 = np.float64
+        # cls.two_theta_0 = cls.global_x[0]
+        # cls.global_x[0] = 0.2
         cls.global_x_no_bkgd_mask = np.invert(
-            np.char.startswith(global_x['labels'], 'bkgd'))
+            np.char.startswith(cls.global_params.x['labels'], 'bkgd'))
+        print cls.global_x_no_bkgd_mask
 
     #     cls.two_theta_0 = cls.global_x[0]
     #     cls.bkgd = cls.global_x[1:1+cls.bkgd.shape[0]]
@@ -450,9 +465,10 @@ class RietveldPhases:
         self.phase_data = phase_from_cif.compute_relative_intensities(
             self.phase_settings)
         self.masks = peak_masking.peak_masks(self.two_theta,
-            self.two_theta_0,
+            RietveldPhases.two_theta_0,
             self.phase_data["two_theta_peaks"],
             self.phase_settings["delta_theta"])
+        self.set_masked_arrays()
 
     def update_params(self, phase_x, mask=None):
         if mask is None:
@@ -500,8 +516,8 @@ class RietveldPhases:
                 RietveldPhases.two_theta_0, dim, masks)
 
         self.two_theta_all_squared = (self.two_theta_masked
-                                                -self.two_theta_0_masked
-                                                -self.two_theta_peaks_masked)**2
+                                        -self.two_theta_0_masked
+                                        -self.two_theta_peaks_masked)**2
 
     def update_two_thetas(self, anomalous_flag=False):
         unit_cell.update_unit_cell(self.phase_settings, self.lattice_parameters)
@@ -617,35 +633,64 @@ class RietveldPhases:
         # print np.sum(result, axis=1)
         return result
 
-    def get_phase_info(self):
-        phase_params = {}
-        for x in np.nditer(self.phase_x):
-            phase_params[str(x['labels'])] = (
-                float(x['values']),
-                float(x['l_limits']),
-                float(x['u_limits']),
-                )
-        eta = []
+    # def get_phase_info(self):
+    #     import refinement_parameters as rp
+    #     phase_params = {}
+    #     for x in np.nditer(self.phase_x):
+    #         phase_params[str(x['labels'])] = (
+    #             str(x['labels']),
+    #             float(x['values']),
+    #             True,
+    #             float(x['l_limits']),
+    #             float(x['u_limits']),
+    #             )
+    #     eta = []
+    #     for key, value in phase_params.iteritems():
+    #         if key.startswith('eta'):
+    #             # d = {}
+    #             # for key in rp.keys:
+    #             #     d[key] =
+    #             # eta.append({
+    #             #     ''
+    #             #     })
+    #             eta.append((value[0], value[1], value[3], value[4], True, 2))
+
+    #     lattice_parameters = []
+    #     for param in unit_cell.unit_cell_parameter_gen(self.phase_settings,
+    #         np.ones(6,dtype=bool)):
+    #         lattice_parameters.append(
+    #             (param[0],param[1], True, param[2], param[3]))
+    #     d = {}
+    #     d['cif_path'] = self.file_path_cif
+    #     d['phase_name'] = self.phase_settings['chemical_name']
+    #     d['scale'] = phase_params['Scale']
+    #     d['cagliotti_u'] = phase_params['U']
+    #     d['cagliotti_v'] = phase_params['V']
+    #     d['cagliotti_w'] = phase_params['W']
+    #     d['eta'] = eta
+    #     d['lattice_parameters'] = lattice_parameters
+    #     d['lattice_parameter_tolerances'] = \
+    #         [float(self.phase_settings["lattice_dev"])]*6
+
+    #     return d
+
+    def update_phase_info(self, phase_dict):
+        phase_dict['phase_name'] = self.phase_settings['chemical_name']
         lattice_parameters = []
         for param in unit_cell.unit_cell_parameter_gen(self.phase_settings,
-            np.ones(6,dtype=bool)):
-            lattice_parameters.append((param[1], param[2], param[3]))
-        d = {}
-        d['cif_path'] = self.file_path_cif
-        d['phase_name'] = self.phase_settings['chemical_name']
-        d['scale'] = phase_params['Scale']
-        d['cagliotti_u'] = phase_params['U']
-        d['cagliotti_v'] = phase_params['V']
-        d['cagliotti_w'] = phase_params['W']
-        d['eta'] = eta
-        d['lattice_parameters'] = lattice_parameters
-        d['lattice_parameter_tolerances'] = \
-            [float(self.phase_settings["lattice_dev"])]*6
-
-        return d
+            np.ones(6, dtype=bool)):
+            d = {}
+            d['name'] = param[0]
+            d['value'] = param[1]
+            d['l_limit'] = param[2]
+            d['u_limit'] = param[3]
+            d['used'] = False
+            d['round'] = 2
+            lattice_parameters.append(d)
+        phase_dict['lattice_parameters'] = lattice_parameters
 
 if __name__ == '__main__':
     RietveldPhases.set_profile('./data/profiles/d5_05005.xye')
     phase = RietveldPhases('./data/cifs/9015662-rutile.cif')
-    profile = phase.phase_profile()
+    profile = phase.phase_profile() + RietveldPhases.background_polynomial()
     profile_grad = phase.phase_profile_grad(1)

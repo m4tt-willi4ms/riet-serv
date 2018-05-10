@@ -42,26 +42,29 @@ def test_parameters_exist():
    assert 'lattice_parameters' in tp_dict
 
 def test_set_bkgd_order():
-   Rp.set_bkgd_order(3)
+   Rp.global_params.set_bkgd_order(3)
+   Rp.assemble_global_x()
    assert len(Rp.bkgd) == 3
    assert len(test_phase.bkgd) == 3
 
 def test_bkgd_param_gen():
-   gen = Rp.bkgd_param_gen(order=3)
+   Rp.global_params.set_bkgd_order(3)
+   gen = Rp.global_params.bkgd_param_gen()
    for n in xrange(0,3):
-      assert next(gen)['labels'] == 'bkgd_' + str(n)
+      assert next(gen)[0] == 'bkgd_' + str(n)
    assert pytest.raises(StopIteration,next,gen)
 
 def test_background_polynomial():
-   Rp.bkgd['values'][0] = 1
+   Rp.assemble_global_x()
+   Rp.bkgd[0] = 1
    assert np.all(np.isclose(Rp.background_polynomial(),
       np.ones(len(Rp.two_theta),dtype=float)))
 
-   Rp.bkgd['values'] = np.array([1,2,3],dtype=float)
+   Rp.bkgd = np.array([1,2,3],dtype=float)
    assert np.all(np.isclose(Rp.background_polynomial(),
       1.0+2.0*Rp.two_theta+3.0*Rp.two_theta_powers[2,:]))
 
-   Rp.bkgd['values'] = np.array([0,0,0],dtype=float)
+   Rp.bkgd = np.array([0,0,0],dtype=float)
    assert np.all(np.isclose(Rp.background_polynomial(),
       np.zeros(len(Rp.two_theta),dtype=float)))
 
@@ -75,23 +78,23 @@ def test_U_default():
       r_p.DEFAULT_U['u_limits'])
 
 def test_set_vertical_offset():
-   assert test_phase.vertical_offset == False
+   assert test_phase.global_params.vertical_offset == False
    assert 'cos_theta' not in test_phase.__dict__
-   test_phase.set_vertical_offset(True)
-   assert test_phase.vertical_offset == True
+   test_phase.global_params.set_vertical_offset(True)
+   assert test_phase.global_params.vertical_offset == True
    assert 'cos_theta' in Rp.__dict__
    assert np.isclose(Rp.cos_theta[-1],-360/np.pi/np.sqrt(2))
 
 def test_LP_intensity_scaling():
    assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
 
-   Rp.two_theta_0['values'] = 0.1
-   two_theta = Rp.two_theta - Rp.two_theta_0['values']
+   Rp.two_theta_0 = 0.1
+   two_theta = Rp.two_theta - Rp.two_theta_0
    assert np.all(np.isclose(Rp.LP_intensity_scaling(),
       (1+np.cos(np.pi/180*two_theta)**2) \
          /np.sin(np.pi/360*two_theta) \
          /np.sin(np.pi/180*two_theta)))
-   Rp.two_theta_0['values'] = 0.0
+   Rp.two_theta_0 = 0.0
    assert not np.all(np.isclose(Rp.LP_intensity_scaling(),
       (1+np.cos(np.pi/180*two_theta)**2) \
          /np.sin(np.pi/360*two_theta) \
@@ -107,15 +110,22 @@ def test_update_global_x():
    mask = np.zeros(len(Rp.global_x),dtype=bool)
    mask[0] = True
    new_x = copy.deepcopy(Rp.global_x)
-   new_x['values'][0] = 0.3
-   Rp.update_global_x(new_x,mask)
-   assert np.isclose(Rp.global_x['values'][0],0.3)
+   new_x[0] = 0.3
+   Rp.global_params.update_x(new_x,mask)
+   assert np.isclose(Rp.global_x[0],0.3)
 
 def test_global_param_gen():
-   gen = Rp.global_param_gen()
-   assert next(gen)['labels'] == 'two_theta_0'
-   assert np.all(np.char.startswith(next(gen)['labels'],'bkgd_'))
-   assert pytest.raises(StopIteration,next,gen)
+   gen = Rp.global_params.param_gen()
+   exp_tt_0 = next(gen)
+   assert exp_tt_0[0] == 'two_theta_0'
+   assert len(exp_tt_0[1]) == 5
+   assert exp_tt_0[1][1] == 0.0
+   exp_bkgd = next(gen)
+   assert exp_bkgd[0] == 'bkgd'
+   assert len(exp_bkgd[1]) == Rp.global_params.bkgd_order
+   for val in exp_bkgd[1]:
+      assert val[1] == 0.0
+   assert pytest.raises(StopIteration, next, gen)
 
 def test_phase_param_gen():
    count = 0
