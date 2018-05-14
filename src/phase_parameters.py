@@ -1,7 +1,10 @@
+from collections import OrderedDict
 import numpy as np
+import json
 
-from refinement_parameters import RefinementParameters
-from profiles import Profile
+from src.refinement_parameters import RefinementParameters
+import src.profiles as profiles
+import src.cctbx_dep.unit_cell as unit_cell
 
 DEFAULT_U = ('caglioti_u', 0.00, [False], -0.1, 0.1)
 DEFAULT_V = ('caglioti_v', 0.00, [False], -0.1, 0.1)
@@ -16,55 +19,58 @@ class PhaseParameters(RefinementParameters):
     A class used to keep track of phase-specific parameters used in computing
     powder diffraction profiles.
     '''
-    def __init__(self,
-        validate_order_func=lambda x: x,
+    def __init__(self, phase_settings,
         scale=DEFAULT_SCALE,
         U=DEFAULT_U,
         V=DEFAULT_V,
         W=DEFAULT_W,
         eta_order=DEFAULT_ETA_ORDER,
-        lattice_dev=DEFAULT_LATTICE_DEV,
         profile=DEFAULT_PROFILE,
         ):
-        self.validate_order_func = validate_order_func
+        # RefinementParameters.__init__(self)
+        super(PhaseParameters, self).__init__()
+        self.phase_settings = phase_settings
         self.scale = scale
         self.U = U
         self.V = V
         self.W = W
         self.eta_order = eta_order
-        self.eta = set_eta_order(self.eta_order)
-        self.lattice_dev = lattice_dev
-        self.lattice_parameters = unit_cell.
-        assert profile in profiles.profiles
+        self.eta = self.set_eta_order(self.eta_order)
+        if self.phase_settings["recompute_peak_positions"]:
+            self.lattice_parameters = unit_cell.assemble_lattice_parameters(
+                self.phase_settings)
+        assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
         # self.profile_parameters = [x for x in profile.]
 
     def set_eta_order(self, order):
-        self.eta_order = self.validate_order(order)
-        self.eta = np.hstack((x for x in self.eta_param_gen(order)))
+        self.eta_order = self.validate_order(order,
+            max_polynom_order=self.phase_settings["max_polynom_order"])
+        self.eta = [x for x in self.eta_param_gen()]
         return self.eta
 
-    def eta_param_gen(self, order):
+    def eta_param_gen(self):
         n = 0
-        while n < order:
+        while n < self.eta_order:
             limit = np.power(0.001, n)
             if n == 0:
-                yield np.array([('eta_'+str(n), 0.5, 0, 1)],
-                                    dtype=CUSTOM_DTYPE)
+                yield ('eta_'+str(n), 0.5, [True], 0, 1)
             else:
-                yield np.array([('eta_'+str(n), 0.0, -limit, limit)],
-                                    dtype=CUSTOM_DTYPE)
+                yield ('eta_'+str(n), 0.0, [True], -limit, limit)
             n += 1
 
     def param_gen(self):
-        yield self.scale
-        yield self.U
-        yield self.V
-        yield self.W
-        yield self.eta
-        yield self.lattice_parameters
+        d = OrderedDict()
+        d['scale'] = self.scale
+        d['U'] = self.U
+        d['V'] = self.V
+        d['W'] = self.W
+        d['eta'] = self.eta
+        if self.phase_settings["recompute_peak_positions"]:
+            d['lattice_parameters'] = self.lattice_parameters
+        return d.iteritems()
 
-    def set_param(self, param_name, val_tuple):
-        assert len(val_tuple) == 5
-        setattr(self, param_name, )
+    def load_json(json_str):
+        json_dict = json.loads(json_str)
+        self.phase_settings["cif_path"] = json_dict["cif_path"]

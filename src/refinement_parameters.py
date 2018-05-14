@@ -4,7 +4,6 @@ import copy
 keys = ("labels", "values", "refine", "l_limits", "u_limits")
 
 def validate_order(order, max_polynom_order=5):
-    print max_polynom_order
     assert isinstance(order, int)
     if order > max_polynom_order:
         order = max_polynom_order
@@ -14,30 +13,30 @@ def validate_order(order, max_polynom_order=5):
 
 def make_x_dict(parameters):
     x = {}
-    def add_to_x(key, value):
+
+    def add_to_x(param):
         # for key, value in zip(keys, param):
-        if key not in x:
-            x[key] = [value]
-        else:
-            x[key].append(value)
+        for key, value in zip(keys, param):
+            if key not in x:
+                x[key] = [value]
+            else:
+                x[key].append(value)
 
     for param in parameters:
         if isinstance(param, tuple):
-            for key, value in zip(keys, param):
-                add_to_x(key, value)
+            add_to_x(param)
         elif isinstance(param, list):
             for item in param:
-                for key, value in zip(keys, item):
-                    add_to_x(key, value)
+                add_to_x(item)
         else: raise TypeError('Parameters must be either a parameter-tuple \
 or a list of parameter-tuples.')
 
     for key in x.keys():
-        x[key] = np.array(x[key])
+        x[key] = np.array([np.array(x_i) for x_i in x[key]])
 
     return x
 
-class RefinementParameters:
+class RefinementParameters(object):
 
     def __init__(self):
         self.x = {}
@@ -57,6 +56,7 @@ class RefinementParameters:
 
         self.param_names = param_names
         self.parameters = parameters
+
         def param_gen():
             for name, param in zip(self.param_names, self.parameters):
                 yield name, param
@@ -64,8 +64,11 @@ class RefinementParameters:
         self.param_gen = param_gen
 
         n = 0
-        for name in self.param_names:
-            l = np.sum(np.char.startswith(self.x['labels'], name))
+        for name, param in zip(param_names, parameters):
+            if isinstance(param, list):
+                l = len(param)
+            else: l = 1
+            # l = len(self.parameters[self.param_names.index(name)])
             setattr(self, name, self.x['values'][n:n+l])
             n += l
 
@@ -89,6 +92,10 @@ class RefinementParameters:
             or list of tuples defining the individual parameter values.
         """
         raise NotImplementedError
+
+    def set_param(self, param_name, val_tuple):
+        assert len(val_tuple) == 5
+        setattr(self, param_name, val_tuple)
 
     # def get_param_dict(self, param_tuple):
     #     d = {}

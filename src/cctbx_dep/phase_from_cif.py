@@ -7,13 +7,13 @@ import numpy as np
 
 import iotbx.cif
 
-def load_cif(file_path):
+def load_cif(phase_settings):
    """Reads in a unit cell, crystal structure, crystal system from iotbx
 
       :param str file_path: The file name
 
    """
-   phase_settings = {}
+   file_path = phase_settings["cif_path"]
    with open(file_path, 'r') as opened_file:
       as_cif = opened_file.read()
    cif_reader = iotbx.cif.reader(input_string=as_cif)

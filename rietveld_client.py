@@ -17,11 +17,16 @@ from twisted.protocols.basic import LineReceiver
 class RietveldClient(LineReceiver):
     """Once connected, send a message, then print the result."""
     phase_info = json.dumps({'input_cif_path': '.\data\cifs\9015662-rutile.cif'})
+    ref_model = json.dumps({
+        'input_data_path': '.\data\profiles\cement_15_03_11_0028.xye',
+        'two_theta_roi_window': [25.0, 180.0]
+        })
     messages = [
         'help',
         # 'help reset',
         # 'load_profile .\data\profiles\d5_05005.xye',
-        'add_phase;' + phase_info
+        'load_profile;' + ref_model
+        # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',
         # 'writeJSON',

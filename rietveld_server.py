@@ -15,6 +15,8 @@ class RietveldServer(basic.LineReceiver):
    err_flag = False
    phase_list = []
    phase_dict_list = []
+   refinery_model = None
+   rietveld_refinery = None
 
    def connectionMade(self):
       # pass
@@ -62,12 +64,27 @@ class RietveldServer(basic.LineReceiver):
       except:
          log.err()
 
-   def call_load_profile(self, profile_path):
+   def call_load_profile(self, refinery_model_string):
       try:
-         assert type(profile_path) == unicode
-         rp.RietveldPhases.set_profile(profile_path)
-         profile_filename = os.path.split(profile_path)[1]
-         self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
+         assert isinstance(refinery_model_string, unicode)
+         self.refinery_model = json.loads(refinery_model_string)
+         profile_path = self.refinery_model['input_data_path']
+         min_two_theta = self.refinery_model['two_theta_roi_window'][0]
+         max_two_theta = self.refinery_model['two_theta_roi_window'][1]
+         rp.RietveldPhases.set_profile(profile_path,
+            min_two_theta=min_two_theta,
+            max_two_theta=max_two_theta,
+            )
+         # profile_filename = os.path.split(profile_path)[1]
+         # self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
+         self.rietveld_refinery = rr.RietveldRefinery(self.phase_list,
+            bkgd_refine=True)
+         self.rietveld_refinery.minimize()
+         reply = {}
+         reply['two_thetas'] = []
+         reply['intensities'] = list(self.rietveld_refinery.total_profile())
+         reply['errors'] = []
+         self.sendLine(json.dumps(reply, indent=4))
       except:
          log.err()
 

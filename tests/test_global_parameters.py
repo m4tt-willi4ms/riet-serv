@@ -6,8 +6,14 @@ from src.global_parameters import GlobalParameters
 import src.refinement_parameters as rp
 
 @pytest.fixture(scope="module")
-def gp():
-    return GlobalParameters()
+def phase_settings():
+    phase_settings = {}
+    phase_settings["max_polynom_order"] = 5
+    return phase_settings
+
+@pytest.fixture(scope="module")
+def gp(phase_settings):
+    return GlobalParameters(phase_settings)
 
 def test_set_bkgd_order(gp):
     gp.set_bkgd_order(3)
@@ -19,40 +25,25 @@ def test_set_bkgd_order(gp):
         n += 1
     assert n == 3
 
-def test_set_vertical_offset(gp):
-    assert gp.vertical_offset == False
-    gp.set_vertical_offset(True)
-    assert gp.vertical_offset == True
-    gp.set_vertical_offset(False)
-    assert gp.vertical_offset == False
-
 def test_assemble_x(gp):
     gp.assemble_x()
     for key in rp.keys:
         assert key in gp.x
 
-def test_validate_order_func():
-    def val_func(order):
-        assert isinstance(order, int)
-        if order > 3:
-            order = 3
-        elif order < 0:
-            order = 0
-        return order
-    rp.DEFAULT_MAX_POLYNOM_ORDER = 3
-
-    gp = GlobalParameters()
+def test_validate_order_func(phase_settings):
+    phase_settings["max_polynom_order"] = 3
+    gp = GlobalParameters(phase_settings)
     gp.set_bkgd_order(7)
     assert gp.bkgd_order == 3
     gp.set_bkgd_order(-5)
-    assert gp.bkgd_order == 0
+    assert gp.bkgd_order == 1
     assert pytest.raises(AssertionError, gp.set_bkgd_order, -.3)
 
-def test_custom_two_theta_0(gp):
-    gp = GlobalParameters(
+def test_custom_two_theta_0(gp, phase_settings):
+    gp = GlobalParameters(phase_settings,
         two_theta_0=('two_theta_0', 0.5, [True, False], -1, 1))
     assert gp.two_theta_0[1] == 0.5
-    gp = GlobalParameters()
+    gp = GlobalParameters(phase_settings)
 
 @pytest.fixture(scope="module")
 def gp_assembled(gp):
@@ -70,7 +61,7 @@ def bkgd_mask(gp_assembled):
 def test_assemble_x(gp_assembled, two_theta_0_mask, bkgd_mask):
     two_theta_val = gp_assembled.x['values'][two_theta_0_mask]
     assert gp_assembled.two_theta_0 == two_theta_val
-    assert np.sum(bkgd_mask) == gp_assembled.bkgd_order
+    assert np.sum(gp_assembled.x['refine'][bkgd_mask]) == gp_assembled.bkgd_order
     bkgd_vals = gp_assembled.x['values'][bkgd_mask]
     assert np.all(np.isclose(gp_assembled.bkgd, bkgd_vals))
 
@@ -99,8 +90,8 @@ def test_assembled_param_gen(gp_assembled, two_theta_0_mask, bkgd_mask):
             assert value[2][1] == 0.0
             assert getattr(gp_assembled, name)[2] == 1000
 
-def test_reset_x(bkgd_mask, two_theta_0_mask):
-    gp = GlobalParameters()
+def test_reset_x(phase_settings, bkgd_mask, two_theta_0_mask):
+    gp = GlobalParameters(phase_settings)
     old_two_theta_0 = copy.deepcopy(gp.two_theta_0)
     old_bkgd = copy.deepcopy(gp.bkgd)
     gp.assemble_x()

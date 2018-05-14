@@ -7,7 +7,7 @@ from random import randrange
 import sys, os
 
 from src.rietveld_phases import RietveldPhases
-from src.rietveld_refinery import RietveldRefinery
+from src.rietveld_refinery import RietveldRefinery, RietveldPlot
 
 from cctbx.eltbx import wavelengths
 from libtbx import test_utils
@@ -20,14 +20,19 @@ cifs = ["1000032.cif","1507774.cif"]
 test_phase_list = []
 test_phase_list.append(RietveldPhases(r".//data//cifs//" + cifs[0],
           delta_theta=2.0,intensity_cutoff=0.005))
+test_refinery = RietveldRefinery(test_phase_list, Rp, None)
 
-test_refinery = RietveldRefinery(test_phase_list, None)
+Rp = RietveldPlot()
 
 def test_read_in():
    tr_dict = test_refinery.__dict__
    assert 'phase_list' in tr_dict
    assert 'x' in tr_dict
    assert 'mask' in tr_dict
+
+def test_bkgd_refine():
+   test_refinery = RietveldRefinery(test_phase_list, Rp, bkgd_refine=True)
+   test_refinery.minimize()
 
 def exercise_Rietveld_Refinery_SinglePhase():
    RietveldPhases.global_params_from_string(global_input_string,
