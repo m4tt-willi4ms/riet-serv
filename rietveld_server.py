@@ -64,7 +64,7 @@ class RietveldServer(basic.LineReceiver):
       except:
          log.err()
 
-   def call_load_profile(self, refinery_model_string):
+   def call_load_profile(self, refinery_model_string, global_parameters):
       try:
          assert isinstance(refinery_model_string, unicode)
          self.refinery_model = json.loads(refinery_model_string)
@@ -80,10 +80,26 @@ class RietveldServer(basic.LineReceiver):
          self.rietveld_refinery = rr.RietveldRefinery(self.phase_list,
             bkgd_refine=True)
          self.rietveld_refinery.minimize()
+         profile = self.rietveld_refinery.total_profile()# reply = {}
+         # reply['two_thetas'] = []
+         # reply['intensities'] = list(self.rietveld_refinery.total_profile())
+         # reply['errors'] = []
+
+         def get_plot_data(nparray, two_thetas=[], errors=[]):
+            d = {}
+            d['two_thetas'] = two_thetas
+            d['errors'] = errors
+            d['intensities'] = list(nparray)
+            return d
          reply = {}
-         reply['two_thetas'] = []
-         reply['intensities'] = list(self.rietveld_refinery.total_profile())
-         reply['errors'] = []
+         reply['input_data'] = get_plot_data(rp.RietveldPhases.I, 
+            two_thetas=list(rp.RietveldPhases.two_theta), 
+            errors=list(rp.RietveldPhases.sigma))
+         reply['profile_data'] = get_plot_data(profile)
+         reply['differences'] = get_plot_data(rp.RietveldPhases.I - profile)
+         # reply['two_thetas'] = []
+         # reply['intensities'] = list(self.rietveld_refinery.total_profile())
+         # reply['errors'] = []
          self.sendLine(json.dumps(reply, indent=4))
       except:
          log.err()

@@ -162,7 +162,7 @@ class RietveldPhases:
         I = []
         sigma = []
         with open(filename) as file:
-            for line in file.readlines()[1:]:#[4:]:
+            for line in file.readlines()[3:]:#[4:]:
                 if number_of_columns == 2:
                     two_thetatmp, Itmp = line.split()
                 # if float(two_thetatmp) < 15:
@@ -471,9 +471,9 @@ class RietveldPhases:
             d = {}
             d['name'] = param[0]
             d['value'] = param[1]
-            d['l_limit'] = param[2]
-            d['u_limit'] = param[3]
-            d['used'] = False
+            d['l_limit'] = param[3]
+            d['u_limit'] = param[4]
+            d['used'] = np.any(np.array(param[2], dtype=bool))
             d['round'] = 2
             lattice_parameters.append(d)
         phase_dict['lattice_parameters'] = lattice_parameters
