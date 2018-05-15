@@ -312,7 +312,7 @@ class RietveldPhases:
         #     RietveldPhases.two_theta)
         self.set_masked_arrays()
 
-        self.phase_parameters.scale[:] *= self.I_max/ \
+        self.phase_parameters.scale[:] = self.phase_parameters.scale*self.I_max/ \
             np.amax(self.phase_profile())
 
     def assemble_phase_x(self):
@@ -339,7 +339,7 @@ class RietveldPhases:
         if self.phase_settings["recompute_peak_positions"]:
             #TODO: only update if lattice parameter is updated
             unit_cell.update_unit_cell(self.phase_settings,
-                self.lattice_parameters)
+                self.phase_parameters.lattice_parameters)
 
     def set_masked_arrays(self):
         two_theta_peaks = self.phase_data["two_theta_peaks"]
