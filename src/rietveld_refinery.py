@@ -79,10 +79,6 @@ class RietveldRefinery:
       self.weighted_sum_of_I_squared = np.sum(
          RietveldPhases.I**2/RietveldPhases.sigma**2)
 
-      RietveldPhases.assemble_global_x()
-      for phase in self.phase_list:
-         phase.assemble_phase_x()
-
       if len(self.phase_list) > 0:
          self.x = np.hstack((RietveldPhases.global_x,
             np.hstack((x.phase_x for x in self.phase_list))))
@@ -92,7 +88,7 @@ class RietveldRefinery:
       np.hstack((phase.phase_parameters.x[key] for phase in self.phase_list))))
                setattr(self, key, tmp)
       else:
-         print dir(RietveldPhases)
+         RietveldPhases.assemble_global_x()
          self.x = RietveldPhases.global_x
          for key in refinement_parameters.keys:
             setattr(self, key, RietveldPhases.global_parameters.x[key])
@@ -269,28 +265,33 @@ class RietveldRefinery:
          'disp': True,
          }
 
-      self.result = \
-         minimize(self.weighted_sum_of_squares,self.x[self.mask],
-         method = 'L-BFGS-B',#'Newton-CG',#
-         options=options,
-         # jac = False,
-         jac = self.weighted_sum_of_squares_grad,
-         callback = self.callback,
-         # approx_grad = True,
-         # epsilon = self.epsilon, \
-         bounds = zip(self.l_limits[self.mask],
-            self.u_limits[self.mask]),
-         )
+      if np.sum(self.mask) > 0:
+         self.result = \
+            minimize(self.weighted_sum_of_squares,self.x[self.mask],
+            method = 'L-BFGS-B',#'Newton-CG',#
+            options=options,
+            # jac = False,
+            jac = self.weighted_sum_of_squares_grad,
+            callback = callback_functions,
+            # approx_grad = True,
+            # epsilon = self.epsilon, \
+            bounds = zip(self.l_limits[self.mask],
+               self.u_limits[self.mask]),
+            )
+      else:
+         self.result = None
 
       self.t1 = time.time()
 
-      if not self.bkgd_refine and self.rietveld_plot is not None:
+      if self.rietveld_plot is not None and self.result is not None:
          if self.result['message'][0:4] == "STOP":
             self.rietveld_plot.fig.suptitle("Optimization Ended...")
          elif self.result['message'][0:4] == "CONV":
             self.rietveld_plot.fig.suptitle("Optimization Complete.")
          elif self.result['message'][0:4] == "ABNO":
             self.rietveld_plot.fig.suptitle("Try Again...")
+      elif self.rietveld_plot is not None:
+         self.rietveld_plot.fig.suptitle("No parameters to be refined.")
 
       self.set_compositions()
 
@@ -351,8 +352,7 @@ class RietveldRefinery:
       #    self.update_plot()
       # elif self.store_intermediate_state:
       #    self.update_state()
-      if not self.bkgd_refine and self.count % 5 == 0 and \
-         self.rietveld_plot is not None:
+      if self.count % 5 == 0 and self.rietveld_plot is not None:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
          map(operator.methodcaller('__call__'),list(self.callback_functions))
@@ -432,12 +432,12 @@ class RietveldRefinery:
          mask = np.logical_and(self.mask,phase_mask)
          if np.any(mask):
             param_list += "Phase " + str(i+1) + ": " + \
-               self.phase_list[i].chemical_name +"\n"
+               self.phase_list[i].phase_settings["chemical_name"] +"\n"
             for label,value,l,u in zip(
-               self.x['labels'][mask],
-               self.x['values'][mask],
-               self.x['l_limits'][mask],
-               self.x['u_limits'][mask]):
+               self.labels[mask],
+               self.x[mask],
+               self.l_limits[mask],
+               self.u_limits[mask]):
                param_list += \
                   "  " + label + " = " \
                   + ('%.4g' % value) + " (" \
