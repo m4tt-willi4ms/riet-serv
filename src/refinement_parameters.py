@@ -68,10 +68,8 @@ class RefinementParameters(object):
             if isinstance(param, list):
                 l = len(param)
             else: l = 1
-            # l = len(self.parameters[self.param_names.index(name)])
             setattr(self, name, self.x['values'][n:n+l])
             n += l
-
 
     def update_x(self, x_new, mask=None):
         if mask is None:
@@ -94,11 +92,34 @@ class RefinementParameters(object):
         raise NotImplementedError
 
     def set_param(self, param_name, val_tuple):
-        assert len(val_tuple) == 5
+        assert len(val_tuple) == len(keys)
         setattr(self, param_name, val_tuple)
 
-    # def get_param_dict(self, param_tuple):
-    #     d = {}
-    #     for k, v in zip(keys, param_tuple):
-    #         d[k[:-1]] = v
-    #     return d
+    def as_dict(self):
+        result = {}
+        if self.x:
+            n=0
+            def make_tuple_from_x(index):
+                tup = [self.x[k][index] for k in keys]
+                tup[2] = [bool(x) for x in tup[2]]
+                return tuple(tup)
+            for name, param in self.param_gen():
+                val_array = getattr(self, name)
+                l = len(val_array)
+                if l > 1:
+                    value = []
+                    for i, val in enumerate(np.nditer(val_array)):
+                        value.append(make_tuple_from_x(n+i))
+                elif l == 1:
+                    value = make_tuple_from_x(n)
+                result[name] = value
+                n += l
+        else:
+            for name, param in self.param_gen():
+                result[name] = param
+        return result
+
+    def from_dict(self, d):
+        for name, param in self.param_gen():
+            if name in d.keys():
+                setattr(self, name, d[name])

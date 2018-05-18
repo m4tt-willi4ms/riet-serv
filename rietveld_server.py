@@ -75,32 +75,20 @@ class RietveldServer(basic.LineReceiver):
             min_two_theta=min_two_theta,
             max_two_theta=max_two_theta,
             )
+         global_params = json.loads(global_parameters)
+         rp.RietveldPhases.global_parameters.from_dict(global_params)
          # profile_filename = os.path.split(profile_path)[1]
          # self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
          self.rietveld_refinery = rr.RietveldRefinery(self.phase_list,
             bkgd_refine=True)
          self.rietveld_refinery.minimize()
-         profile = self.rietveld_refinery.total_profile()# reply = {}
-         # reply['two_thetas'] = []
-         # reply['intensities'] = list(self.rietveld_refinery.total_profile())
-         # reply['errors'] = []
 
-         def get_plot_data(nparray, two_thetas=[], errors=[]):
-            d = {}
-            d['two_thetas'] = two_thetas
-            d['errors'] = errors
-            d['intensities'] = list(nparray)
-            return d
-         reply = {}
-         reply['input_data'] = get_plot_data(rp.RietveldPhases.I, 
-            two_thetas=list(rp.RietveldPhases.two_theta), 
-            errors=list(rp.RietveldPhases.sigma))
-         reply['profile_data'] = get_plot_data(profile)
-         reply['differences'] = get_plot_data(rp.RietveldPhases.I - profile)
-         # reply['two_thetas'] = []
-         # reply['intensities'] = list(self.rietveld_refinery.total_profile())
-         # reply['errors'] = []
-         self.sendLine(json.dumps(reply, indent=4))
+         profile = self.rietveld_refinery.total_profile()
+         rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile)
+         global_parameters = rp.RietveldPhases.global_parameters.as_dict()
+
+         self.sendLine(json.dumps(rietveld_plot, indent=4) + ";" +
+                       json.dumps(global_parameters, indent=4) + ";" )
       except:
          log.err()
 

@@ -205,6 +205,26 @@ class RietveldPhases:
             cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
+    def get_plot_data(cls, intensities, two_thetas=[], errors=[]):
+        if intensities is None:
+            intensities = []
+        d = {}
+        d['two_thetas'] = two_thetas
+        d['errors'] = errors
+        d['intensities'] = intensities
+        return d
+
+    @classmethod
+    def get_rietveld_plot(cls, profile):
+        result = {}
+        result['input_data'] = cls.get_plot_data(list(cls.I),
+            two_thetas=list(cls.two_theta),
+            errors=list(cls.sigma))
+        result['profile_data'] = cls.get_plot_data(list(profile))
+        result['differences'] = cls.get_plot_data(list(cls.I - profile))
+        return result
+
+    @classmethod
     def background_polynomial(cls):
         r""" Returns a numpy array populated by the values of a background
         polynomial, :math:`P(2\theta)`, with input parameters :math:`c_i` stored

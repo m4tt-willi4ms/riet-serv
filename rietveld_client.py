@@ -19,13 +19,17 @@ class RietveldClient(LineReceiver):
     phase_info = json.dumps({'input_cif_path': '.\data\cifs\9015662-rutile.cif'})
     ref_model = json.dumps({
         'input_data_path': '.\data\profiles\cement_15_03_11_0028.xye',
-        'two_theta_roi_window': [25.0, 180.0]
+        'two_theta_roi_window': [25.0, 180.0],
+        })
+    global_params = json.dumps({
+        'two_theta_offset': ('two_theta_0', 0.0, [True], -0.1, 0.2),
+        'bkgd': [('bkgd_0', 0.0, [True], -float('inf'), float('inf'))],
         })
     messages = [
         'help',
         # 'help reset',
         # 'load_profile .\data\profiles\d5_05005.xye',
-        'load_profile;' + ref_model
+        'load_profile;' + ref_model + "; " + global_params
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',

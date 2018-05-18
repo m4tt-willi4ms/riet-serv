@@ -28,12 +28,12 @@ class GlobalParameters(RefinementParameters):
         (Strictly speaking, `order` is the number of parameters :math:`c_i` in
         the polynomial
 
-        .. math:: P(2\theta) = \sum_{i=0}^{N} c_i (2\theta)^i
+        .. math:: P(2\theta) = \sum_{i=0}^{N} c_i \, (2\theta)^i
 
         not its degree.)
 
         Parameters
-        -----------
+        ----------
         order : int
             The number of coefficients (:math:`N`) appearing in :math:`P(2\theta)`.
 

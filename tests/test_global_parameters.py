@@ -107,5 +107,15 @@ def test_reset_x(phase_settings, bkgd_mask, two_theta_0_mask):
         if name == 'bkgd':
             assert value[0] == new_bkgd_0
     gp.assemble_x()
-    print gp.x
     assert gp.x['values'][bkgd_mask][0] == 1.0
+
+def test_get_dict(gp, gp_assembled):
+    d = gp.as_dict()
+    assert 'bkgd' in d.keys()
+    assert 'two_theta_0' in d.keys()
+    assert d['bkgd'][0][1] == 0.0
+    assert 'scale' not in d.keys()
+    assert gp_assembled.x
+    d = gp_assembled.as_dict()
+    print d
+    assert 0
