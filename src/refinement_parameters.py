@@ -2,6 +2,7 @@ import numpy as np
 import copy
 
 keys = ("labels", "values", "refine", "l_limits", "u_limits")
+param_keys = ("label", "value", "refine", "l_limit", "u_limit")
 
 def validate_order(order, max_polynom_order=5):
     assert isinstance(order, int)
@@ -99,19 +100,19 @@ class RefinementParameters(object):
         result = {}
         if self.x:
             n=0
-            def make_tuple_from_x(index):
-                tup = [self.x[k][index] for k in keys]
-                tup[2] = [bool(x) for x in tup[2]]
-                return tuple(tup)
+            def make_dict_from_x(index):
+                lst = [self.x[k][index] for k in keys]
+                lst[2] = [bool(x) for x in np.nditer(lst[2])]
+                return dict(zip(param_keys, lst))
             for name, param in self.param_gen():
                 val_array = getattr(self, name)
                 l = len(val_array)
                 if l > 1:
                     value = []
                     for i, val in enumerate(np.nditer(val_array)):
-                        value.append(make_tuple_from_x(n+i))
+                        value.append(make_dict_from_x(n+i))
                 elif l == 1:
-                    value = make_tuple_from_x(n)
+                    value = make_dict_from_x(n)
                 result[name] = value
                 n += l
         else:
@@ -119,7 +120,21 @@ class RefinementParameters(object):
                 result[name] = param
         return result
 
+
     def from_dict(self, d):
+        def get_param_from_dict(d):
+            return tuple([d[key] for key in param_keys])
+
+        def get_param(val):
+            result = None
+            if isinstance(val, list):
+                result = []
+                for item in val:
+                    result.append(get_param_from_dict(item))
+            elif isinstance(val, dict):
+                result = get_param_from_dict(val)
+            return result
+
         for name, param in self.param_gen():
             if name in d.keys():
-                setattr(self, name, d[name])
+                setattr(self, name, get_param(d[name]))
