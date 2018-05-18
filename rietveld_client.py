@@ -24,9 +24,9 @@ class RietveldClient(LineReceiver):
     global_params = json.dumps({
         'two_theta_offset': ('two_theta_0', 0.0, [True], -0.1, 0.2),
         'bkgd': [{
-        'label': 'bkgd_0',
+        'name': 'bkgd_0',
         'value': 0.0,
-        'refine': [True],
+        'u_round': [True],
         'l_limit': -float('inf'),
         'u_limit': float('inf'),
         }]
