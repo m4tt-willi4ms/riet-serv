@@ -2,7 +2,7 @@ import numpy as np
 import copy
 
 keys = ("labels", "values", "refine", "l_limits", "u_limits")
-param_keys = ("name", "value", "u_round", "l_limit", "u_limit")
+param_keys = ("name", "value", "uround", "l_limit", "u_limit")
 
 def validate_order(order, max_polynom_order=5):
     assert isinstance(order, int)
