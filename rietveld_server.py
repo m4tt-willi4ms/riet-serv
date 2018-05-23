@@ -77,6 +77,13 @@ class RietveldServer(basic.LineReceiver):
             max_two_theta=max_two_theta,
             lines_to_strip_at_TOF=3,   
             )
+
+         print self.refinery_model.keys()
+         wavelength_string = self.refinery_model["wavelength"]
+         wavelength_model = self.refinery_model["wavelength_model"]
+         rp.RietveldPhases.set_wavelength(wavelength_string, wavelength_model)
+
+         assert isinstance(global_parameters, unicode)
          global_params = json.loads(global_parameters)
          rp.RietveldPhases.global_parameters.from_dict(global_params)
          # profile_filename = os.path.split(profile_path)[1]

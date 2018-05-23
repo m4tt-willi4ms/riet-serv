@@ -14,7 +14,7 @@ targets = ('Ag','Mo','Cu','Cr','Fe','Co')
 K_alpha_factors = [1.0, 0.48]
 
 def set_wavelength(phase_settings, target='Cu', wavelength_mode=2):
-   if type(target) == str:
+   if isinstance(target, basestring):
       assert target in targets
       if wavelength_mode == 1:
          wavelengths = [wavelengths_dict[target+"A1"]]

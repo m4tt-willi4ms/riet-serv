@@ -20,19 +20,21 @@ class RietveldClient(LineReceiver):
         # 'input_data_path': '.\\data\\profiles\\Jade-Al2O3-Sim.xye',
         'input_data_path': '.\\data\\profiles\\d5_05005.xye',
         'two_theta_roi_window': [25.0, 180.0],
+        'wavelength': 'Cr',
+        'wavelength_model': 2, #TODO: check 1
         })
     global_params = json.dumps({
         'two_theta_offset': {
         'name': 'two_theta_0',
         'value': 0.0,
-        'u_round': [True],
+        'uround': [True],
         'l_limit': -0.1,
         'u_limit': -0.1,
         },
         'bkgd': [{
         'name': 'bkgd_0',
         'value': 0.0,
-        'u_round': [True],
+        'uround': [True],
         'l_limit': -float('inf'),
         'u_limit': float('inf'),
         }]
