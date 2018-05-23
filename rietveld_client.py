@@ -37,17 +37,7 @@ class RietveldClient(LineReceiver):
         'u_limit': float('inf'),
         }]
         })
-    phase_params = json.dumps({
-        # 'cif_path': '.\\data\\cifs\\1000032.cif',
-        'cif_path': '.\\data\\cifs\\9015662-rutile.cif',
-        'caglioti_w': {
-        'name': 'caglioti_w',
-        'value': 0.033,
-        'u_round': [True],
-        'l_limit': 0.00001,
-        'u_limit': 1,
-        }
-        })
+    phase_params = json.dumps({"lattice_parameter_tolerances":[0.0,0.0,0.0,0.0,0.0,0.0],"cif_path":"C:\\Users\\prati\\Desktop\\Rietveld_CCTBX\\data\\cifs\\1000032.cif","phase_name":"","scale":{"name":"scale","value":0.0,"round":1,"used":true,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":0.0,"u_limit":3.40282347E+38},"cagliotti_u":{"name":"cagliotti_u","value":0.0,"round":4,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-0.1,"u_limit":0.1},"cagliotti_v":{"name":"cagliotti_v","value":0.0,"round":4,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-0.1,"u_limit":0.1},"cagliotti_w":{"name":"cagliotti_w","value":0.003,"round":3,"used":true,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":1E-05,"u_limit":1.0},"eta":[{"name":"eta_0","value":0.5,"round":2,"used":true,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":0.0,"u_limit":1.0},{"name":"eta_1","value":0.5,"round":4,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":0.0,"u_limit":1.0},{"name":"eta_2","value":0.5,"round":4,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":0.0,"u_limit":1.0}],"lattice_parameters":[{"name":"lattice_parameters_0","value":0.0,"round":2,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-3.40282347E+38,"u_limit":3.40282347E+38},{"name":"lattice_parameters_1","value":0.0,"round":2,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-3.40282347E+38,"u_limit":3.40282347E+38},{"name":"lattice_parameters_2","value":0.0,"round":2,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-3.40282347E+38,"u_limit":3.40282347E+38},{"name":"lattice_parameters_3","value":0.0,"round":2,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-3.40282347E+38,"u_limit":3.40282347E+38},{"name":"lattice_parameters_4","value":0.0,"round":2,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-3.40282347E+38,"u_limit":3.40282347E+38},{"name":"lattice_parameters_5","value":0.0,"round":2,"used":false,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"l_limit":-3.40282347E+38,"u_limit":3.40282347E+38}]})
     messages = [
         'help',
         # 'help reset',

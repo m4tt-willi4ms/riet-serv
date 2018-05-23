@@ -75,6 +75,7 @@ class RietveldServer(basic.LineReceiver):
          rp.RietveldPhases.set_profile(profile_path,
             min_two_theta=min_two_theta,
             max_two_theta=max_two_theta,
+            lines_to_strip_at_TOF=3,   
             )
          global_params = json.loads(global_parameters)
          rp.RietveldPhases.global_parameters.from_dict(global_params)
