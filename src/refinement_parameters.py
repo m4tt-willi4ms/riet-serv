@@ -3,6 +3,7 @@ import copy
 
 keys = ("labels", "values", "refine", "l_limits", "u_limits")
 param_keys = ("name", "value", "uround", "l_limit", "u_limit")
+ignored_keys = ("lattice_parameters", "scale")
 
 def validate_order(order, max_polynom_order=5):
     assert isinstance(order, int)
@@ -136,5 +137,5 @@ class RefinementParameters(object):
             return result
 
         for name, param in self.param_gen():
-            if name in d.keys():
+            if name in filter(lambda x: not x in ignored_keys, d.keys()):
                 setattr(self, name, get_param(d[name]))

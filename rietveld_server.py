@@ -2,7 +2,7 @@ from twisted.internet import reactor, protocol, defer, task
 from twisted.protocols import basic
 from twisted.python import log
 
-import json
+import json, simplejson
 import sys, os
 
 import src.rietveld_phases as rp
@@ -75,7 +75,7 @@ class RietveldServer(basic.LineReceiver):
          rp.RietveldPhases.set_profile(profile_path,
             min_two_theta=min_two_theta,
             max_two_theta=max_two_theta,
-            lines_to_strip_at_TOF=3,   
+            lines_to_strip_at_TOF=3,
             )
 
          print self.refinery_model.keys()
@@ -104,8 +104,8 @@ class RietveldServer(basic.LineReceiver):
       except:
          log.err()
 
-   def _fit_added_phase(self, json_string):
-      phase_dict = json.loads(json_string)
+   def _fit_added_phase(self, phase_parameters_JSON):
+      phase_dict = simplejson.loads(phase_parameters_JSON)
       # try:
       cif_path = phase_dict["cif_path"]
       # except KeyError:
