@@ -12,6 +12,10 @@ def peak_masks(two_theta, two_theta_0, two_theta_peaks, delta_theta):
 def get_masked_array(array, shape, mask):
     return np.broadcast_to(array, shape)[mask]
 
+class MaskedArrayBuilder(object):
+    """This class handles the building of some
+    """
+
 def set_masked_arrays(phase_data, two_theta):
     two_theta_peaks = phase_data["two_theta_peaks"]
     # two_theta = RietveldPhases.two_theta

@@ -26,6 +26,7 @@ class PhaseParameters(RefinementParameters):
         W=DEFAULT_W,
         eta_order=DEFAULT_ETA_ORDER,
         profile=DEFAULT_PROFILE,
+        phase_parameter_dict=None,
         ):
         # RefinementParameters.__init__(self)
         super(PhaseParameters, self).__init__()
@@ -39,6 +40,8 @@ class PhaseParameters(RefinementParameters):
         if self.phase_settings["recompute_peak_positions"]:
             self.lattice_parameters = unit_cell.assemble_lattice_parameters(
                 self.phase_settings)
+        if phase_parameter_dict is not None:
+            self.from_dict(phase_parameter_dict)
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
@@ -63,9 +66,9 @@ class PhaseParameters(RefinementParameters):
     def param_gen(self):
         d = OrderedDict()
         d['scale'] = self.scale
-        d['U'] = self.U
-        d['V'] = self.V
-        d['W'] = self.W
+        d['caglioti_u'] = self.U
+        d['caglioti_v'] = self.V
+        d['caglioti_w'] = self.W
         d['eta'] = self.eta
         if self.phase_settings["recompute_peak_positions"]:
             d['lattice_parameters'] = self.lattice_parameters

@@ -124,8 +124,8 @@ def unit_cell_parameter_gen(phase_settings, uc_mask=None):
             yield ('uc_'+uc_labels[i],
                      uc_params[i],
                      [True],
-                     uc_params[i]*(1-lattice_dev),
-                     uc_params[i]*(1+lattice_dev)
+                     uc_params[i]*(1-lattice_dev[i]),
+                     uc_params[i]*(1+lattice_dev[i])
                     )
 
 def assemble_lattice_parameters(phase_settings):

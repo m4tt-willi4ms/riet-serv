@@ -32,24 +32,24 @@ def test_global_parameters_exist():
 test_phase = Rp("./data/cifs/1000032.cif")
 
 def test_parameters_exist():
-    tp_dict = test_phase.__dict__
-    print tp_dict
+    tp_dict = test_phase.phase_parameters.__dict__
+    print tp_dict.keys()
     assert 'U' in tp_dict
     assert 'V' in tp_dict
     assert 'W' in tp_dict
-    assert 'Scale' in tp_dict
+    assert 'scale' in tp_dict
     assert 'eta' in tp_dict
     assert 'lattice_parameters' in tp_dict
 
 def test_set_bkgd_order():
-    Rp.global_params.set_bkgd_order(3)
+    Rp.global_parameters.set_bkgd_order(3)
     Rp.assemble_global_x()
     assert len(Rp.bkgd) == 3
     assert len(test_phase.bkgd) == 3
 
 def test_bkgd_param_gen():
-    Rp.global_params.set_bkgd_order(3)
-    gen = Rp.global_params.bkgd_param_gen()
+    Rp.global_parameters.set_bkgd_order(3)
+    gen = Rp.global_parameters.bkgd_param_gen()
     for n in xrange(0,3):
         assert next(gen)[0] == 'bkgd_' + str(n)
     assert pytest.raises(StopIteration,next,gen)
@@ -69,6 +69,7 @@ def test_background_polynomial():
         np.zeros(len(Rp.two_theta),dtype=float)))
 
 def test_U_default():
+    test_U = test_phase.phase_parameters.U
     assert test_phase.U.dtype == r_p.CUSTOM_DTYPE
     assert test_phase.U['labels'] == r_p.DEFAULT_U['labels']
     assert np.isclose(test_phase.U['values'], r_p.DEFAULT_U['values'])
@@ -109,25 +110,25 @@ def test_update_global_x():
     mask[0] = True
     new_x = copy.deepcopy(Rp.global_x)
     new_x[0] = 0.3
-    Rp.global_params.update_x(new_x,mask)
+    Rp.global_parameters.update_x(new_x,mask)
     assert np.isclose(Rp.global_x[0],0.3)
 
 def test_global_param_gen():
-    gen = Rp.global_params.param_gen()
+    gen = Rp.global_parameters.param_gen()
     exp_tt_0 = next(gen)
     assert exp_tt_0[0] == 'two_theta_0'
     assert len(exp_tt_0[1]) == 5
     assert exp_tt_0[1][1] == 0.0
     exp_bkgd = next(gen)
     assert exp_bkgd[0] == 'bkgd'
-    assert len(exp_bkgd[1]) == Rp.global_params.bkgd_order
+    assert len(exp_bkgd[1]) == Rp.global_parameters.bkgd_order
     for val in exp_bkgd[1]:
         assert val[1] == 0.0
     assert pytest.raises(StopIteration, next, gen)
 
 def test_phase_param_gen():
     count = 0
-    for x in test_phase.phase_param_gen():
+    for x in test_phase.phase_parameters.param_gen():
         count += 1
     assert count == 6
 
@@ -152,7 +153,7 @@ def test_assemble_phase_x():
 
 def test_update_params():
     tmp_x = np.copy(test_phase.phase_x)
-    mask = np.char.startswith(tmp_x['labels'],'Sca')
+    mask = np.char.startswith(tmp_x['labels'],'sca')
     test_val = 100
     tmp_x['values'][mask] = 100
     test_phase.update_params(tmp_x,mask=mask)

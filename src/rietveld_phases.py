@@ -20,7 +20,7 @@ DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 DEFAULT_DELTA_THETA = 0.5
 DEFAULT_INTENSITY_CUTOFF = 0.01
 DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
-DEFAULT_LATTICE_DEV = 0.01
+DEFAULT_LATTICE_DEV = [0.01]*6
 
 DEFAULT_TWO_THETAS = np.linspace(0.05, 100, num=1000)
 
@@ -157,12 +157,21 @@ class RietveldPhases:
                          max_two_theta=180,
                          target='Cu',
                          wavelength_mode=2,
+                         lines_to_strip_at_TOF=1,
                         ):
         two_theta = []
         I = []
         sigma = []
         with open(filename) as file:
-            for line in file.readlines()[3:]:#[4:]:
+            for _ in xrange(lines_to_strip_at_TOF):
+                file.readline()
+            n = len(file.readline().split())
+        if n == 2 or n == 3:
+            number_of_columns = n
+
+
+        with open(filename) as file:
+            for line in file.readlines()[lines_to_strip_at_TOF:]:
                 if number_of_columns == 2:
                     two_thetatmp, Itmp = line.split()
                 # if float(two_thetatmp) < 15:
@@ -209,19 +218,22 @@ class RietveldPhases:
         if intensities is None:
             intensities = []
         d = {}
-        d['two_thetas'] = two_thetas
-        d['errors'] = errors
-        d['intensities'] = intensities
+        d['two_thetas'] = list(two_thetas)
+        d['errors'] = list(errors)
+        d['intensities'] = list(intensities)
         return d
 
     @classmethod
-    def get_rietveld_plot(cls, profile):
+    def get_rietveld_plot(cls, profile, compute_differences=False):
         result = {}
-        result['input_data'] = cls.get_plot_data(list(cls.I),
-            two_thetas=list(cls.two_theta),
-            errors=list(cls.sigma))
-        result['profile_data'] = cls.get_plot_data(list(profile))
-        result['differences'] = cls.get_plot_data(list(cls.I - profile))
+        result['input_data'] = cls.get_plot_data(cls.I,
+            two_thetas=cls.two_theta,
+            errors=cls.sigma)
+        result['profile_data'] = cls.get_plot_data(profile)
+        if compute_differences:
+            result['differences'] = cls.get_plot_data(cls.I - profile)
+        else:
+            result['differences'] = cls.get_plot_data([])
         return result
 
     @classmethod
@@ -279,6 +291,7 @@ class RietveldPhases:
                  recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
                  target='Cu',
                  profile='PV',
+                 phase_parameter_dict=None,
                 ):
 
         self.file_path_cif = file_path_cif
@@ -293,7 +306,8 @@ class RietveldPhases:
         assert intensity_cutoff <= 1 and intensity_cutoff >= 0
         self.phase_settings["intensity_cutoff"] = intensity_cutoff
 
-        assert lattice_dev >0
+        assert len(lattice_dev) == 6
+        assert all([dev > 0 and dev < 1 for dev in lattice_dev])
         self.phase_settings["lattice_dev"] = lattice_dev
 
         assert isinstance(recompute_peak_positions, bool)
@@ -309,7 +323,8 @@ class RietveldPhases:
         self.phase_settings["cif_path"] = file_path_cif
         phase_from_cif.load_cif(self.phase_settings)
 
-        self.phase_parameters = PhaseParameters(self.phase_settings)
+        self.phase_parameters = PhaseParameters(self.phase_settings,
+            phase_parameter_dict=phase_parameter_dict)
 
         if RietveldPhases.two_theta is None:
             RietveldPhases.two_theta = DEFAULT_TWO_THETAS
@@ -435,9 +450,9 @@ class RietveldPhases:
         result = np.zeros((len(two_theta_peaks), len(self.two_theta)))
         profile = profiles.PROFILES[self.phase_settings["profile"]]
         omegaUVW_squareds = \
-            np.abs(self.phase_parameters.U*self.tan_two_theta_peaks_sq_masked
-                +self.phase_parameters.V*self.tan_two_theta_peaks_masked
-                +self.phase_parameters.W)
+            np.abs(self.phase_parameters.caglioti_u*self.tan_two_theta_peaks_sq_masked
+                +self.phase_parameters.caglioti_v*self.tan_two_theta_peaks_masked
+                +self.phase_parameters.caglioti_w)
         two_thetabar_squared = self.two_theta_all_squared/omegaUVW_squareds
 
         result[self.masks] = self.phase_parameters.scale \
@@ -449,11 +464,14 @@ class RietveldPhases:
         return self.phase_profile_state
 
     def update_global_and_phase_x(self, x, mask):
-        self.global_and_phase_x[mask] = x
-        RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
-            = self.global_and_phase_x[self.global_mask_no_bkgd]
-        self.phase_x = \
-            self.global_and_phase_x[self.phase_mask]
+        self.global_and_phase_x[np.where(mask)] = x
+        print 'x', x
+        print 'mask', mask
+        print 'phase_x', self.phase_x
+        # RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
+        #     = self.global_and_phase_x[self.global_mask_no_bkgd]
+        # self.phase_x = \
+        #     self.global_and_phase_x[self.phase_mask]
 
     def phase_profile_x(self, x, mask):
         self.update_global_and_phase_x(x, mask)
@@ -497,6 +515,13 @@ class RietveldPhases:
             d['round'] = 2
             lattice_parameters.append(d)
         phase_dict['lattice_parameters'] = lattice_parameters
+
+    def as_dict(self):
+        d = self.phase_parameters.as_dict()
+        d['cif_path'] = self.file_path_cif
+        d['phase_name'] = self.phase_settings["chemical_name"]
+        d['lattice_parameter_tolerances'] = self.phase_settings["lattice_dev"]
+        return d
 
 if __name__ == '__main__':
     RietveldPhases.set_profile('./data/profiles/d5_05005.xye')

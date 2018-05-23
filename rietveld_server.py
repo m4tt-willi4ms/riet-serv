@@ -14,13 +14,14 @@ class RietveldServer(basic.LineReceiver):
    calc_flag = False
    err_flag = False
    phase_list = []
-   phase_dict_list = []
+   # phase_dict_list = []
    refinery_model = None
    rietveld_refinery = None
 
    def connectionMade(self):
       # pass
       self.sendLine(b'Connected. Type <help> [command] for info.')
+      self.MAX_LENGTH = 4194304
       # self.setLineMode()
       # print self.__dict__
       # self.sendLine(b"Web checker console. Type 'help' for help.")
@@ -84,44 +85,52 @@ class RietveldServer(basic.LineReceiver):
          self.rietveld_refinery.minimize()
 
          profile = self.rietveld_refinery.total_profile()
-         rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile)
+         rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile,
+            compute_differences=True)
+         reply = ""
+         reply += json.dumps(rietveld_plot, indent=4) + ";"
          global_parameters = rp.RietveldPhases.global_parameters.as_dict()
-
-         self.sendLine(json.dumps(rietveld_plot, indent=4) + ";" +
-                       json.dumps(global_parameters, indent=4) + ";" )
+         reply += json.dumps(global_parameters, indent=4) + ";"
+         print len(reply.encode('utf-8'))
+         self.sendLine(reply)
       except:
          log.err()
+
+   def _fit_added_phase(self, json_string):
+      phase_dict = json.loads(json_string)
+      # try:
+      cif_path = phase_dict["cif_path"]
+      # except KeyError:
+      #    cif_path = phase_dict["input_cif_path"]
+      assert type(cif_path) == unicode
+      self.phase_list.append(rp.RietveldPhases(cif_path,
+         phase_parameter_dict=phase_dict))
+
+      self.rietveld_refinery = rr.RietveldRefinery(self.phase_list,
+         bkgd_refine=True)
+      self.rietveld_refinery.minimize()
+      phase_dict = json.dumps(self.phase_list[-1].as_dict(), indent=4)
+      reply = ""
+      reply += phase_dict + ";"
+      plot_data = json.dumps(rp.RietveldPhases.get_plot_data(
+         self.rietveld_refinery.total_profile()), indent=4)
+      reply += plot_data + ";"
+      print len(reply.encode('utf-8'))
+      self.sendLine(reply)
+      print 'Here', self.MAX_LENGTH
 
    def call_add_phase(self, json_string):
       """add_phase: appends a phase to the server's phase list, given a
 PhaseParameters object in json-serialized form.
       """
-      try:
-         phase_dict = json.loads(json_string)
-         try:
-            cif_path = phase_dict["cif_path"]
-         except KeyError:
-            cif_path = phase_dict["input_cif_path"]
-         assert type(cif_path) == unicode
-         self.phase_list.append(rp.RietveldPhases(cif_path))
-         self.phase_dict_list.append(phase_dict)
-         # print json.dumps(self.phase_list[-1].get_phase_info())
-         # self.sendLine(json.dumps(self.phase_list[-1].get_phase_info()))
-         self.sendLine(b'Added {0} to the server\'s phase list'.format(
-            self.phase_list[-1].phase_settings["chemical_name"]))
-      except:
-         log.err()
-
-   def call_get_phase_info(self, index=u'-1'):
-      """get_phase_info [index]: returns a json-serialized dictionary containing
-relevant phase information. If no index is specified, information for the
-most-recently loaded phase is returned"""
-      index = int(index)
-      self.phase_list[index].update_phase_info(
-         self.phase_dict_list[index])
-      # info = json.dumps(self.phase_list[index].get_phase_info(), indent=4)
-      info = json.dumps(self.phase_dict_list[index], indent=4)
-      self.sendLine(info)
+      # try:
+      d = defer.Deferred()
+      d.addCallback(self._fit_added_phase)
+      d.addErrback(self._error)
+      # d.addCallback(lambda x: self._calc_complete())
+      reactor.callInThread(d.callback, json_string)
+      # except:
+      #    log.err()
 
    def call_get_phase_profile(self, index=u'-1'):
       """get_phase_profile [index]: returns a json-serialized list containing
@@ -160,7 +169,7 @@ most-recently loaded phase is returned"""
    def _calc_complete(self):
       self.calc_flag = False
 
-   def _refine_error(self, f):
+   def _error(self, f):
       self.err_flag = True
       log.err()
 

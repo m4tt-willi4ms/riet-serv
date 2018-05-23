@@ -16,13 +16,19 @@ from twisted.protocols.basic import LineReceiver
 
 class RietveldClient(LineReceiver):
     """Once connected, send a message, then print the result."""
-    phase_info = json.dumps({'input_cif_path': '.\data\cifs\9015662-rutile.cif'})
     ref_model = json.dumps({
-        'input_data_path': '.\data\profiles\cement_15_03_11_0028.xye',
+        # 'input_data_path': '.\\data\\profiles\\Jade-Al2O3-Sim.xye',
+        'input_data_path': '.\\data\\profiles\\d5_05005.xye',
         'two_theta_roi_window': [25.0, 180.0],
         })
     global_params = json.dumps({
-        'two_theta_offset': ('two_theta_0', 0.0, [True], -0.1, 0.2),
+        'two_theta_offset': {
+        'name': 'two_theta_0',
+        'value': 0.0,
+        'u_round': [True],
+        'l_limit': -0.1,
+        'u_limit': -0.1,
+        },
         'bkgd': [{
         'name': 'bkgd_0',
         'value': 0.0,
@@ -31,11 +37,23 @@ class RietveldClient(LineReceiver):
         'u_limit': float('inf'),
         }]
         })
+    phase_params = json.dumps({
+        # 'cif_path': '.\\data\\cifs\\1000032.cif',
+        'cif_path': '.\\data\\cifs\\9015662-rutile.cif',
+        'caglioti_w': {
+        'name': 'caglioti_w',
+        'value': 0.033,
+        'u_round': [True],
+        'l_limit': 0.00001,
+        'u_limit': 1,
+        }
+        })
     messages = [
         'help',
         # 'help reset',
         # 'load_profile .\data\profiles\d5_05005.xye',
-        'load_profile;' + ref_model + "; " + global_params
+        'load_profile;' + ref_model + ';' + global_params,
+        'add_phase;' + phase_params,
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',
@@ -44,24 +62,38 @@ class RietveldClient(LineReceiver):
         # 'reset',
         # 'exit',
         ]
+    data_buffer = ""
 
     def sendMessage(self, msg):
         self.sendLine(msg)
 
     def connectionMade(self):
-        self.setRawMode()
+        pass
+        # self.sendLine('help')
+        # self.setRawMode()
+        # print self.MAX_LENGTH
+        # self.MAX_LENGTH = 4194304
 
-    def rawDataReceived(self, data):
-        print "Received:", data
-        self.clearLineBuffer()
-        delay = 0.2
-        if len(self.messages) > 0:
-            reactor.callLater(delay,self.sendMessage, self.messages.pop(0))
-        else:
-            reactor.callLater(delay,self.transport.loseConnection)
+    # def lineReceived(self, data):
 
-    def connectionLost(self, reason):
-        print "connection lost"
+
+    def dataReceived(self, data):
+        print "Data received. Length:", len(data)
+        self.data_buffer += data
+        delay = 0.
+        if data[-1] in [";", "\n"]:
+            if len(self.messages) > 0:
+                msg = self.messages.pop(0)
+                self.clearLineBuffer()
+                reactor.callLater(delay, self.sendMessage, msg)
+            else:
+                reactor.callLater(delay, self.transport.loseConnection)
+            print self.data_buffer
+            # print "Message sent."
+            self.data_buffer = ""
+
+    # def connectionLost(self, reason):
+    #     print "connection lost"
 
 class RietveldClientFactory(ClientFactory):
     protocol = RietveldClient
@@ -73,6 +105,9 @@ class RietveldClientFactory(ClientFactory):
     def clientConnectionLost(self, connector, reason):
         print "Connection lost - goodbye!"
         reactor.stop()
+
+    # def startedConnecting(self, connector):
+    #     pass
 
 
 # this connects the protocol to a server running on port 8000

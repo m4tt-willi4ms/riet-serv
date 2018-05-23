@@ -196,7 +196,8 @@ class RietveldRefinery:
 
    def set_mask(self, list_of_parameter_strings=[]):
       mask = self.make_mask(list_of_parameter_strings=list_of_parameter_strings)
-      self.mask = mask
+      if np.any(mask):
+         self.mask = mask
 
    def make_mask(self, list_of_parameter_strings=[]):
       mask = np.zeros(len(self.x), dtype=bool)
@@ -314,6 +315,11 @@ class RietveldRefinery:
       # sys.stdout.write('.')
       # sys.stdout.flush()
       print x
+      if self.phase_list:
+         mask = self.global_and_phase_refine_masks[0]
+         print "grad:", np.sum(self.phase_list[0].phase_profile_grad(
+                  mask[self.global_and_phase_masks[0]],
+                     epsilon=self.epsilon), axis=1)
       if self.rietveld_plot is not None: # and self.count % 5 == 0
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
