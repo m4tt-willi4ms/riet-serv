@@ -4,7 +4,7 @@ A short python script to set the paths needed in order to use the cctbx library.
 import sys, os
 
 #Path to the cctbx build directory goes here
-os.environ["LIBTBX_BUILD"] = r"C:/cctbx2/build"
+os.environ["LIBTBX_BUILD"] = r"C:/cctbx/build"
 
 #These commands update automatically
 sys.path.append(os.path.abspath(os.environ["LIBTBX_BUILD"]
