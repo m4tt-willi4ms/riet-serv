@@ -20,7 +20,6 @@ tests/Cement/minimizer-settings.txt
 doc/exts/
 tests/tst_RietveldPhases_from_nb.py
 tests/Cement/.vs/
-*.json
 tests/Cement/Cement1.sln
 tests/9007634.cif
 tests/Cement/build/

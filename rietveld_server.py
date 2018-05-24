@@ -81,7 +81,9 @@ class RietveldServer(basic.LineReceiver):
          print self.refinery_model.keys()
          wavelength_string = self.refinery_model["wavelength"]
          wavelength_model = self.refinery_model["wavelength_model"]
-         rp.RietveldPhases.set_wavelength(wavelength_string, wavelength_model)
+         custom_wavelength = self.refinery_model["wavelengthc"]
+         rp.RietveldPhases.set_wavelength(wavelength_string, wavelength_model,
+            custom_wavelength=custom_wavelength)
 
          assert isinstance(global_parameters, unicode)
          global_params = json.loads(global_parameters)
@@ -99,46 +101,46 @@ class RietveldServer(basic.LineReceiver):
          reply += json.dumps(rietveld_plot, indent=4) + ";"
          global_parameters = rp.RietveldPhases.global_parameters.as_dict()
          reply += json.dumps(global_parameters, indent=4) + ";"
-         print len(reply.encode('utf-8'))
+         print "Message Length (in bytes):", len(reply.encode('utf-8'))
          self.sendLine(reply)
       except:
          log.err()
 
-   def _fit_added_phase(self, phase_parameters_JSON):
-      phase_dict = simplejson.loads(phase_parameters_JSON)
-      # try:
-      cif_path = phase_dict["cif_path"]
-      # except KeyError:
-      #    cif_path = phase_dict["input_cif_path"]
-      assert type(cif_path) == unicode
-      self.phase_list.append(rp.RietveldPhases(cif_path,
-         phase_parameter_dict=phase_dict))
+   # def _fit_added_phase(self, phase_parameters_JSON):
 
-      self.rietveld_refinery = rr.RietveldRefinery(self.phase_list,
-         bkgd_refine=True)
-      self.rietveld_refinery.minimize()
-      phase_dict = json.dumps(self.phase_list[-1].as_dict(), indent=4)
-      reply = ""
-      reply += phase_dict + ";"
-      plot_data = json.dumps(rp.RietveldPhases.get_plot_data(
-         self.rietveld_refinery.total_profile()), indent=4)
-      reply += plot_data + ";"
-      print len(reply.encode('utf-8'))
-      self.sendLine(reply)
-      print 'Here', self.MAX_LENGTH
-
-   def call_add_phase(self, json_string):
+   def call_add_phase(self, phase_parameters_JSON):
       """add_phase: appends a phase to the server's phase list, given a
 PhaseParameters object in json-serialized form.
       """
-      # try:
-      d = defer.Deferred()
-      d.addCallback(self._fit_added_phase)
-      d.addErrback(self._error)
-      # d.addCallback(lambda x: self._calc_complete())
-      reactor.callInThread(d.callback, json_string)
-      # except:
-      #    log.err()
+      try:
+         phase_dict = json.loads(phase_parameters_JSON)
+         # try:
+         cif_path = phase_dict["cif_path"]
+         # except KeyError:
+         #    cif_path = phase_dict["input_cif_path"]
+         assert type(cif_path) == unicode
+         self.phase_list.append(rp.RietveldPhases(cif_path,
+            phase_parameter_dict=phase_dict))
+
+         self.rietveld_refinery = rr.RietveldRefinery(self.phase_list,
+            bkgd_refine=True)
+         self.rietveld_refinery.minimize()
+         phase_dict = json.dumps(self.phase_list[-1].as_dict(), indent=4)
+         reply = ""
+         reply += phase_dict + ";"
+         plot_data = json.dumps(rp.RietveldPhases.get_plot_data(
+            self.rietveld_refinery.total_profile()), indent=4)
+         reply += plot_data + ";"
+         # print len(reply.encode('utf-8'))
+         self.sendLine(reply)
+         # print 'Here', self.MAX_LENGTH
+      # d = defer.Deferred()
+      # d.addCallback(self._fit_added_phase)
+      # d.addErrback(self._error)
+      # # d.addCallback(lambda x: self._calc_complete())
+      # reactor.callInThread(d.callback, json_string)
+      except:
+         log.err()
 
    def call_get_phase_profile(self, index=u'-1'):
       """get_phase_profile [index]: returns a json-serialized list containing

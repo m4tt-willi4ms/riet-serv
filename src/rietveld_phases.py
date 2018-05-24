@@ -156,7 +156,7 @@ class RietveldPhases:
                          min_two_theta=0,
                          max_two_theta=180,
                          target='Cu',
-                         wavelength_mode=2,
+                         wavelength_model=0,
                          lines_to_strip_at_TOF=1,
                         ):
         two_theta = []
@@ -194,12 +194,13 @@ class RietveldPhases:
         cls.two_theta = cls.two_theta[min_max_mask]
 
         cls.set_two_theta_powers_and_limits()
-        cls.set_wavelength(target, wavelength_mode)
+        cls.set_wavelength(target, wavelength_model)
 
     @classmethod
-    def set_wavelength(cls, target, wavelength_mode):
+    def set_wavelength(cls, target, wavelength_model, custom_wavelength=None):
         target_wavelengths.set_wavelength(cls.phase_settings,
-            target=target, wavelength_mode=wavelength_mode)
+            target=target, wavelength_model=wavelength_model,
+            custom_wavelength=custom_wavelength)
 
     @classmethod
     def set_two_theta_powers_and_limits(cls):
