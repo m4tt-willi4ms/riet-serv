@@ -47,8 +47,8 @@ class RietveldClient(LineReceiver):
         'help',
         # 'help reset',
         # 'load_profile .\data\profiles\d5_05005.xye',
-        'load_profile;' + ref_model + ';' + global_params,
         'add_phase;' + phase_params,
+        'load_profile;' + ref_model + ';' + global_params,
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',

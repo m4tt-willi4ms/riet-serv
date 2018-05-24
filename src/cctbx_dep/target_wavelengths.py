@@ -1,3 +1,11 @@
+"""
+   Target Wavelengths Module
+   =========================
+
+   This module makes use of the cctbx.eltbx wavelengths module to populate a
+   dictionary of available characteristic wavelengths, and sets the appropriate
+   phase_settings keys according the target specified.
+"""
 import numpy as np
 
 from cctbx.eltbx import wavelengths
@@ -9,7 +17,7 @@ wavelengths_dict = {
 for w in wavelengths.characteristic_iterator():
    wavelengths_dict[w.label()] = w.as_angstrom()
 
-targets = ('Ag','Mo','Cu','Cr','Fe','Co')
+targets = tuple(set([label[0:2] for label in wavelengths_dict.keys()]))
 
 K_alpha_factors = [1.0, 0.48]
 
@@ -41,8 +49,6 @@ def set_wavelength(phase_settings, target='Cu', wavelength_model=0,
       else:
          value = default_val
       exec(bound + " = {}".format(value))
-
-   print len(wavelengths), wavelength_model, target
 
    phase_settings["d_max"] = wavelengths[0]/2/np.sin(np.pi/360*min_two_theta)
    phase_settings["d_min"] = wavelengths[-1]/2/np.sin(np.pi/360*max_two_theta)

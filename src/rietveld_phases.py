@@ -51,26 +51,16 @@ class RietveldPhases:
 
             The default value is
 
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 40
-
         intensity_cutoff : float, optional
             The relative intensity, below which peaks are not generated. (In
             practice this is implemented when computing the squares of structure
             factors, and before any Lorentz, polarization rescaling is applied.)
             The default value of :math:`|F|^2_{\rm cutoff}` is
 
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 41
-
-
         lattice_dev : float, optional
             This parameter specifices the maximum allowed relative deviation of
             any lattice parameters (assuming lattice parameters will be refined).
             The default value of `lattice_dev` is 0.01.
-
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 43
 
         recompute_peak_positions : bool, optional
             This boolean variable determines whether or not peak positions are
@@ -78,17 +68,11 @@ class RietveldPhases:
             necessary if lattice parameters are being refined.) The default value
             is
 
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 44
-
         Attributes
         ----------
         Scale : np.array (custom dtype)
             The initial input parameters for the phase Scale factor (Scale).
             Its default label, value, lower- and upper-limit are set to be
-
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 38,39
 
             respectively.
 
@@ -96,26 +80,17 @@ class RietveldPhases:
             The initial input parameters for the Caglioti `U` parameter.
             Its default label, value, lower- and upper-limit are set to be
 
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 35
-
             respectively.
 
         V : np.array (custom dtype)
             The initial input parameters for the Caglioti `V` parameter.
             Its default label, value, lower- and upper-limit are set to be
 
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 36
-
             respectively.
 
         W : np.array (custom dtype)
             The initial input parameters for the Caglioti `W` parameter.
             Its default label, value, lower- and upper-limit are set to be
-
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 37
 
             respectively.
 
@@ -124,9 +99,6 @@ class RietveldPhases:
             the corresponding eta polynomial (for more information, see
             :func:`~src.RietveldPhases.RietveldPhases.eta_polynomial()`).
             The default value is
-
-            .. literalinclude:: ../src/RietveldPhases.py
-                :lines: 42
 
         Note
         ----
