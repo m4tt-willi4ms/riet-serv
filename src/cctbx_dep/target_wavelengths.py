@@ -50,5 +50,5 @@ def set_wavelength(phase_settings, target='Cu', wavelength_model=0,
          value = default_val
       exec(bound + " = {}".format(value))
 
-   phase_settings["d_max"] = wavelengths[0]/2/np.sin(np.pi/360*min_two_theta)
    phase_settings["d_min"] = wavelengths[-1]/2/np.sin(np.pi/360*max_two_theta)
+   phase_settings["d_max"] = wavelengths[0]/2/np.sin(np.pi/360*min_two_theta)

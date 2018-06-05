@@ -142,6 +142,10 @@ PhaseParameters object in json-serialized form.
       except:
          log.err()
 
+   # def call_get_current_profile(self):
+   #    if self.rietveld_refinery is not None:
+
+
    def call_get_phase_profile(self, index=u'-1'):
       """get_phase_profile [index]: returns a json-serialized list containing
 the phase profile data. If no index is specified, information for the
