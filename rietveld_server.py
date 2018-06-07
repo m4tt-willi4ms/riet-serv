@@ -164,6 +164,11 @@ PhaseParameters object in json-serialized form.
 
     def _calc_complete(self):
         self.calc_flag = False
+        state = {}
+        state['rietveld_data'] = self.rietveld_refinery.get_plot_data()
+        state['global_state'] = rp.RietveldPhases.global_parameters.as_dict()
+        state['phase_state'] = [phase.as_dict() for phase in self.phase_list]
+        self.rietveld_history.append(state)
 
     def _refine_error(self):
         self.err_flag = True
@@ -199,6 +204,7 @@ respectively
 
             self._bkgd_refine()
 
+            self.rietveld_refinery = rr.RietveldRefinery(self.phase_list)
             self.rietveld_refinery.set_mask(['two_theta_0', 'bkgd', 'scale'])
             self._run()
 
@@ -231,7 +237,7 @@ rietveld_history.)
         """is_complete: returns either true or false, depending on whether or
 not the rietveld_refinement session has completed
         """
-        self.sendLine(str(self.calc_flag) + ";")
+        self.sendLine(str(not self.calc_flag) + ";")
 
     def call_can_ping(self):
         """can_ping: returns True (for diagnostic purposes)
