@@ -28,7 +28,7 @@ def with_stats(wrappee):
       print self.display_parameters()
       wrappee(self)
       print self.display_parameters(fn=wrappee)
-      print self.display_stats()
+      print self.display_stats(fn=wrappee)
    return fancy_minimize
 
 class RietveldRefinery:
@@ -71,21 +71,23 @@ class RietveldRefinery:
          RietveldPhases.I**2/RietveldPhases.sigma**2)
 
       if len(self.phase_list) > 0:
-         self.x = np.hstack((RietveldPhases.global_x,
-            np.hstack((x.phase_x for x in self.phase_list))))
+         # self.x = np.hstack((RietveldPhases.global_x,
+         #    np.hstack((x.phase_x for x in self.phase_list))))
          for key in refinement_parameters.keys:
             if not key == "refine":
                tmp = np.hstack((RietveldPhases.global_parameters.x[key],
       np.hstack((phase.phase_parameters.x[key] for phase in self.phase_list))))
                setattr(self, key, tmp)
+         self.x = self.values
       else:
          RietveldPhases.assemble_global_x()
          self.x = RietveldPhases.global_x
-         for key in refinement_parameters.keys:
-            setattr(self, key, RietveldPhases.global_parameters.x[key])
+         # for key in refinement_parameters.keys:
+         #    setattr(self, key, RietveldPhases.global_parameters.x[key])
 
       if self.bkgd_refine:
-         self.raw_profile_state = np.sum( x for x in self.phase_profiles())
+         self.raw_profile_state = np.sum(x.phase_profile() for x in
+            self.phase_list)
 
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
@@ -120,6 +122,10 @@ class RietveldRefinery:
          n+=len(phase.phase_x)
 
       self.update_state()
+      if self.rietveld_plot is not None:
+         self.rietveld_plot.setplotdata()
+         self.rietveld_plot.updateplotprofile(self.total_profile_state,
+            wse=self.relative_differences_state)
 
    def total_profile(self):
       if self.bkgd_refine:
@@ -127,11 +133,7 @@ class RietveldRefinery:
             + self.raw_profile_state
       else:
          return RietveldPhases.background_polynomial() \
-            + np.sum( x for x in self.phase_profiles())
-
-   def phase_profiles(self):
-      for phase in self.phase_list:
-         yield phase.phase_profile()
+            + np.sum( x.phase_profile() for x in self.phase_list)
 
    def weighted_squared_errors(self):
       return (RietveldPhases.I - self.total_profile_state)**2 \
@@ -147,7 +149,8 @@ class RietveldRefinery:
          self.mask[self.global_mask])
       if not self.bkgd_refine:
          for phase, phase_mask in zip(self.phase_list, self.phase_masks):
-               phase.update_params(self.x[phase_mask], self.mask[phase_mask])
+               phase.phase_parameters.update_x(
+                  self.x[phase_mask], self.mask[phase_mask])
                # self.x[self.phase_masks[i]][self.mask[self.phase_masks[i]]])
       self.total_profile_state = self.total_profile()
       # print "profile: " + str(self.phase_list[0].phase_x[3])
@@ -211,7 +214,6 @@ class RietveldRefinery:
    @with_stats
    def minimize(self, callback_functions=[]):
       self.callback_functions = callback_functions
-      self.t0 = time.time()
       # self.mask = np.logical_and(self.del_mask,self.mask)
       self.display_parameters()
       self.count = 0
@@ -219,7 +221,7 @@ class RietveldRefinery:
       self.global_and_phase_refine_masks = []
       for i in xrange(len(self.phase_list)):
          self.global_and_phase_refine_masks.append(
-            np.logical_and(self.mask,self.global_and_phase_masks[i]))
+            np.logical_and(self.mask, self.global_and_phase_masks[i]))
 
       if not self.bkgd_refine and self.rietveld_plot is not None:
          self.rietveld_plot.fig.suptitle("In Progress...")
@@ -232,6 +234,8 @@ class RietveldRefinery:
          'maxiter': self.maxiter,
          'disp': True,
          }
+
+      self.t0 = time.time()
 
       if np.sum(self.mask) > 0:
          self.result = \
@@ -265,7 +269,7 @@ class RietveldRefinery:
 
       if self.rietveld_plot is not None:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
-            wse=self.relative_differences_state,update_view=True)
+            wse=self.relative_differences_state)
 
    def set_compositions(self):
       Scales = self.x[self.scale_mask]
@@ -314,13 +318,11 @@ class RietveldRefinery:
 
       # sys.stdout.write('.')
       # sys.stdout.flush()
-      print x
-      if self.phase_list:
-         mask = self.global_and_phase_refine_masks[0]
-         print "grad:", np.sum(self.phase_list[0].phase_profile_grad(
-                  mask[self.global_and_phase_masks[0]],
-                     epsilon=self.epsilon), axis=1)
-      if self.rietveld_plot is not None: # and self.count % 5 == 0
+      # if self.phase_list:
+         # print "grad:", self.weighted_sum_of_squares_grad(self.x[self.mask])
+         # print "two_theta_0:", RietveldPhases.two_theta_0
+         # print "scale:", self.phase_list[0].phase_parameters.scale
+      if self.rietveld_plot is not None and self.count % 5 == 0:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
          map(operator.methodcaller('__call__'), list(self.callback_functions))
@@ -340,7 +342,7 @@ class RietveldRefinery:
       self.mask = np.ones(len(self.x),dtype=bool)
       self.minimize()
 
-   def display_parameters(self,fn=None):
+   def display_parameters(self, fn=None):
       if fn is not None:
          param_list = "After " + fn.__name__ + ":\n"
       else:
@@ -376,7 +378,7 @@ class RietveldRefinery:
       # print param_list
       return param_list
 
-   def display_stats(self,fn=None):
+   def display_stats(self, fn=None):
       # self.mask = np.ones(len(self.x),dtype=bool)
       WSS = np.sum(self.weighted_squared_errors_state)
       R_wp = np.sqrt(WSS/self.weighted_sum_of_I_squared)
@@ -392,7 +394,9 @@ class RietveldRefinery:
          output += "\n" + self.result['message'] +"\n"
          output +=  "\nTime taken to run " + fn.__name__ + " with " \
             + str(self.num_params) + " parameters: " \
-            + str(round(self.t1-self.t0,3)) + " seconds" +"\n"
+            + str(round(self.t1-self.t0,3)) + " seconds (" \
+            + str(self.result['nit']) + " iterations, " \
+            + str(self.result['nfev']) + " function calls)\n"
       output +=  "R_wp: " + str(R_wp) +"\n"
       output +=  "R_e: " + str(R_e) +"\n"
       output +=  "Goodness-of-Fit: " + str(self.GoF) +"\n"
@@ -411,3 +415,10 @@ class RietveldRefinery:
       # print output
       return output
 
+   def get_plot_data(self):
+      intensities = self.total_profile()
+      d = {}
+      d['two_thetas'] = []
+      d['errors'] = []
+      d['intensities'] = list(intensities)
+      return d

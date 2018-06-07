@@ -16,14 +16,16 @@ from twisted.protocols.basic import LineReceiver
 
 class RietveldClient(LineReceiver):
     """Once connected, send a message, then print the result."""
-    ref_model = json.dumps({
-        # 'input_data_path': '.\\data\\profiles\\Jade-Al2O3-Sim.xye',
-        'input_data_path': '.\\data\\profiles\\d5_05005.xye',
-        'two_theta_roi_window': [25.0, 180.0],
-        'wavelength': 'Cr',
-        'wavelength_model': 0, #TODO: check 1
-        'wavelengthc': 1.0
-        })
+    # ref_model = json.dumps({
+    #     # 'input_data_path': '.\\data\\profiles\\Jade-Al2O3-Sim.xye',
+    #     'input_data_path': '.\\data\\profiles\\d5_05005.xye',
+    #     'two_theta_roi_window': [25.0, 180.0],
+    #     'wavelength': 'Cr',
+    #     'wavelength_model': 0, #TODO: check 1
+    #     'wavelengthc': 1.0
+    #     })
+    with open('./data/server_input/rietveld_model_sample.json') as file:
+        ref_model = json.dumps(json.load(file))
     global_params = json.dumps({
         'two_theta_offset': {
         'name': 'two_theta_0',
@@ -43,12 +45,20 @@ class RietveldClient(LineReceiver):
     with open('./data/server_input/phase_parameters_sample.json') as file:
         phase_params = json.dumps(json.load(file))
 
+    with open('./data/server_input/rietveld_state_sample.json') as file:
+        rietveld_state_sample = json.dumps(json.load(file))
+
     messages = [
         'help',
         # 'help reset',
         # 'load_profile .\data\profiles\d5_05005.xye',
-        'load_profile;' + ref_model + ';' + global_params,
+        'reset',
         'add_phase;' + phase_params,
+        'load_profile;' + ref_model + ';' + global_params,
+        'is_complete',
+        'rounds_completed',
+        'get_rietveld_state;2',
+        'start_refine;' + ref_model + ';' + rietveld_state_sample,
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',
@@ -75,7 +85,7 @@ class RietveldClient(LineReceiver):
     def dataReceived(self, data):
         print "Data received. Length:", len(data)
         self.data_buffer += data
-        delay = 0.
+        delay = 0.02
         if data[-1] in [";", "\n"]:
             if len(self.messages) > 0:
                 msg = self.messages.pop(0)

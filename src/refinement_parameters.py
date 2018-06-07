@@ -34,7 +34,11 @@ def make_x_dict(parameters):
 or a list of parameter-tuples.')
 
     for key in x.keys():
-        x[key] = np.array([np.array(x_i) for x_i in x[key]])
+        if key in ("values", "l_limits", "u_limits"):
+            x[key] = np.array([np.array(x_i, dtype=np.dtype('d'))
+                for x_i in x[key]], dtype=np.dtype('d'))
+        else:
+            x[key] = np.array([np.array(x_i) for x_i in x[key]])
 
     return x
 
@@ -73,11 +77,13 @@ class RefinementParameters(object):
             setattr(self, name, self.x['values'][n:n+l])
             n += l
 
-    def update_x(self, x_new, mask=None):
+    def update_x(self, x_new, mask=None, apply_mask_to_input=True):
         if mask is None:
             self.x['values'] = x_new
-        else:
+        elif apply_mask_to_input:
             self.x['values'][mask] = x_new[mask]
+        else:
+            self.x['values'][mask] = x_new
 
     def reset_x(self):
         self.x = {}

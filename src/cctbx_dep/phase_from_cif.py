@@ -147,6 +147,7 @@ def set_two_theta_peaks(phase_settings, phase_data):
 
    tan_two_theta_peaks = np.tan(np.pi/360.0*two_theta_peaks)
    tan_two_theta_peaks.shape = (tan_two_theta_peaks.shape[0], 1)
+   #TODO: use [:,np.newaxis] instead
 
    phase_data["two_theta_peaks"] = two_theta_peaks
    phase_data["tan_two_theta_peaks"] = tan_two_theta_peaks
