@@ -14,7 +14,7 @@ from rietveld_phases import RietveldPhases
 from rietveld_plot import RietveldPlot
 import src.refinement_parameters as refinement_parameters
 
-default_factr = 1e3
+default_factr = 1e2
 default_iprint = 1
 default_maxiter = 150
 default_m = 10
@@ -122,6 +122,10 @@ class RietveldRefinery:
          n+=len(phase.phase_x)
 
       self.update_state()
+      if self.rietveld_plot is not None:
+         self.rietveld_plot.setplotdata()
+         self.rietveld_plot.updateplotprofile(self.total_profile_state,
+            wse=self.relative_differences_state)
 
    def total_profile(self):
       if self.bkgd_refine:
@@ -217,7 +221,7 @@ class RietveldRefinery:
       self.global_and_phase_refine_masks = []
       for i in xrange(len(self.phase_list)):
          self.global_and_phase_refine_masks.append(
-            np.logical_and(self.mask,self.global_and_phase_masks[i]))
+            np.logical_and(self.mask, self.global_and_phase_masks[i]))
 
       if not self.bkgd_refine and self.rietveld_plot is not None:
          self.rietveld_plot.fig.suptitle("In Progress...")
@@ -265,7 +269,7 @@ class RietveldRefinery:
 
       if self.rietveld_plot is not None:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
-            wse=self.relative_differences_state,update_view=True)
+            wse=self.relative_differences_state)
 
    def set_compositions(self):
       Scales = self.x[self.scale_mask]

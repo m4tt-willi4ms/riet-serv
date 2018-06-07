@@ -1,7 +1,7 @@
 import numpy as np
 
 def pseudo_voigt(x_squared, eta):
-    return (eta/(1+x_squared) \
+    return (eta/(1+x_squared)
             + (1-eta)*np.exp2(-x_squared))
 
 def gaussian(x_squared, eta=None):

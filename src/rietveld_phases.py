@@ -19,7 +19,7 @@ DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 
 DEFAULT_DELTA_THETA = 0.5
 DEFAULT_INTENSITY_CUTOFF = 0.01
-DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
+DEFAULT_RECOMPUTE_PEAK_POSITIONS = False
 DEFAULT_LATTICE_DEV = [0.01]*6
 
 DEFAULT_TWO_THETAS = np.linspace(0.05, 100, num=1000)
@@ -241,7 +241,7 @@ class RietveldPhases:
 
         """
         two_theta = RietveldPhases.two_theta \
-            - RietveldPhases.global_parameters.two_theta_0[:]
+            # - RietveldPhases.global_parameters.two_theta_0[:]
         return (1+np.cos(np.pi/180*two_theta)**2) \
             /np.sin(np.pi/360*two_theta) \
             /np.sin(np.pi/180*two_theta)
@@ -363,11 +363,9 @@ class RietveldPhases:
         two_theta_peaks = self.phase_data["two_theta_peaks"]
         two_theta = RietveldPhases.two_theta
         masks = self.masks
-        dim = (len(two_theta_peaks), len(two_theta))
+        dim = masks.shape
         self.two_theta_masked = peak_masking.get_masked_array(
             two_theta, dim, masks)
-        # two_theta_masked = np.broadcast_to(two_theta,
-        #         (len(two_theta_peaks), len(two_theta)))[masks]
         self.two_theta_peaks_masked = peak_masking.get_masked_array(
             two_theta_peaks, dim, masks)
 
@@ -376,15 +374,25 @@ class RietveldPhases:
             tan_two_theta_peaks, dim, masks)
         self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2
 
-        self.LP_factors_masked = peak_masking.get_masked_array(
-            RietveldPhases.LP_intensity_scaling(), dim, masks)
-
         weighted_intensities = self.phase_data["weighted_intensities"]
         self.weighted_intensities_masked = peak_masking.get_masked_array(
             weighted_intensities, dim, masks)
+        self.LP_factors_masked = peak_masking.get_masked_array(
+            RietveldPhases.LP_intensity_scaling(), dim, masks)
+        self.update_param_arrays()
+
+    def update_param_arrays(self):
+        masks = self.masks
+        dim = masks.shape
         self.eta_masked = peak_masking.get_masked_array(
             self.eta_polynomial(), dim, masks)
-
+        if RietveldPhases.phase_settings["vertical_offset"]:
+            vals = -360/np.pi*np.cos(np.pi/360*RietveldPhases.two_theta) \
+                * RietveldPhases.two_theta_0
+            self.two_theta_0_masked = peak_masking.get_masked_array(
+                vals, dim, masks)
+        else:
+            self.two_theta_0_masked = RietveldPhases.two_theta_0
 
     def update_two_thetas(self, anomalous_flag=False):
         unit_cell.update_unit_cell(self.phase_settings,
@@ -414,30 +422,25 @@ class RietveldPhases:
         return np.dot(eta, RietveldPhases.two_theta_powers[:len(eta), :])
 
     def phase_profile(self):
+        self.update_param_arrays()
         if self.phase_settings["recompute_peak_positions"]:
-            pass
-            # self.update_two_thetas()
+            self.update_two_thetas()
         # print "called phase_profile()", inspect.stack()[1][3]
-        two_theta_peaks = self.phase_data["two_theta_peaks"]
-        result = np.zeros((len(two_theta_peaks), len(RietveldPhases.two_theta)))
-        omegaUVW_squareds = \
-            np.abs(self.phase_parameters.caglioti_u*self.tan_two_theta_peaks_sq_masked
-                +self.phase_parameters.caglioti_v*self.tan_two_theta_peaks_masked
-                +self.phase_parameters.caglioti_w)
+        result = np.zeros(self.masks.shape)
 
-        if RietveldPhases.phase_settings["vertical_offset"]:
-            vals = -360/np.pi*np.cos(np.pi/360*RietveldPhases.two_theta) \
-                * RietveldPhases.two_theta_0
-            two_theta_0_masked = peak_masking.get_masked_array(
-                vals, dim, masks)
-        else:
-            two_theta_0_masked = RietveldPhases.two_theta_0
-
-        two_theta_all_squared = (self.two_theta_masked - two_theta_0_masked
+        omegaUVW_squareds = np.abs(
+            self.phase_parameters.caglioti_u*self.tan_two_theta_peaks_sq_masked
+            +self.phase_parameters.caglioti_v*self.tan_two_theta_peaks_masked
+            +self.phase_parameters.caglioti_w)
+        two_theta_all_squared = (self.two_theta_masked - self.two_theta_0_masked
                                         - self.two_theta_peaks_masked)**2
-
         two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds
 
+        # tmp = self.phase_parameters.scale \
+        #     *self.weighted_intensities_masked \
+        #     *self.LP_factors_masked \
+        #     *self.profile(two_thetabar_squared, self.eta_masked)
+        # np.putmask(result, self.masks, tmp)
         result[self.masks] = self.phase_parameters.scale \
             *self.weighted_intensities_masked \
             *self.LP_factors_masked \

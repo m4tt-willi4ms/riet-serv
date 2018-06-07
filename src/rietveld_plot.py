@@ -65,34 +65,15 @@ class RietveldPlot:
       plt.ion()
       self.fig.canvas.show()
 
-   def updateplotprofile(self,profile,wse=None,update_view=False):
-      # if len(self.subplot1.axes.lines) is not 0:
-      #    for x in (self.subplot1,self.subplot2):#,self.subplot3):
-      #       for line in x.axes.lines:
-      #          line.remove()
+   def updateplotprofile(self, profile, wse=None):
       self.profile1.set_ydata(profile)
       self.profile2.set_ydata(profile)
       if wse is not None:
          sigma = RietveldPhases.sigma
          self.diff1.set_ydata(-self.I_max/2+wse*sigma**2)
          self.diff2.set_ydata(-self.I_max/2+wse*sigma**2)
-      # self.subplot1.plot(two_theta,profile,label=r'$I_{\rm calc}$',
-      #    alpha=0.7,color='red')
-      #    self.subplot1.plot(two_theta,-self.I_max/2+wse*RietveldPhases.sigma**2,
-      #       label=r'$\Delta I$',color='green')
-      # self.subplot1.legend(bbox_to_anchor=(.8,.7))
-
-      # self.subplot2.plot(two_theta,profile,
-      #    alpha=0.7,color='red')
-      # if wse is not None:
-      #    self.subplot2.plot(two_theta,-self.I_max/2+wse*RietveldPhases.sigma**2,
-      #       color='green')
 
       self.fig.canvas.show()
-
-      # if wse is not None:
-      #    self.subplot3.plot(two_theta,wse*RietveldPhases.sigma**2,
-      #       label=r'$\Delta I$',color='green')
 
       def onselect(xmin, xmax):
          x = RietveldPhases.two_theta
@@ -113,13 +94,12 @@ class RietveldPlot:
       self.span = SpanSelector(self.subplot1, onselect, 'horizontal',
                     rectprops=dict(alpha=0.5, facecolor='green'))
 
-      if update_view:
-         self.subplot1.axes.relim()
-         self.subplot1.axes.autoscale_view()
-         self.subplot2.axes.relim()
-         self.subplot2.axes.autoscale_view()
-         # self.subplot3.axes.relim()
-         # self.subplot3.axes.autoScale_view()
+      self.subplot1.axes.relim()
+      self.subplot1.axes.autoscale_view()
+      self.subplot2.axes.relim()
+      self.subplot2.axes.autoscale_view()
+      # self.subplot3.axes.relim()
+      # self.subplot3.axes.autoScale_view()
 
       # self.fig.canvas.draw_idle()
       self.fig.canvas.draw()
