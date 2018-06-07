@@ -86,8 +86,8 @@ class RietveldRefinery:
          #    setattr(self, key, RietveldPhases.global_parameters.x[key])
 
       if self.bkgd_refine:
-         self.raw_profile_state = np.sum(
-            x.phase_profile() for x in iter(self.phase_list))
+         self.raw_profile_state = np.sum(x.phase_profile() for x in
+            self.phase_list)
 
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
@@ -342,7 +342,7 @@ class RietveldRefinery:
       self.mask = np.ones(len(self.x),dtype=bool)
       self.minimize()
 
-   def display_parameters(self,fn=None):
+   def display_parameters(self, fn=None):
       if fn is not None:
          param_list = "After " + fn.__name__ + ":\n"
       else:
@@ -378,7 +378,7 @@ class RietveldRefinery:
       # print param_list
       return param_list
 
-   def display_stats(self,fn=None):
+   def display_stats(self, fn=None):
       # self.mask = np.ones(len(self.x),dtype=bool)
       WSS = np.sum(self.weighted_squared_errors_state)
       R_wp = np.sqrt(WSS/self.weighted_sum_of_I_squared)
@@ -415,3 +415,10 @@ class RietveldRefinery:
       # print output
       return output
 
+   def get_plot_data(self):
+      intensities = self.total_profile()
+      d = {}
+      d['two_thetas'] = []
+      d['errors'] = []
+      d['intensities'] = list(intensities)
+      return d

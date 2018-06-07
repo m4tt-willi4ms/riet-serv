@@ -188,8 +188,6 @@ class RietveldPhases:
 
     @classmethod
     def get_plot_data(cls, intensities, two_thetas=[], errors=[]):
-        if intensities is None:
-            intensities = []
         d = {}
         d['two_thetas'] = list(two_thetas)
         d['errors'] = list(errors)
@@ -516,8 +514,8 @@ class RietveldPhases:
             d['value'] = param[1]
             d['l_limit'] = param[3]
             d['u_limit'] = param[4]
-            d['used'] = np.any(np.array(param[2], dtype=bool))
-            d['uround'] = param[2]
+            d['used'] = bool(np.any(np.array(param[2], dtype=bool)))
+            d['uround'] = [bool(x) for x in np.nditer(param[2])]
             d['round'] = 2
             lattice_parameters.append(d)
         phase_dict['lattice_parameters'] = lattice_parameters
