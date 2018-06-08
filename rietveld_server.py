@@ -18,6 +18,7 @@ class RietveldServer(basic.LineReceiver):
     refinery_model = None
     rietveld_refinery = None
     rietveld_history = []
+    plot_data = None
 
     def connectionMade(self):
         # pass
@@ -175,8 +176,12 @@ PhaseParameters object in json-serialized form.
         self.err_flag = True
         log.err()
 
+    def _update_plot(self):
+        self.plot_data = rp.RietveldPhases.get_plot_data(
+            self.rietveld_refinery.total_profile_state)
+
     def _refine(self):
-        self.rietveld_refinery.minimize()
+        self.rietveld_refinery.minimize(callback_functions=[self._update_plot])
 
     def _run(self):
         self.calc_flag = True
@@ -244,6 +249,17 @@ not the rietveld_refinement session has completed
         """can_ping: returns True (for diagnostic purposes)
         """
         self.sendLine(str(True) + ";")
+
+    def call_get_plot_data(self):
+        """get_plot_data: returns the
+        """
+        if self.plot_data is None:
+            if self.rietveld_refinery is not None:
+                self._update_plot()
+            else:
+                self.rietveld_refinery = rr.RietveldRefinery(self.phase_list)
+                self._update_plot()
+        self.sendLine(json.dumps(self.plot_data) + ";")
 
     def call_get_phase_profile(self, index=u'-1'):
         """get_phase_profile [index]: returns a json-serialized list containing

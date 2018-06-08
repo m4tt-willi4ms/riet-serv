@@ -49,6 +49,7 @@ class RietveldClient(LineReceiver):
         'rounds_completed',
         'is_complete',
         'rounds_completed',
+        'get_plot_data',
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',

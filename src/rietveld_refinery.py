@@ -24,9 +24,9 @@ default_epsilon = 1e-11
 # default_composition_cutoff = 3
 
 def with_stats(wrappee):
-   def fancy_minimize(self):
+   def fancy_minimize(self, *args, **kwargs):
       print self.display_parameters()
-      wrappee(self)
+      wrappee(self, *args, **kwargs)
       print self.display_parameters(fn=wrappee)
       print self.display_stats(fn=wrappee)
    return fancy_minimize
