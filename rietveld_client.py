@@ -38,15 +38,17 @@ class RietveldClient(LineReceiver):
         # 'help reset',
         # 'load_profile .\data\profiles\d5_05005.xye',
         'reset',
-        'add_phase;' + phase_params,
         'load_profile;' + ref_model + ';' + global_params,
-        # 'add_phase;' + phase_params,
-        # 'is_complete',
-        # 'rounds_completed',
-        # 'get_rietveld_state;2',
-        # 'start_refine;' + ref_model + ';' + rietveld_state_sample,
-        # 'is_complete',
-        # 'rounds_completed',
+        'add_phase;' + phase_params,
+        'add_phase;' + phase_params,
+        'is_complete',
+        'rounds_completed',
+        'get_rietveld_state;2',
+        'start_refine;' + ref_model + ';' + rietveld_state_sample,
+        'is_complete',
+        'rounds_completed',
+        'is_complete',
+        'rounds_completed',
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',
@@ -74,7 +76,7 @@ class RietveldClient(LineReceiver):
         print "Data received. Length:", len(data)
         self.data_buffer += data
         if data[-1] in ["\n"]:
-            delay = 0.5
+            delay = 1
             if len(self.messages) > 0:
                 msg = self.messages.pop(0)
                 self.clearLineBuffer()

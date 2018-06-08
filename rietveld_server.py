@@ -83,7 +83,7 @@ class RietveldServer(basic.LineReceiver):
             custom_wavelength=custom_wavelength)
 
     def _set_global_parameters(self, global_parameters):
-        rp.RietveldPhases.global_parameters.from_dict(global_parameters)
+        rp.RietveldPhases.set_global_parameters(global_parameters)
         # profile_filename = os.path.split(profile_path)[1]
         # self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
         if rp.RietveldPhases.I is not None:
@@ -198,15 +198,15 @@ respectively
             self._set_refinery_model(json.loads(refinery_model))
 
             rs = json.loads(rietveld_state)
-            self._set_global_parameters(rs['global_state'])
             self.phase_list = []
+            self._set_global_parameters(rs['global_state'])
             for phase in rs['phase_state']:
                 self._add_phase(phase)
 
             self._bkgd_refine()
 
             self.rietveld_refinery = rr.RietveldRefinery(self.phase_list)
-            self.rietveld_refinery.set_mask(['two_theta_0', 'bkgd', 'scale'])
+            self.rietveld_refinery.set_mask(['two_theta_', 'bkgd', 'scale'])
             self._run()
 
             self.sendLine(str(True) + ";")

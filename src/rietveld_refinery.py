@@ -70,18 +70,18 @@ class RietveldRefinery:
       self.weighted_sum_of_I_squared = np.sum(
          RietveldPhases.I**2/RietveldPhases.sigma**2)
 
-      if len(self.phase_list) > 0:
-         # self.x = np.hstack((RietveldPhases.global_x,
-         #    np.hstack((x.phase_x for x in self.phase_list))))
-         for key in refinement_parameters.keys:
-            if not key == "refine":
+      for key in refinement_parameters.keys:
+         if key in ("labels", "values", "l_limits", "u_limits"):
+            if len(self.phase_list) > 0:
+               # self.x = np.hstack((RietveldPhases.global_x,
+               #    np.hstack((x.phase_x for x in self.phase_list))))
                tmp = np.hstack((RietveldPhases.global_parameters.x[key],
       np.hstack((phase.phase_parameters.x[key] for phase in self.phase_list))))
-               setattr(self, key, tmp)
-         self.x = self.values
-      else:
-         RietveldPhases.assemble_global_x()
-         self.x = RietveldPhases.global_x
+            else:
+               RietveldPhases.assemble_global_x()
+               tmp = RietveldPhases.global_parameters.x[key]
+         setattr(self, "x_" + key, tmp)
+      self.x = self.x_values
          # for key in refinement_parameters.keys:
          #    setattr(self, key, RietveldPhases.global_parameters.x[key])
 
@@ -205,10 +205,10 @@ class RietveldRefinery:
    def make_mask(self, list_of_parameter_strings=[]):
       mask = np.zeros(len(self.x), dtype=bool)
       if len(list_of_parameter_strings) == 1:
-         mask = np.char.startswith(self.labels, list_of_parameter_strings[0])
+         mask = np.char.startswith(self.x_labels, list_of_parameter_strings[0])
       elif len(list_of_parameter_strings) > 1:
          for param in list_of_parameter_strings:
-            mask = np.logical_or(mask, np.char.startswith(self.labels, param))
+            mask = np.logical_or(mask, np.char.startswith(self.x_labels, param))
       return mask
 
    @with_stats
@@ -247,8 +247,8 @@ class RietveldRefinery:
             callback = self.callback,
             # approx_grad = True,
             # epsilon = self.epsilon, \
-            bounds = zip(self.l_limits[self.mask],
-               self.u_limits[self.mask]),
+            bounds = zip(self.x_l_limits[self.mask],
+               self.x_u_limits[self.mask]),
             )
       else:
          self.result = None
@@ -351,10 +351,10 @@ class RietveldRefinery:
       if np.any(mask):
          param_list += "Global:\n"
       for label,value,l,u in zip(
-            self.labels[mask],
+            self.x_labels[mask],
             self.x[mask],
-            self.l_limits[mask],
-            self.u_limits[mask]):
+            self.x_l_limits[mask],
+            self.x_u_limits[mask]):
             param_list += \
                "  " + label + " = " \
                + ('%.4g' % value) + " (" \
@@ -366,10 +366,10 @@ class RietveldRefinery:
             param_list += "Phase " + str(i+1) + ": " + \
                self.phase_list[i].phase_settings["chemical_name"] +"\n"
             for label,value,l,u in zip(
-               self.labels[mask],
+               self.x_labels[mask],
                self.x[mask],
-               self.l_limits[mask],
-               self.u_limits[mask]):
+               self.x_l_limits[mask],
+               self.x_u_limits[mask]):
                param_list += \
                   "  " + label + " = " \
                   + ('%.4g' % value) + " (" \

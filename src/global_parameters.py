@@ -14,12 +14,13 @@ class GlobalParameters(RefinementParameters):
     def __init__(self, phase_settings,
         two_theta_0=DEFAULT_TWO_THETA_0,
         bkgd_order=DEFAULT_BKGD_ORDER,
-        *args, **kwargs):
+        param_dict=None):
         self.phase_settings = phase_settings
         self.bkgd_order = bkgd_order
-        self.two_theta_0 = two_theta_0
-        self.bkgd = [x for x in self.bkgd_param_gen()]
-        super(GlobalParameters, self).__init__(*args, **kwargs)
+        if param_dict is None:
+            self.two_theta_0 = two_theta_0
+            self.bkgd = [x for x in self.bkgd_param_gen()]
+        super(GlobalParameters, self).__init__(param_dict=param_dict)
 
     def set_bkgd_order(self, order):
         r'''

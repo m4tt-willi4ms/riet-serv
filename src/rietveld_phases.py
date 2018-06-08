@@ -123,6 +123,11 @@ class RietveldPhases:
     sigma = None
 
     @classmethod
+    def set_global_parameters(cls, param_dict):
+        cls.global_parameters = GlobalParameters(cls.phase_settings,
+            param_dict=param_dict)
+
+    @classmethod
     def set_profile(cls, filename,
                          number_of_columns=3,
                          min_two_theta=0,
@@ -239,7 +244,7 @@ class RietveldPhases:
 
         """
         two_theta = RietveldPhases.two_theta \
-            # - RietveldPhases.global_parameters.two_theta_0[:]
+            # - RietveldPhases.global_parameters.two_theta_offset[:]
         return (1+np.cos(np.pi/180*two_theta)**2) \
             /np.sin(np.pi/360*two_theta) \
             /np.sin(np.pi/180*two_theta)
@@ -248,7 +253,7 @@ class RietveldPhases:
     def assemble_global_x(cls):
         cls.global_parameters.assemble_x()
         cls.global_x = cls.global_parameters.x['values']
-        cls.two_theta_0 = cls.global_parameters.two_theta_0[:]
+        cls.two_theta_offset = cls.global_parameters.two_theta_offset[:]
         cls.bkgd = cls.global_parameters.bkgd[:]
         cls.global_x_no_bkgd_mask = np.invert(
             np.char.startswith(cls.global_parameters.x['labels'], 'bkgd'))
@@ -313,7 +318,7 @@ class RietveldPhases:
         # self.phase_data["masks"] = peak_masking.peak_masks(
         self.masks = peak_masking.peak_masks(
             RietveldPhases.two_theta,
-            RietveldPhases.two_theta_0,
+            RietveldPhases.two_theta_offset,
             self.phase_data["two_theta_peaks"],
             self.phase_settings["delta_theta"])
 
@@ -386,11 +391,11 @@ class RietveldPhases:
             self.eta_polynomial(), dim, masks)
         if RietveldPhases.phase_settings["vertical_offset"]:
             vals = -360/np.pi*np.cos(np.pi/360*RietveldPhases.two_theta) \
-                * RietveldPhases.two_theta_0
-            self.two_theta_0_masked = peak_masking.get_masked_array(
+                * RietveldPhases.two_theta_offset
+            self.two_theta_offset_masked = peak_masking.get_masked_array(
                 vals, dim, masks)
         else:
-            self.two_theta_0_masked = RietveldPhases.two_theta_0
+            self.two_theta_offset_masked = RietveldPhases.two_theta_offset
 
     def update_two_thetas(self, anomalous_flag=False):
         unit_cell.update_unit_cell(self.phase_settings,
@@ -429,7 +434,7 @@ class RietveldPhases:
             self.phase_parameters.cagliotti_u*self.tan_two_theta_peaks_sq_masked
             +self.phase_parameters.cagliotti_v*self.tan_two_theta_peaks_masked
             +self.phase_parameters.cagliotti_w)
-        two_theta_all_squared = (self.two_theta_masked - self.two_theta_0_masked
+        two_theta_all_squared = (self.two_theta_masked - self.two_theta_offset_masked
                                         - self.two_theta_peaks_masked)**2
         two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds
 
