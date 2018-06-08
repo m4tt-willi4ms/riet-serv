@@ -26,25 +26,10 @@ class RietveldClient(LineReceiver):
     #     })
     with open('./data/server_input/rietveld_model_sample.json') as file:
         ref_model = json.dumps(json.load(file))
-    global_params = json.dumps({
-        'two_theta_offset': {
-        'name': 'two_theta_0',
-        'value': 0.0,
-        'uround': [True],
-        'l_limit': -0.1,
-        'u_limit': -0.1,
-        },
-        'bkgd': [{
-        'name': 'bkgd_0',
-        'value': 0.0,
-        'uround': [True],
-        'l_limit': -float('inf'),
-        'u_limit': float('inf'),
-        }]
-        })
+    with open('./data/server_input/global_parameters_sample.json') as file:
+        global_params = json.dumps(json.load(file))
     with open('./data/server_input/phase_parameters_sample.json') as file:
         phase_params = json.dumps(json.load(file))
-
     with open('./data/server_input/rietveld_state_sample.json') as file:
         rietveld_state_sample = json.dumps(json.load(file))
 
@@ -54,16 +39,14 @@ class RietveldClient(LineReceiver):
         # 'load_profile .\data\profiles\d5_05005.xye',
         'reset',
         'add_phase;' + phase_params,
-        'add_phase;' + phase_params,
-        'add_phase;' + phase_params,
-        'add_phase;' + phase_params,
         'load_profile;' + ref_model + ';' + global_params,
-        'is_complete',
-        'rounds_completed',
-        'get_rietveld_state;2',
-        'start_refine;' + ref_model + ';' + rietveld_state_sample,
-        'is_complete',
-        'rounds_completed',
+        # 'add_phase;' + phase_params,
+        # 'is_complete',
+        # 'rounds_completed',
+        # 'get_rietveld_state;2',
+        # 'start_refine;' + ref_model + ';' + rietveld_state_sample,
+        # 'is_complete',
+        # 'rounds_completed',
         # 'add_phase;' + phase_info
         # 'get_phase_info',
         # 'get_phase_profile',

@@ -6,9 +6,9 @@ from src.refinement_parameters import RefinementParameters
 import src.profiles as profiles
 import src.cctbx_dep.unit_cell as unit_cell
 
-DEFAULT_U = ('caglioti_u', 0.00, [False], -0.1, 0.1)
-DEFAULT_V = ('caglioti_v', 0.00, [False], -0.1, 0.1)
-DEFAULT_W = ('caglioti_w', 0.007, [True], 0.000001, 1)
+DEFAULT_U = ('cagliotti_u', 0.00, [False], -0.1, 0.1)
+DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
+DEFAULT_W = ('cagliotti_w', 0.007, [True], 0.000001, 1)
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01
@@ -26,22 +26,20 @@ class PhaseParameters(RefinementParameters):
         W=DEFAULT_W,
         eta_order=DEFAULT_ETA_ORDER,
         profile=DEFAULT_PROFILE,
-        phase_parameter_dict=None,
-        ):
+        param_dict=None):
         # RefinementParameters.__init__(self)
-        super(PhaseParameters, self).__init__()
+        super(PhaseParameters, self).__init__(param_dict=param_dict)
         self.phase_settings = phase_settings
-        self.scale = scale
-        self.U = U
-        self.V = V
-        self.W = W
-        self.eta_order = eta_order
-        self.eta = self.set_eta_order(self.eta_order)
+        if param_dict is None:
+            self.scale = scale
+            self.U = U
+            self.V = V
+            self.W = W
+            self.eta_order = eta_order
+            self.eta = self.set_eta_order(self.eta_order)
         if self.phase_settings["recompute_peak_positions"]:
             self.lattice_parameters = unit_cell.assemble_lattice_parameters(
                 self.phase_settings)
-        if phase_parameter_dict is not None:
-            self.from_dict(phase_parameter_dict)
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)

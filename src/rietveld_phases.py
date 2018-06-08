@@ -298,7 +298,7 @@ class RietveldPhases:
         phase_from_cif.load_cif(self.phase_settings)
 
         self.phase_parameters = PhaseParameters(self.phase_settings,
-            phase_parameter_dict=phase_parameter_dict)
+            param_dict=phase_parameter_dict)
 
         if RietveldPhases.two_theta is None:
             RietveldPhases.two_theta = DEFAULT_TWO_THETAS
@@ -425,11 +425,10 @@ class RietveldPhases:
             self.update_two_thetas()
         # print "called phase_profile()", inspect.stack()[1][3]
         result = np.zeros(self.masks.shape)
-
         omegaUVW_squareds = np.abs(
-            self.phase_parameters.caglioti_u*self.tan_two_theta_peaks_sq_masked
-            +self.phase_parameters.caglioti_v*self.tan_two_theta_peaks_masked
-            +self.phase_parameters.caglioti_w)
+            self.phase_parameters.cagliotti_u*self.tan_two_theta_peaks_sq_masked
+            +self.phase_parameters.cagliotti_v*self.tan_two_theta_peaks_masked
+            +self.phase_parameters.cagliotti_w)
         two_theta_all_squared = (self.two_theta_masked - self.two_theta_0_masked
                                         - self.two_theta_peaks_masked)**2
         two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds

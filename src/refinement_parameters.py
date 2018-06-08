@@ -3,7 +3,8 @@ import copy
 
 keys = ("labels", "values", "refine", "l_limits", "u_limits")
 param_keys = ("name", "value", "uround", "l_limit", "u_limit")
-ignored_keys = ("lattice_parameters", "scale")
+ignored_keys = ("lattice_parameters", "vertical_offset",
+    "lattice_parameter_tolerances", "cif_path", "phase_name")
 
 def validate_order(order, max_polynom_order=5):
     assert isinstance(order, int)
@@ -42,10 +43,25 @@ or a list of parameter-tuples.')
 
     return x
 
+def get_param_from_dict(d):
+    return tuple([d[key] for key in param_keys])
+
+def get_param(val):
+    result = None
+    if isinstance(val, list):
+        result = []
+        for item in val:
+            result.append(get_param_from_dict(item))
+    elif isinstance(val, dict):
+        result = get_param_from_dict(val)
+    return result
+
 class RefinementParameters(object):
 
-    def __init__(self):
+    def __init__(self, param_dict=None):
         self.x = {}
+        if param_dict is not None:
+            self.from_dict(param_dict)
         self.validate_order = validate_order
 
     def assemble_x(self):
@@ -111,6 +127,7 @@ class RefinementParameters(object):
                 lst = [self.x[k][index] for k in keys]
                 lst[2] = [bool(x) for x in np.nditer(lst[2])]
                 return dict(zip(param_keys, lst))
+
             for name, param in self.param_gen():
                 val_array = getattr(self, name)
                 l = len(val_array)
@@ -124,24 +141,27 @@ class RefinementParameters(object):
                 n += l
         else:
             for name, param in self.param_gen():
-                result[name] = param
+                if isinstance(param, list):
+                    return_value = []
+                    for i, item in enumerate(param):
+                        return_value.append(dict(zip(param_keys, item)))
+                elif isinstance(param, tuple):
+                    return_value =  dict(zip(param_keys, param))
+                result[name] = return_value
         return result
 
-
     def from_dict(self, d):
-        def get_param_from_dict(d):
-            return tuple([d[key] for key in param_keys])
 
-        def get_param(val):
-            result = None
-            if isinstance(val, list):
-                result = []
-                for item in val:
-                    result.append(get_param_from_dict(item))
-            elif isinstance(val, dict):
-                result = get_param_from_dict(val)
-            return result
+        def param_gen():
+            d_filtered = { k: get_param(d[k]) for k in d.keys()
+                if k not in ignored_keys}
+            return d_filtered.iteritems()
+
+        self.param_gen = param_gen
 
         for name, param in self.param_gen():
-            if name in filter(lambda x: not x in ignored_keys, d.keys()):
-                setattr(self, name, get_param(d[name]))
+            setattr(self, name, get_param(d[name]))
+
+        if self.x:
+            self.assemble_x()
+

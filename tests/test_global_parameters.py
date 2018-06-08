@@ -118,3 +118,29 @@ def test_get_dict(gp, gp_assembled):
     assert gp_assembled.x
     d = gp_assembled.as_dict()
     assert len(d['bkgd']) == gp_assembled.bkgd_order
+
+def test_from_dict(phase_settings):
+    import json
+    with open('./data/server_input/global_parameters_sample.json') as file:
+        gp_dict = json.load(file)
+    gp = GlobalParameters(phase_settings, param_dict=gp_dict)
+    gp_dict_filtered = dict((k, v) for k, v in gp_dict.iteritems()
+        if k not in rp.ignored_keys)
+    def check_dict(d1, d2):
+        for k, v in d1.iteritems():
+            assert k in d2
+            def check_paramdict(d1, d2):
+                for k, v in d1.iteritems():
+                    assert k in d2
+                    if isinstance(v, float):
+                        assert np.isclose(v, d2[k])
+                    else:
+                        assert v == d2[k]
+            if isinstance(v, list):
+                for i, item in enumerate(v):
+                    check_paramdict(item, d2[k][i])
+            elif isinstance(v, dict):
+                check_paramdict(v, d2[k])
+    check_dict(gp.as_dict(), gp_dict_filtered)
+    gp.assemble_x()
+    check_dict(gp.as_dict(), gp_dict_filtered)

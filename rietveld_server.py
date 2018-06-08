@@ -106,6 +106,7 @@ class RietveldServer(basic.LineReceiver):
             assert isinstance(global_parameters, unicode)
             self._set_global_parameters(json.loads(global_parameters))
 
+            self.rietveld_refinery = rr.RietveldRefinery(self.phase_list)
             profile = self.rietveld_refinery.total_profile()
             rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile,
                 compute_differences=True)
@@ -262,6 +263,7 @@ most-recently loaded phase is returned"""
         self.refinery_model = None
         self.rietveld_refinery = None
         self.rietveld_history = []
+        rp.RietveldPhases.global_parameters.reset_x()
         self.sendLine(b'Resetting')
 
     def call_help(self, command=None):
