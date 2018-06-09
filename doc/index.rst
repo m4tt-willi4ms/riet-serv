@@ -7,14 +7,17 @@
 PROTO Rietveld Refinement
 +++++++++++++++++++++++++++++++++++++
 
-.. Welcome to PROTO Rietveld Refinement's documentation!
-.. =====================================================
+This page provides some details describing the behaviour of the PROTO Rietveld
+Refinement software. Questions or comments are welcome! Please email us `here`_
+with any suggestions for improvement.
+
+.. _here: mwilliams@protoxrd.com
 
 .. toctree::
    :maxdepth: 3
-   :caption: Contents:
 
    main
+   helper
    client-server
    cctbx_dep
 

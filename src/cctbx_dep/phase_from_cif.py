@@ -11,7 +11,10 @@ import cctbx.eltbx as eltbx
 def load_cif(phase_settings):
    """Reads in a unit cell, crystal structure, crystal system from iotbx
 
-      :param str file_path: The file name
+      :param dict phase_settings: A dictionary containing the key `cif_path`,
+         whose value is the path to the .cif file to be loaded.
+      :returns: An updated phase_settings dictionary, with the `structure`,
+         `unit_cell`, `crystal_system`, and `chemical_name` keys added.
 
    """
    file_path = phase_settings["cif_path"]
@@ -39,16 +42,6 @@ def load_cif(phase_settings):
    for scatterer in structure.scatterers():
       scatterer.scattering_type = eltbx.xray_scattering.get_standard_label(
          scatterer.scattering_type)
-      # if scatterer.scattering_type == "O-2":
-      #    scatterer.scattering_type = "O2-"
-      # if scatterer.scattering_type == "Ca+2":
-      #    scatterer.scattering_type = "Ca2+"
-      # if scatterer.scattering_type == "Si+4":
-      #    scatterer.scattering_type = "Si4+"
-      # if scatterer.scattering_type == "Al+3":
-      #    scatterer.scattering_type = "Al3+"
-      # if scatterer.scattering_type == "K+1":
-      #    scatterer.scattering_type = "K1+"
    return phase_settings
 
 def compute_relative_intensities(phase_settings, anomalous_flag=True):

@@ -1,8 +1,4 @@
-"""
-   Target Wavelengths Module
-   =========================
-
-   This module makes use of the cctbx.eltbx wavelengths module to populate a
+"""This module makes use of the cctbx.eltbx wavelengths module to populate a
    dictionary of available characteristic wavelengths, and sets the appropriate
    phase_settings keys according the target specified.
 """

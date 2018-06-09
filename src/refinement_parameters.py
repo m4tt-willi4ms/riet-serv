@@ -1,3 +1,11 @@
+"""This module is used as a base module for any collection of refinement
+parameters. It includes functionality for importing parameters from a
+dictionary, assembling parameters into numpy arrays (which are used when running
+a refinement), and exporting the refined parameters as a dictionary.
+
+Any subclass of RefinementParameters need only implement the parameter generator
+in order to take advantage of the features detailed herein.
+"""
 import numpy as np
 import copy
 

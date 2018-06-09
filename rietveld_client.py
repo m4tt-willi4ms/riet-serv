@@ -1,13 +1,9 @@
-
-# Copyright (c) Twisted Matrix Laboratories.
-# See LICENSE for details.
-
-
 """
-An example client. Run simpleserv.py first before running this.
+A test client to demonstrate some simple use of the Rietveld Server
 """
 import time
 import json
+import os
 
 from twisted.internet import reactor
 from twisted.internet.protocol import ClientFactory
@@ -24,13 +20,19 @@ class RietveldClient(LineReceiver):
     #     'wavelength_model': 0, #TODO: check 1
     #     'wavelengthc': 1.0
     #     })
-    with open('./data/server_input/rietveld_model_sample.json') as file:
+    # with open('./data/server_input/rietveld_model_sample.json') as file:
+    #     ref_model = json.dumps(json.load(file))
+    with open(os.path.join(os.path.dirname(__file__),
+        'data/server_input/rietveld_model_sample.json')) as file:
         ref_model = json.dumps(json.load(file))
-    with open('./data/server_input/global_parameters_sample.json') as file:
+    with open(os.path.join(os.path.dirname(__file__),
+        'data/server_input/global_parameters_sample.json')) as file:
         global_params = json.dumps(json.load(file))
-    with open('./data/server_input/phase_parameters_sample.json') as file:
+    with open(os.path.join(os.path.dirname(__file__),
+        'data/server_input/phase_parameters_sample.json')) as file:
         phase_params = json.dumps(json.load(file))
-    with open('./data/server_input/rietveld_state_sample.json') as file:
+    with open(os.path.join(os.path.dirname(__file__),
+        'data/server_input/rietveld_state_sample.json')) as file:
         rietveld_state_sample = json.dumps(json.load(file))
 
     messages = [

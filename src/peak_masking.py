@@ -15,6 +15,8 @@ def get_masked_array(array, shape, mask):
 class MaskedArrayBuilder(object):
     """This class handles the building of some
     """
+    def __init__(self):
+        pass
 
 def set_masked_arrays(phase_data, two_theta):
     two_theta_peaks = phase_data["two_theta_peaks"]

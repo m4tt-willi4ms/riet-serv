@@ -243,6 +243,7 @@ rietveld_history.)
         """is_complete: returns either true or false, depending on whether or
 not the rietveld_refinement session has completed
         """
+        print "return:", not self.calc_flag
         self.sendLine(str(not self.calc_flag) + ";")
 
     def call_can_ping(self):
@@ -251,7 +252,8 @@ not the rietveld_refinement session has completed
         self.sendLine(str(True) + ";")
 
     def call_get_plot_data(self):
-        """get_plot_data: returns the
+        """get_plot_data: returns a JSON-serialized plot_data object
+corresponding to the present state of the RietveldRefinery on the server
         """
         if self.plot_data is None:
             if self.rietveld_refinery is not None:
