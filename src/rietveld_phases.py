@@ -2,10 +2,7 @@
 parameters upon which it depends
 """
 from __future__ import division
-import os
-import time
-import inspect
-import sys
+# import inspect
 import numpy as np
 
 import src.profiles as profiles
@@ -197,7 +194,14 @@ class RietveldPhases(object):
             cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
-    def get_plot_data(cls, intensities, two_thetas=[], errors=[]):
+    def get_plot_data(cls, intensities,
+                      two_thetas=None, errors=None, compute_errors=False):
+        if two_thetas is None:
+            two_thetas = []
+        if errors is None:
+            errors = []
+        if compute_errors:
+            errors = list(np.sqrt(np.array(intensities)))
         d = {}
         d['two_thetas'] = list(two_thetas)
         d['errors'] = list(errors)
@@ -478,10 +482,6 @@ class RietveldPhases(object):
         #     = self.global_and_phase_x[self.global_mask_no_bkgd]
         # self.phase_x = \
         #     self.global_and_phase_x[self.phase_mask]
-
-    def phase_profile_x(self, x, mask):
-        self.update_global_and_phase_x(x, mask)
-        return self.phase_profile()
 
     def phase_profile_grad(self, global_and_phase_mask, epsilon=1e-6):
         num_params = np.sum(global_and_phase_mask)
