@@ -109,11 +109,11 @@ server"""
             assert isinstance(global_parameters, unicode)
             self._set_global_parameters(json.loads(global_parameters))
 
-            RietveldServer.rietveld_refinery = rr.RietveldRefinery(
-                RietveldServer.phase_list)
-            profile = RietveldServer.rietveld_refinery.total_profile()
-            rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile,
-                compute_differences=True)
+            if self.rietveld_refinery is not None:
+                profile_data = self.rietveld_refinery.total_profile()
+            else:
+                profile_data = self.phase_list[-1].phase_profile()
+            rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile_data)
             reply = ""
             reply += json.dumps(rietveld_plot) + ";"
             global_parameters = rp.RietveldPhases.global_parameters.as_dict()

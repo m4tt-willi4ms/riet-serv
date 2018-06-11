@@ -215,7 +215,7 @@ class RietveldPhases(object):
                                                  two_thetas=cls.two_theta,
                                                  errors=cls.sigma)
         result['profile_data'] = cls.get_plot_data(profile)
-        if compute_differences:
+        if compute_differences and cls.I is not None:
             result['differences'] = cls.get_plot_data(cls.I - profile)
         else:
             result['differences'] = cls.get_plot_data([])
