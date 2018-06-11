@@ -4,6 +4,7 @@ from twisted.python import log
 
 import json, simplejson
 import sys, os
+import numpy as np
 
 import src.rietveld_phases as rp
 import src.rietveld_refinery as rr
@@ -89,7 +90,8 @@ server"""
         rp.RietveldPhases.set_global_parameters(global_parameters)
         # profile_filename = os.path.split(profile_path)[1]
         # self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
-        if rp.RietveldPhases.I is not None:
+        if rp.RietveldPhases.I is not None \
+                and len(RietveldServer.phase_list) > 0:
             self._bkgd_refine()
 
     def _bkgd_refine(self):
@@ -103,16 +105,17 @@ server"""
             self._set_refinery_model(json.loads(refinery_model_string))
             phase_temp = list(RietveldServer.phase_list)
             RietveldServer.phase_list = []
-            for phase in phase_temp:
-                self._add_phase(phase.as_dict())
 
             assert isinstance(global_parameters, unicode)
             self._set_global_parameters(json.loads(global_parameters))
 
-            if self.rietveld_refinery is not None:
-                profile_data = self.rietveld_refinery.total_profile()
-            else:
-                profile_data = self.phase_list[-1].phase_profile()
+            for phase in phase_temp:
+                self._add_phase(phase.as_dict())
+
+            self._bkgd_refine()
+
+            profile_data = self.rietveld_refinery.total_profile()
+
             rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile_data)
             reply = ""
             reply += json.dumps(rietveld_plot) + ";"
@@ -142,17 +145,17 @@ PhaseParameters object in json-serialized form.
             self._add_phase(phase_dict)
             if rp.RietveldPhases.I is not None:
                 self._bkgd_refine()
+                profile = RietveldServer.rietveld_refinery.total_profile()
+            else:
+                profile = np.sum([phase.phase_profile() for phase in
+                    RietveldServer.phase_list], axis=0)
 
             phase_dict = json.dumps(
                 RietveldServer.phase_list[-1].as_dict())
             reply = ""
             reply += phase_dict + ";"
-            if RietveldServer.rietveld_refinery is None:
-                RietveldServer.rietveld_refinery = rr.RietveldRefinery(
-                    RietveldServer.phase_list)
-            plot_data = json.dumps(rp.RietveldPhases.get_plot_data(
-                RietveldServer.rietveld_refinery.total_profile()))
-            reply += plot_data + ";"
+            reply += json.dumps(
+                rp.RietveldPhases.get_plot_data(profile)) + ";"
             # print len(reply.encode('utf-8'))
             self.sendLine(reply)
             # print 'Here', self.MAX_LENGTH

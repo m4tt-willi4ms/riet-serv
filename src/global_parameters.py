@@ -4,7 +4,7 @@ import numpy as np
 from refinement_parameters import RefinementParameters
 
 DEFAULT_BKGD_ORDER = 3
-DEFAULT_TWO_THETA_0 = ('two_theta_0', 0.0, [True], -0.1, 0.1)
+DEFAULT_TWO_THETA_OFFSET = ('two_theta_offset', 0.0, [True], -0.1, 0.1)
 
 class GlobalParameters(RefinementParameters):
     '''
@@ -12,13 +12,13 @@ class GlobalParameters(RefinementParameters):
     diffraction profiles.
     '''
     def __init__(self, phase_settings,
-        two_theta_0=DEFAULT_TWO_THETA_0,
+        two_theta_offset=DEFAULT_TWO_THETA_OFFSET,
         bkgd_order=DEFAULT_BKGD_ORDER,
         param_dict=None):
         self.phase_settings = phase_settings
         self.bkgd_order = bkgd_order
         if param_dict is None:
-            self.two_theta_0 = two_theta_0
+            self.two_theta_offset = two_theta_offset
             self.bkgd = [x for x in self.bkgd_param_gen()]
         super(GlobalParameters, self).__init__(param_dict=param_dict)
 
@@ -60,7 +60,7 @@ class GlobalParameters(RefinementParameters):
 
     def param_gen(self):
         d = OrderedDict()
-        d['two_theta_0'] = self.two_theta_0
+        d['two_theta_offset'] = self.two_theta_offset
         d['bkgd'] = self.bkgd
         return d.iteritems()
 
