@@ -156,9 +156,6 @@ PhaseParameters object in json-serialized form.
         except:
             log.err()
 
-    # def call_get_current_profile(self):
-    #    if self.rietveld_refinery is not None:
-
     def _calc_complete(self):
         RietveldServer.calc_flag = False
         state = {}
@@ -175,8 +172,9 @@ PhaseParameters object in json-serialized form.
 
     def _update_plot_data(self):
         if rp.RietveldPhases.I is not None:
-            self._bkgd_refine()
-            profile = RietveldServer.rietveld_refinery.total_profile()
+            if not RietveldServer.calc_flag:
+                self._bkgd_refine()
+            profile = RietveldServer.rietveld_refinery.total_profile_state
         else:
             profile = np.sum([phase.phase_profile() for phase in
                 RietveldServer.phase_list], axis=0)

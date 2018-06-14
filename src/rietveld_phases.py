@@ -363,15 +363,15 @@ class RietveldPhases(object):
             np.zeros(len(global_x_no_bkgd), dtype=bool),
             np.ones(len(self.phase_x), dtype=bool)))
 
-    def update_params(self, phase_x, mask=None):
-        if mask is None:
-            self.phase_x = phase_x
-        else:
-            self.phase_x[mask] = phase_x[mask]
-        if self.phase_settings["recompute_peak_positions"]:
-            #TODO: only update if lattice parameter is updated
-            unit_cell.update_unit_cell(
-                self.phase_settings, self.phase_parameters.lattice_parameters)
+    # def update_params(self, phase_x, mask=None):
+    #     if mask is None:
+    #         self.phase_x = phase_x
+    #     else:
+    #         self.phase_x[mask] = phase_x[mask]
+    #     if self.phase_settings["recompute_peak_positions"]:
+    #         #TODO: only update if lattice parameter is updated
+    #         unit_cell.update_unit_cell(
+    #             self.phase_settings, self.phase_parameters.lattice_parameters)
 
     def set_masked_arrays(self):
         two_theta_peaks = self.phase_data["two_theta_peaks"]
