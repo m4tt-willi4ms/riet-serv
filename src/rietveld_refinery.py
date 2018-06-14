@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 import os, random, math
 import time
 import sys, subprocess
@@ -10,8 +10,8 @@ from scipy.optimize import minimize
 import json,codecs
 import operator
 
-from rietveld_phases import RietveldPhases
-from rietveld_plot import RietveldPlot
+from src.rietveld_phases import RietveldPhases
+from src.rietveld_plot import RietveldPlot
 import src.refinement_parameters as refinement_parameters
 
 default_factr = 1e2
@@ -25,10 +25,10 @@ default_epsilon = 1e-11
 
 def with_stats(wrappee):
    def fancy_minimize(self, *args, **kwargs):
-      print self.display_parameters()
+      print(self.display_parameters())
       wrappee(self, *args, **kwargs)
-      print self.display_parameters(fn=wrappee)
-      print self.display_stats(fn=wrappee)
+      print(self.display_parameters(fn=wrappee))
+      print(self.display_stats(fn=wrappee))
    return fancy_minimize
 
 class RietveldRefinery:
@@ -308,11 +308,11 @@ class RietveldRefinery:
          else:
             del_list += [True]
       if not all(del_list):
-         print "\nLength of Phase_list (Before): " + str(len(self.Phase_list))
+         print("\nLength of Phase_list (Before): " + str(len(self.Phase_list)))
          self.Phase_list = [self.Phase_list[i] for i in \
             xrange(len(self.Phase_list)) if del_list[i]]
-         print "Length of Phase_list (After): " + str(len(self.Phase_list)) \
-            + "\n"
+         print("Length of Phase_list (After): " + str(len(self.Phase_list)) \
+            + "\n")
 
    def callback(self, x):
 

@@ -1,3 +1,11 @@
+'''This module contains the RietveldPlot object, which can be used in
+conjunction with RietveldRefinery to visualize powder profiles and
+their fit to experimental data.
+'''
+from __future__ import division, print_function, absolute_import
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import SpanSelector
 # import matplotlib
 # matplotlib.use("TkAgg")
 # matplotlib.style.use("ggplot")
@@ -5,9 +13,6 @@
 #    FigureCanvasTkAgg, NavigationToolbar2TkAgg
 # from  matplotlib.figure import Figure
 # import matplotlib.animation as animation
-import matplotlib.pyplot as plt
-from matplotlib.widgets import SpanSelector
-import numpy as np
 
 from src.rietveld_phases import RietveldPhases
 

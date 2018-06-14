@@ -1,3 +1,4 @@
+from __future__ import division, print_function, absolute_import
 import numpy as np
 
 def pseudo_voigt(x_squared, eta):

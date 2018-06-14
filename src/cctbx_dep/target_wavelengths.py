@@ -2,6 +2,7 @@
    dictionary of available characteristic wavelengths, and sets the appropriate
    phase_settings keys according the target specified.
 """
+from __future__ import division, print_function, absolute_import
 import numpy as np
 
 from cctbx.eltbx import wavelengths

@@ -1,3 +1,4 @@
+from __future__ import division, print_function, absolute_import
 from twisted.internet import reactor, protocol, defer, task
 from twisted.protocols import basic
 from twisted.python import log
@@ -8,6 +9,7 @@ import numpy as np
 
 import src.rietveld_phases as rp
 import src.rietveld_refinery as rr
+from src.rietveld_plot import RietveldPlot
 
 class RietveldServer(basic.LineReceiver):
     delimiter = b'\n'
@@ -22,6 +24,8 @@ server"""
     rietveld_refinery = None
     rietveld_history = []
     plot_data = None
+    plot = RietveldPlot()
+    show_plot = True
 
     def connectionMade(self):
         # pass
@@ -37,7 +41,6 @@ server"""
 
         # Parse the command
         commandParts = [x.strip() for x in data.split(self.split_character)]
-        print commandParts
         command = commandParts[0]#.lower()
         args = commandParts[1:]
 
@@ -47,7 +50,7 @@ server"""
             self.sendLine(b'Error: no such command.')
         else:
             try:
-                print command, args
+                print(command, args)
                 method(*args)
             except Exception as e:
                 # pass
@@ -114,14 +117,19 @@ server"""
 
             self._bkgd_refine()
 
-            profile_data = self.rietveld_refinery.total_profile()
-
-            rietveld_plot = rp.RietveldPhases.get_rietveld_plot(profile_data)
+            if RietveldServer.show_plot:
+                RietveldServer.plot.setplotdata()
+            self._update_plot_data()
+            rietveld_plot = rp.RietveldPhases.get_rietveld_plot(
+                RietveldServer.plot_data)
             reply = ""
             reply += json.dumps(rietveld_plot) + ";"
             global_parameters = rp.RietveldPhases.global_parameters.as_dict()
             reply += json.dumps(global_parameters) + ";"
-            print "Message Length (in bytes):", len(reply.encode('utf-8'))
+            print("Message Length (in bytes):", len(reply.encode('utf-8')))
+            # with open(os.path.join(
+            #         os.path.dirname(__file__),'reply.json'), 'w') as file:
+            #     file.write(json.dumps(rietveld_plot))
             self.sendLine(reply)
         except:
             log.err()
@@ -143,27 +151,8 @@ PhaseParameters object in json-serialized form.
         try:
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict)
-            if rp.RietveldPhases.I is not None:
-                self._bkgd_refine()
-                profile = RietveldServer.rietveld_refinery.total_profile()
-            else:
-                profile = np.sum([phase.phase_profile() for phase in
-                    RietveldServer.phase_list], axis=0)
-
-            phase_dict = json.dumps(
-                RietveldServer.phase_list[-1].as_dict())
-            reply = ""
-            reply += phase_dict + ";"
-            reply += json.dumps(
-                rp.RietveldPhases.get_plot_data(profile)) + ";"
-            # print len(reply.encode('utf-8'))
-            self.sendLine(reply)
-            # print 'Here', self.MAX_LENGTH
-        # d = defer.Deferred()
-        # d.addCallback(self._fit_added_phase)
-        # d.addErrback(self._error)
-        # # d.addCallback(lambda x: self._calc_complete())
-        # reactor.callInThread(d.callback, json_string)
+            new_phase = RietveldServer.phase_list[-1].as_dict()
+            self.sendLine(json.dumps(new_phase))
         except:
             log.err()
 
@@ -184,13 +173,18 @@ PhaseParameters object in json-serialized form.
         RietveldServer.err_flag = True
         log.err()
 
-    def _update_plot(self):
-        RietveldServer.plot_data = rp.RietveldPhases.get_plot_data(
-            RietveldServer.rietveld_refinery.total_profile_state)
+    def _update_plot_data(self):
+        if rp.RietveldPhases.I is not None:
+            self._bkgd_refine()
+            profile = RietveldServer.rietveld_refinery.total_profile()
+        else:
+            profile = np.sum([phase.phase_profile() for phase in
+                RietveldServer.phase_list], axis=0)
+        RietveldServer.plot_data = profile
 
     def _refine(self):
         RietveldServer.rietveld_refinery.minimize(
-            callback_functions=[self._update_plot])
+            callback_functions=[self._update_plot_data])
 
     def _run(self):
         RietveldServer.calc_flag = True
@@ -255,7 +249,7 @@ rietveld_history.)
         """is_complete: returns either true or false, depending on whether or
 not the rietveld_refinement session has completed
         """
-        print "return:", not RietveldServer.calc_flag
+        print("return:", not RietveldServer.calc_flag)
         self.sendLine(str(not RietveldServer.calc_flag) + ";")
 
     def call_can_ping(self):
@@ -267,14 +261,10 @@ not the rietveld_refinement session has completed
         """get_plot_data: returns a JSON-serialized plot_data object
 corresponding to the present state of the RietveldRefinery on the server
         """
-        if RietveldServer.plot_data is None:
-            if RietveldServer.rietveld_refinery is not None:
-                self._update_plot()
-            else:
-                RietveldServer.rietveld_refinery = rr.RietveldRefinery(
-                    RietveldServer.phase_list)
-                self._update_plot()
-        self.sendLine(json.dumps(RietveldServer.plot_data) + ";")
+        self._update_plot_data()
+
+        self.sendLine(json.dumps(
+            rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";")
 
     def call_get_phase_profile(self, index=u'-1'):
         """get_phase_profile [index]: returns a json-serialized list containing
@@ -286,7 +276,7 @@ most-recently loaded phase is returned"""
             indent=4)
         self.sendLine(profile)
 
-    def call_reset(self):
+    def call_initialize(self):
         """reset: returns the rietveld_server to its initial state"""
         RietveldServer.calc_flag = False
         RietveldServer.err_flag = False
@@ -296,7 +286,7 @@ most-recently loaded phase is returned"""
         RietveldServer.rietveld_refinery = None
         RietveldServer.rietveld_history = []
         rp.RietveldPhases.global_parameters.reset_x()
-        self.sendLine(b'Resetting')
+        self.sendLine(b'Initializing')
 
     def call_help(self, command=None):
         """help [command]: List commands, or show help on the given command"""

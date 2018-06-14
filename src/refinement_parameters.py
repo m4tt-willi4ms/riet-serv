@@ -6,6 +6,7 @@ a refinement), and exporting the refined parameters as a dictionary.
 Any subclass of RefinementParameters need only implement the parameter generator
 in order to take advantage of the features detailed herein.
 """
+from __future__ import division, print_function, absolute_import
 import numpy as np
 import copy
 

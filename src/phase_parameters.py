@@ -1,3 +1,4 @@
+from __future__ import division, print_function, absolute_import
 from collections import OrderedDict
 import numpy as np
 import json
@@ -37,6 +38,8 @@ class PhaseParameters(RefinementParameters):
             self.W = W
             self.eta_order = eta_order
             self.eta = self.set_eta_order(self.eta_order)
+        # else:
+        #     self.eta = self.set_eta_order(len(self.eta))
         if self.phase_settings["recompute_peak_positions"]:
             self.lattice_parameters = unit_cell.assemble_lattice_parameters(
                 self.phase_settings)
@@ -64,9 +67,9 @@ class PhaseParameters(RefinementParameters):
     def param_gen(self):
         d = OrderedDict()
         d['scale'] = self.scale
-        d['caglioti_u'] = self.U
-        d['caglioti_v'] = self.V
-        d['caglioti_w'] = self.W
+        d['cagliotti_u'] = self.U
+        d['cagliotti_v'] = self.V
+        d['cagliotti_w'] = self.W
         d['eta'] = self.eta
         if self.phase_settings["recompute_peak_positions"]:
             d['lattice_parameters'] = self.lattice_parameters

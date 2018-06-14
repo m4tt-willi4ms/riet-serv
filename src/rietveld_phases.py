@@ -1,7 +1,7 @@
 """This module contains the RietveldPhases class, along with the default
 parameters upon which it depends
 """
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 # import inspect
 import numpy as np
 
@@ -106,6 +106,7 @@ class RietveldPhases(object):
         RietveldPhases instances.
 
     """
+
     phase_settings = {}
     phase_settings["max_polynom_order"] = DEFAULT_MAX_POLYNOM_ORDER
     '''The maximum number of parameters allowed in any parameter represented
@@ -211,9 +212,12 @@ class RietveldPhases(object):
     @classmethod
     def get_rietveld_plot(cls, profile, compute_differences=False):
         result = {}
-        result['input_data'] = cls.get_plot_data(cls.I,
-                                                 two_thetas=cls.two_theta,
-                                                 errors=cls.sigma)
+        if cls.I is None:
+            result['input_data'] = cls.get_plot_data([])
+        else:
+            result['input_data'] = cls.get_plot_data(cls.I,
+                                                     two_thetas=cls.two_theta,
+                                                     errors=cls.sigma)
         result['profile_data'] = cls.get_plot_data(profile)
         if compute_differences and cls.I is not None:
             result['differences'] = cls.get_plot_data(cls.I - profile)
@@ -429,7 +433,8 @@ class RietveldPhases(object):
 
         """
         eta = self.phase_parameters.eta
-        return np.dot(eta, RietveldPhases.two_theta_powers[:len(eta), :])
+        return np.clip(np.dot(
+            eta, RietveldPhases.two_theta_powers[:len(eta), :]), 0.0, 1.0)
 
     def phase_profile(self):
         self.update_param_arrays()
@@ -457,6 +462,9 @@ class RietveldPhases(object):
             *self.profile(two_thetabar_squared, self.eta_masked)
 
         self.phase_profile_state = np.sum(result, axis=0)
+        # assert np.all(np.logical_and(
+        #     self.eta_masked >= 0, self.eta_masked <= 1))
+        # assert np.all(self.phase_profile_state >= 0)
         return self.phase_profile_state
 
     def increment_global_and_phase_x(self, eps, mask):

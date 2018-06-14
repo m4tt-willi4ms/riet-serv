@@ -2,6 +2,7 @@
    This module gathers together code used to populate the phase_settings
    dictionary using cctbx's iotbx.cif module.
 """
+from __future__ import division, print_function, absolute_import
 import os
 import numpy as np
 

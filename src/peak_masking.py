@@ -1,5 +1,6 @@
 '''This module contains methods used in computing peak masks and masking arrays
 '''
+from __future__ import division, print_function, absolute_import
 import numpy as np
 
 def peak_masks(two_theta, two_theta_0, two_theta_peaks, delta_theta):
