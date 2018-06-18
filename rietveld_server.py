@@ -148,8 +148,7 @@ PhaseParameters object in json-serialized form.
         except:
             log.err()
 
-    def _calc_complete(self):
-        RietveldServer.calc_flag = False
+    def _append_history_entry(self):
         state = {}
         state['rietveld_data'] = \
             RietveldServer.rietveld_refinery.get_plot_data()
@@ -157,6 +156,9 @@ PhaseParameters object in json-serialized form.
         state['phase_state'] = [phase.as_dict() for phase in \
             RietveldServer.phase_list]
         RietveldServer.rietveld_history.append(state)
+
+    def _calc_complete(self):
+        RietveldServer.calc_flag = False
 
     def _refine_error(self):
         RietveldServer.err_flag = True
@@ -170,11 +172,14 @@ PhaseParameters object in json-serialized form.
         else:
             profile = np.sum([phase.phase_profile() for phase in
                 RietveldServer.phase_list], axis=0)
+        # with open('tmp.txt','w+') as f:
+        #     f.write("profile length:" + str(len(profile)))
         RietveldServer.plot_data = profile
 
     def _refine(self):
         RietveldServer.rietveld_refinery.minimize_all_rounds(
-            callback_functions=[self._update_plot_data])
+            callback_functions=[self._update_plot_data],
+            end_of_round_callbacks=[self._append_history_entry])
 
     def _run(self):
         RietveldServer.calc_flag = True
@@ -253,6 +258,9 @@ corresponding to the present state of the RietveldRefinery on the server
         """
         self._update_plot_data()
 
+        with open('tmp.txt', 'w') as f:
+            f.write(json.dumps(
+            rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";")
         self.sendLine(json.dumps(
             rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";")
 
