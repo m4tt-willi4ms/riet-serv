@@ -47,6 +47,7 @@ class RietveldRefinery:
       m=default_m,
       pgtol=default_pgtol,
       epsilon=default_epsilon,
+      use_uround=False,
       # input_weights=None,
       # composition_cutoff=default_composition_cutoff,
       ):
@@ -71,23 +72,35 @@ class RietveldRefinery:
          RietveldPhases.I**2/RietveldPhases.sigma**2)
 
       for key in refinement_parameters.keys:
-         if key in ("labels", "values", "l_limits", "u_limits"):
+         if key in ("labels", "values", "uround", "l_limits", "u_limits"):
             if len(self.phase_list) > 0:
                # self.x = np.hstack((RietveldPhases.global_x,
                #    np.hstack((x.phase_x for x in self.phase_list))))
-               tmp = np.hstack((RietveldPhases.global_parameters.x[key],
+               if key == "uround":
+                  tmp = np.concatenate((
+                     RietveldPhases.global_parameters.x[key],
+                     np.concatenate(
+                        [phase.phase_parameters.x[key]
+                           for phase in self.phase_list], axis=0))
+                     , axis=0)
+               else:
+                  tmp = np.hstack((RietveldPhases.global_parameters.x[key],
       np.hstack((phase.phase_parameters.x[key] for phase in self.phase_list))))
             else:
                RietveldPhases.assemble_global_x()
                tmp = RietveldPhases.global_parameters.x[key]
          setattr(self, "x_" + key, tmp)
       self.x = self.x_values
+      print(self.x_uround[:, 0])
          # for key in refinement_parameters.keys:
          #    setattr(self, key, RietveldPhases.global_parameters.x[key])
 
       if self.bkgd_refine:
-         self.raw_profile_state = np.sum(x.phase_profile() for x in
-            self.phase_list)
+         if len(self.phase_list) > 0:
+            self.raw_profile_state = np.sum(x.phase_profile() for x in
+               self.phase_list)
+         else:
+            self.raw_profile_state = np.zeros(len(RietveldPhases.two_theta))
 
       self.global_mask = np.isin(np.array(xrange(len(self.x))),
          np.array(xrange(len(RietveldPhases.global_x))))
@@ -100,6 +113,11 @@ class RietveldRefinery:
          self.mask = mask
       elif self.bkgd_refine:
          self.mask = self.bkgd_mask
+      elif use_uround:
+         self.mask = self.x_uround[:, 0]
+         assert self.mask.dtype == bool
+         assert len(self.mask) == len(self.x)
+         print(self.x_labels[self.mask])
       else:
          self.mask = np.zeros(len(self.x),dtype=bool)
 

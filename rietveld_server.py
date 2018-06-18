@@ -5,7 +5,9 @@ from twisted.python import log
 
 import json, simplejson
 import sys, os
+import time
 import numpy as np
+import copy
 
 import src.rietveld_phases as rp
 import src.rietveld_refinery as rr
@@ -60,18 +62,7 @@ server"""
         """exit: shuts down the TCP server"""
         self.sendLine(b'Goodbye.')
         self.transport.loseConnection()
-        # reactor.stop()
-
-    # def get_target():
-
-    #    self.sendLine()
-
-    def call_set_wavelength(self, target, mode):
-        try:
-            rp.RietveldPhases.set_wavelength(target, int(mode))
-
-        except:
-            log.err()
+        reactor.stop()
 
     def _set_refinery_model(self, ref_model):
         RietveldServer.refinery_model = ref_model
@@ -106,7 +97,7 @@ server"""
         try:
             assert isinstance(refinery_model_string, unicode)
             self._set_refinery_model(json.loads(refinery_model_string))
-            phase_temp = list(RietveldServer.phase_list)
+            phase_temp = copy.deepcopy(RietveldServer.phase_list)
             RietveldServer.phase_list = []
 
             assert isinstance(global_parameters, unicode)
@@ -114,8 +105,6 @@ server"""
 
             for phase in phase_temp:
                 self._add_phase(phase.as_dict())
-
-            self._bkgd_refine()
 
             if RietveldServer.show_plot:
                 RietveldServer.plot.setplotdata()
@@ -140,7 +129,8 @@ server"""
         cif_path = phase_dict["cif_path"]
         # except KeyError:
         #    cif_path = phase_dict["input_cif_path"]
-        assert type(cif_path) == unicode
+        # print('scale:', phase_dict['scale']['value'])
+        assert isinstance(cif_path, unicode)
         RietveldServer.phase_list.append(rp.RietveldPhases(cif_path,
             phase_parameter_dict=phase_dict))
 
@@ -149,10 +139,13 @@ server"""
 PhaseParameters object in json-serialized form.
         """
         try:
+            # t0 = time.time()
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict)
             new_phase = RietveldServer.phase_list[-1].as_dict()
             self.sendLine(json.dumps(new_phase))
+            # t1 = time.time()
+            # print("time taken:", str(t1-t0))
         except:
             log.err()
 
@@ -212,9 +205,9 @@ respectively
             self._bkgd_refine()
 
             RietveldServer.rietveld_refinery = rr.RietveldRefinery(
-                RietveldServer.phase_list)
-            RietveldServer.rietveld_refinery.set_mask(
-                ['two_theta_', 'bkgd', 'scale'])
+                RietveldServer.phase_list, use_uround=True)
+            # RietveldServer.rietveld_refinery.set_mask(
+            #     ['two_theta_', 'bkgd', 'scale'])
             self._run()
 
             self.sendLine(str(True) + ";")

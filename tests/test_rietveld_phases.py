@@ -26,14 +26,14 @@ def test_data_read_in():
 
 def test_global_parameters_exist():
     Rp_dict = Rp.__dict__
-    assert 'two_theta_0' in Rp_dict
+    assert 'two_theta_offset' in Rp_dict
     assert 'bkgd' in Rp_dict
 
 test_phase = Rp("./data/cifs/1000032.cif")
 
 def test_parameters_exist():
     tp_dict = test_phase.phase_parameters.__dict__
-    print tp_dict.keys()
+    print(tp_dict.keys())
     assert 'U' in tp_dict
     assert 'V' in tp_dict
     assert 'W' in tp_dict
@@ -70,8 +70,7 @@ def test_background_polynomial():
 
 def test_U_default():
     test_U = test_phase.phase_parameters.U
-    assert test_phase.U.dtype == r_p.CUSTOM_DTYPE
-    assert test_phase.U['labels'] == r_p.DEFAULT_U['labels']
+    assert test_phase.phase_parameters.U['labels'] == r_p.DEFAULT_U['labels']
     assert np.isclose(test_phase.U['values'], r_p.DEFAULT_U['values'])
     assert np.isclose(test_phase.U['l_limits'],
         r_p.DEFAULT_U['l_limits'])
@@ -159,9 +158,9 @@ def test_update_params():
     test_phase.update_params(tmp_x,mask=mask)
     assert np.isclose(test_phase.Scale['values'],test_val)
     mask = np.char.startswith(tmp_x['labels'],'uc_a')
-    print tmp_x['values'][mask]
+    print(tmp_x['values'][mask])
     tmp_x['values'][mask] = 2
-    print tmp_x['values'][mask]
+    print(tmp_x['values'][mask])
     test_phase.update_params(tmp_x)
     # print test_phase.recompute_peak_positions
     # print test_phase.phase_x
@@ -252,7 +251,7 @@ def exercise_RietveldPhases():
 
 def run():
     # exercise_RietveldPhases()
-    print "OK"
+    print("OK")
 
 if (__name__ == "__main__"):
     # pr = profile.Profile()

@@ -1,16 +1,19 @@
 import numpy as np
 import copy
+import pytest
 
 import src.cctbx_dep.unit_cell as uc
 from src.rietveld_phases import RietveldPhases
 
-test_phase = RietveldPhases("./data/cifs/1000032.cif")
+@pytest.fixture(scope="module")
+def test_phase():
+   return RietveldPhases("./data/cifs/1000032.cif")
 
-def test_assemble_lattice_params():
+def test_assemble_lattice_params(test_phase):
    assert 'uc_mask' in test_phase.phase_settings
    assert len(test_phase.phase_settings["uc_mask"]) == 6
 
-def test_unit_cell_parameter_gen():
+def test_unit_cell_parameter_gen(test_phase):
    tp_uc_gen = uc.unit_cell_parameter_gen(test_phase.phase_settings)
    uc_params = test_phase.phase_settings["unit_cell"].parameters()
    assert next(tp_uc_gen)[0] == 'uc_a'
@@ -19,4 +22,22 @@ def test_unit_cell_parameter_gen():
    test_phase.phase_settings["uc_mask"] = np.ones(6,dtype=bool)
    for i, x in enumerate(
       uc.unit_cell_parameter_gen(test_phase.phase_settings)):
-      assert np.isclose(uc_params[i],x[1])
+      assert np.isclose(uc_params[i], x[1])
+
+def test_update_unit_cell(test_phase):
+   settings = test_phase.phase_settings
+   lattice_parameters = 12*np.random.random(size=6)
+   uc.update_unit_cell(settings, lattice_parameters)
+   new_uc = settings["unit_cell"].parameters()
+   uc_mask = settings["uc_mask"]
+   from itertools import compress
+   for x, y  in zip(compress(list(new_uc),uc_mask), list(lattice_parameters)):
+      assert x, y
+
+   settings['crystal_system'] = 'Triclinic'
+   lattice_parameters = 20*np.random.random(size=6)+80
+   uc.update_unit_cell(settings, lattice_parameters)
+   new_uc = settings["unit_cell"].parameters()
+   for x, y in zip(list(new_uc), list(lattice_parameters)):
+      assert x == y
+

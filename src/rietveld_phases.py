@@ -19,7 +19,7 @@ DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 
 DEFAULT_DELTA_THETA = 0.5
 DEFAULT_INTENSITY_CUTOFF = 0.01
-DEFAULT_RECOMPUTE_PEAK_POSITIONS = False
+DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
 DEFAULT_LATTICE_DEV = [0.01]*6
 
 DEFAULT_TWO_THETAS = np.linspace(0.05, 100, num=1000)
@@ -513,19 +513,32 @@ class RietveldPhases(object):
     def update_phase_info(self, phase_dict):
         phase_dict['cif_path'] = self.file_path_cif
         phase_dict['phase_name'] = self.phase_settings['chemical_name']
-        lattice_parameters = []
-        for param in unit_cell.unit_cell_parameter_gen(
-                self.phase_settings, np.ones(6, dtype=bool)):
-            d = {}
-            d['name'] = param[0]
-            d['value'] = param[1]
-            d['l_limit'] = param[3]
-            d['u_limit'] = param[4]
-            d['used'] = bool(np.any(np.array(param[2], dtype=bool)))
-            d['uround'] = [bool(x) for x in np.nditer(param[2])]
-            d['round'] = 2
-            lattice_parameters.append(d)
-        phase_dict['lattice_parameters'] = lattice_parameters
+        uc_filter = unit_cell.get_inverse_filter(self.phase_settings)
+        lps = []
+        for entry in uc_filter:
+            if entry < 6:
+                lps.append(phase_dict['lattice_parameters'][entry])
+            else:
+                tmp = phase_dict['lattice_parameters'][0].copy()
+                tmp['value'] = entry
+                tmp['l_limit'] = entry
+                tmp['u_limit'] = entry
+                lps.append(tmp)
+        phase_dict['lattice_parameters'] = lps
+        phase_dict['uc_mask'] = self.phase_settings['uc_mask']
+        # lattice_parameters = []
+        # for param in unit_cell.unit_cell_parameter_gen(
+        #         self.phase_settings, np.ones(6, dtype=bool)):
+        #     d = {}
+        #     d['name'] = param[0]
+        #     d['value'] = param[1]
+        #     d['l_limit'] = param[3]
+        #     d['u_limit'] = param[4]
+        #     d['used'] = bool(np.any(np.array(param[2], dtype=bool)))
+        #     d['uround'] = [bool(x) for x in np.nditer(param[2])]
+        #     d['round'] = 2
+        #     lattice_parameters.append(d)
+        # phase_dict['lattice_parameters'] = lattice_parameters
         phase_dict['lattice_parameter_tolerances'] = \
             self.phase_settings['lattice_dev']
 

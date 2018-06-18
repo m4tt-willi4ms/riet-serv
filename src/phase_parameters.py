@@ -2,8 +2,9 @@ from __future__ import division, print_function, absolute_import
 from collections import OrderedDict
 import numpy as np
 import json
+import copy
 
-from src.refinement_parameters import RefinementParameters
+from src.refinement_parameters import RefinementParameters, as_dict
 import src.profiles as profiles
 import src.cctbx_dep.unit_cell as unit_cell
 
@@ -29,8 +30,25 @@ class PhaseParameters(RefinementParameters):
         profile=DEFAULT_PROFILE,
         param_dict=None):
         # RefinementParameters.__init__(self)
-        super(PhaseParameters, self).__init__(param_dict=param_dict)
         self.phase_settings = phase_settings
+        if self.phase_settings["recompute_peak_positions"]:
+            self.lattice_parameters = unit_cell.assemble_lattice_parameters(
+                self.phase_settings)
+            if param_dict is not None:
+                uc_mask = self.phase_settings['uc_mask']
+                lps = copy.deepcopy(self.lattice_parameters)
+                self.lattice_parameters = []
+                for i, lp in enumerate(lps):
+                    lp = list(lp)
+                    from itertools import compress
+                    lp[2] = list(compress(
+                        param_dict["lattice_parameters"], uc_mask))[i]['uround']
+                    self.lattice_parameters.append(tuple(lp))
+            # print("from assemble lp:", lps)
+            # print("from self.lps:", self.lattice_parameters)
+        # else:
+        #     self.eta = self.set_eta_order(len(self.eta))
+        super(PhaseParameters, self).__init__(param_dict=param_dict)
         if param_dict is None:
             self.scale = scale
             self.U = U
@@ -38,11 +56,6 @@ class PhaseParameters(RefinementParameters):
             self.W = W
             self.eta_order = eta_order
             self.eta = self.set_eta_order(self.eta_order)
-        # else:
-        #     self.eta = self.set_eta_order(len(self.eta))
-        if self.phase_settings["recompute_peak_positions"]:
-            self.lattice_parameters = unit_cell.assemble_lattice_parameters(
-                self.phase_settings)
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
@@ -57,7 +70,7 @@ class PhaseParameters(RefinementParameters):
     def eta_param_gen(self):
         n = 0
         while n < self.eta_order:
-            limit = np.power(0.001, n)
+            limit = np.power(0.01, n)
             if n == 0:
                 yield ('eta_'+str(n), 0.5, [True], 0, 1)
             else:
@@ -78,3 +91,8 @@ class PhaseParameters(RefinementParameters):
     def load_json(json_str):
         json_dict = json.loads(json_str)
         self.phase_settings["cif_path"] = json_dict["cif_path"]
+
+    def from_dict(self, d):
+        d2 = d.copy()
+        d2['lattice_parameters'] = as_dict(self.lattice_parameters)
+        super(PhaseParameters, self).from_dict(d2)

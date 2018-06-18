@@ -10,9 +10,9 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 import copy
 
-keys = ("labels", "values", "refine", "l_limits", "u_limits")
+keys = ("labels", "values", "uround", "l_limits", "u_limits")
 param_keys = ("name", "value", "uround", "l_limit", "u_limit")
-ignored_keys = ("lattice_parameters", "vertical_offset",
+ignored_keys = ("vertical_offset", "uc_mask",
     "lattice_parameter_tolerances", "cif_path", "phase_name")
 
 def validate_order(order, max_polynom_order=5):
@@ -53,13 +53,31 @@ or a list of parameter-tuples.')
     return x
 
 def get_param_from_dict(d):
+    # if isinstance(d, tuple):
+    #     return d
+    # else:
     return tuple([d[key] for key in param_keys])
 
-def get_param(val):
+def get_dict_from_param(param):
+    return dict(zip(param_keys, param))
+
+def as_dict(val):
     result = None
     if isinstance(val, list):
         result = []
         for item in val:
+            assert isinstance(item, tuple)
+            result.append(get_dict_from_param(item))
+    elif isinstance(val, tuple):
+        result = get_dict_from_param(val)
+    return result
+
+def as_param(val):
+    result = None
+    if isinstance(val, list):
+        result = []
+        for item in val:
+            assert isinstance(item, dict)
             result.append(get_param_from_dict(item))
     elif isinstance(val, dict):
         result = get_param_from_dict(val)
@@ -162,14 +180,14 @@ class RefinementParameters(object):
     def from_dict(self, d):
 
         def param_gen():
-            d_filtered = { k: get_param(d[k]) for k in d.keys()
+            d_filtered = { k: as_param(d[k]) for k in d.keys()
                 if k not in ignored_keys}
             return d_filtered.iteritems()
 
         self.param_gen = param_gen
 
         for name, param in self.param_gen():
-            setattr(self, name, get_param(d[name]))
+            setattr(self, name, param)
 
         if self.x:
             self.assemble_x()

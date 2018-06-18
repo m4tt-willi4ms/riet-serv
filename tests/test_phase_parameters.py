@@ -1,7 +1,9 @@
 from __future__ import division, print_function, absolute_import
 import pytest
+import os
 import numpy as np
 import copy
+import json
 
 from src.phase_parameters import PhaseParameters
 import src.refinement_parameters as rp
@@ -11,11 +13,13 @@ import src.profiles as profiles
 
 @pytest.fixture(scope="module")
 def phase_settings():
-    phase_settings = phase_from_cif.load_cif(
-        "./data/cifs/1000032.cif")
-    unit_cell.get_unit_cell_mask(phase_settings)
+    phase_settings = {
+        'cif_path': './data/cifs/1000032.cif'
+    }
+    phase_settings = phase_from_cif.load_cif(phase_settings)
+    unit_cell.set_unit_cell_mask(phase_settings)
     phase_settings["max_polynom_order"] = 5
-    phase_settings["lattice_dev"] = 0.01
+    phase_settings["lattice_dev"] = [0.01]*6
     phase_settings["recompute_peak_positions"] = True
     return phase_settings
 
@@ -38,11 +42,12 @@ def test_set_eta_order(pp):
 
 def test_set_U(pp):
     pp.reset_x()
-    pp.U = ('U', 0.01, [False], -0.1, 0.1)
+    new_U_val = 0.01
     pp.assemble_x()
-    U_mask = np.where(np.char.startswith(pp.x['labels'], 'U'))
-    assert pp.x['values'][U_mask] == 0.01
-    assert pp.U == 0.01
+    U_mask = np.where(np.char.startswith(pp.x['labels'], 'cagliotti_u'))
+    pp.update_x(new_U_val, U_mask, apply_mask_to_input=False)
+    assert pp.x['values'][U_mask] == new_U_val
+    assert pp.cagliotti_u == new_U_val
 
 def test_assemble_x(pp):
     pp.assemble_x()
@@ -91,9 +96,34 @@ def eta_mask(pp_assembled):
 def test_assemble_x(pp_assembled, scale_mask, eta_mask):
     scale_val = pp_assembled.x['values'][scale_mask]
     assert pp_assembled.scale == scale_val
-    assert np.sum(pp_assembled.x['refine'][scale_mask]) == 1
+    assert np.sum(pp_assembled.x['uround'][scale_mask]) == 1
     eta_vals = pp_assembled.x['values'][eta_mask]
     assert np.all(np.isclose(pp_assembled.eta, eta_vals))
+
+@pytest.fixture(scope="module")
+def phase_dict():
+    with open(os.path.join(os.path.dirname(__file__),
+        '../data/server_input/phase_parameters_sample.json')) as f:
+        return json.load(f)
+
+@pytest.fixture(scope="module")
+def pp_from_json(phase_settings, phase_dict):
+    pp_from_json = PhaseParameters(phase_settings, param_dict=phase_dict)
+    pp_from_json.assemble_x()
+    return pp_from_json
+
+@pytest.fixture(scope="module")
+def lp_mask(pp_from_json):
+    return np.where(np.char.startswith(pp_from_json.x['labels'], 'uc'))
+
+def test_lattice_parameters(pp_from_json, lp_mask, phase_dict):
+    json_lps = phase_dict['lattice_parameters']
+    for key in pp_from_json.x.keys():
+        print(key, pp_from_json.x[key][lp_mask])
+    assert list(pp_from_json.x['labels'][lp_mask]) == ['uc_a', 'uc_c']
+    print(json.dumps(phase_dict, indent=4))
+    assert 0
+
 
 # def _set_new_two_theta_0_val(gp_assembled, two_theta_0_mask, val):
 #     new_x = copy.deepcopy(gp_assembled.x['values'])
