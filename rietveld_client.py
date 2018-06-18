@@ -47,6 +47,7 @@ MESSAGES = [
     'initialize',
     'add_phase;' + SAMPLES['phase_parameters'],
     'add_phase;' + SAMPLES['phase_parameters'],
+    'remove_phase;' + '-1',
     'load_profile;' + SAMPLES['rietveld_model'] + ';' + SAMPLES['global_parameters'],
     # 'is_complete',
     # 'rounds_completed',

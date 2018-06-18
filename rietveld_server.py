@@ -264,6 +264,21 @@ corresponding to the present state of the RietveldRefinery on the server
         self.sendLine(json.dumps(
             rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";")
 
+    def call_remove_phase(self, index=u'-1'):
+        """remove_phase [index]: removes the phase specified by the index. If no
+index is specified, the most-recently loaded phase is removed
+        """
+        try:
+            index = int(index)
+            assert index < len(self.phase_list)
+            self.phase_list.pop(index)
+            self.sendLine("")
+            self.sendLine(str(True) + ";")
+        except:
+            log.err()
+            self.sendLine(str(False) + ";")
+
+
     def call_get_phase_profile(self, index=u'-1'):
         """get_phase_profile [index]: returns a json-serialized list containing
 the phase profile data. If no index is specified, information for the
