@@ -2,6 +2,7 @@ import pytest
 import json
 
 import src.refinement_parameters as rp
+from src.rietveld_phases import RietveldPhases
 
 @pytest.fixture(scope="module")
 def global_parameters():
@@ -41,3 +42,9 @@ def test_as_dict(global_parameters):
     for param, param_as_dict in zip(bkgd_list, bkgd_list_as_dict):
         for i, key in enumerate(rp.param_keys):
             assert param_as_dict[key] == param[i]
+
+def test_rietveld_phase_as_dict_with_cubic_crystal_system():
+    cub_phase = RietveldPhases('./data/cifs/Cement/1000039-AluminateCubic.cif')
+    assert len(cub_phase.phase_parameters.lattice_parameters) == 1
+    phase_dict = cub_phase.as_dict()
+    assert len(phase_dict['lattice_parameters']) == 6

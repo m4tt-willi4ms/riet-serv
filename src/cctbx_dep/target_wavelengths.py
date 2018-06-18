@@ -20,10 +20,10 @@ K_alpha_factors = [1.0, 0.48]
 
 def set_wavelength(phase_settings, target='Cu', wavelength_model=0,
    custom_wavelength=None):
+   wavelengths = []
    if isinstance(target, basestring):
       assert target in targets
-      assert wavelength_model in (0, 1, 2)
-      wavelengths = []
+      assert wavelength_model in (0, 1)
       if wavelength_model == 0:
          wavelengths = [
             wavelengths_dict[target+"A1"],
@@ -31,8 +31,8 @@ def set_wavelength(phase_settings, target='Cu', wavelength_model=0,
             ]
       elif wavelength_model == 1:
          wavelengths = [wavelengths_dict[target+"A1"]]
-      elif wavelength_model == 2 and custom_wavelength is not None:
-         wavelengths == [float(custom_wavelength)]
+   elif wavelength_model == 2 and custom_wavelength is not None:
+      wavelengths = [float(custom_wavelength)]
 
    phase_settings["wavelengths"] = wavelengths
 

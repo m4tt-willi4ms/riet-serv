@@ -118,11 +118,7 @@ def lp_mask(pp_from_json):
 
 def test_lattice_parameters(pp_from_json, lp_mask, phase_dict):
     json_lps = phase_dict['lattice_parameters']
-    for key in pp_from_json.x.keys():
-        print(key, pp_from_json.x[key][lp_mask])
     assert list(pp_from_json.x['labels'][lp_mask]) == ['uc_a', 'uc_c']
-    print(json.dumps(phase_dict, indent=4))
-    assert 0
 
 
 # def _set_new_two_theta_0_val(gp_assembled, two_theta_0_mask, val):

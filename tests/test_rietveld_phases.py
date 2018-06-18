@@ -6,7 +6,8 @@ import profile, pstats
 import pytest
 import copy
 
-import src.rietveld_phases as r_p
+import src.rietveld_phases as rp
+import src.phase_parameters as pp
 from src.rietveld_phases import RietveldPhases as Rp
 from src.rietveld_refinery import RietveldRefinery
 
@@ -70,16 +71,15 @@ def test_background_polynomial():
 
 def test_U_default():
     test_U = test_phase.phase_parameters.U
-    assert test_phase.phase_parameters.U['labels'] == r_p.DEFAULT_U['labels']
-    assert np.isclose(test_phase.U['values'], r_p.DEFAULT_U['values'])
-    assert np.isclose(test_phase.U['l_limits'],
-        r_p.DEFAULT_U['l_limits'])
-    assert np.isclose(test_phase.U['u_limits'],
-        r_p.DEFAULT_U['u_limits'])
+    for x, y in zip(test_U, pp.DEFAULT_U):
+        assert x == y
+    assert getattr(test_phase.phase_parameters, test_U[0]) == pp.DEFAULT_U[1]
 
 def test_set_vertical_offset():
     assert test_phase.phase_settings["vertical_offset"] == False
     assert 'cos_theta' not in test_phase.__dict__
+    Rp.phase_settings["vertical_offset"] = True
+    Rp.set_profile(r"./data/profiles/Jade-Al2O3-Sim.xye")
     assert 'cos_theta' in Rp.__dict__
     assert np.isclose(Rp.cos_theta[-1],-360/np.pi/np.sqrt(2))
 
@@ -87,13 +87,8 @@ def test_LP_intensity_scaling():
     assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
 
     Rp.two_theta_0 = 0.1
-    two_theta = Rp.two_theta - Rp.two_theta_0
+    two_theta = Rp.two_theta
     assert np.all(np.isclose(Rp.LP_intensity_scaling(),
-        (1+np.cos(np.pi/180*two_theta)**2) \
-            /np.sin(np.pi/360*two_theta) \
-            /np.sin(np.pi/180*two_theta)))
-    Rp.two_theta_0 = 0.0
-    assert not np.all(np.isclose(Rp.LP_intensity_scaling(),
         (1+np.cos(np.pi/180*two_theta)**2) \
             /np.sin(np.pi/360*two_theta) \
             /np.sin(np.pi/180*two_theta)))
@@ -115,7 +110,7 @@ def test_update_global_x():
 def test_global_param_gen():
     gen = Rp.global_parameters.param_gen()
     exp_tt_0 = next(gen)
-    assert exp_tt_0[0] == 'two_theta_0'
+    assert exp_tt_0[0] == 'two_theta_offset'
     assert len(exp_tt_0[1]) == 5
     assert exp_tt_0[1][1] == 0.0
     exp_bkgd = next(gen)
@@ -135,48 +130,34 @@ def test_assemble_phase_x():
     #assemble_phase_x() is called in RietveldPhases' __init__
     tp_dict = test_phase.__dict__
     assert 'phase_x' in tp_dict
-    assert 'global_and_phase_x' in tp_dict
     assert 'global_mask_no_bkgd' in tp_dict
     assert 'phase_mask' in tp_dict
 
-    x = len(test_phase.global_and_phase_x)
+    x = len(test_phase.global_mask_no_bkgd)
     assert x == len(test_phase.phase_x) + 1
-    assert x == len(test_phase.global_mask_no_bkgd)
     assert x == len(test_phase.phase_mask)
 
-    assert str(type(test_phase.U))[7:17] == 'numpy.void'
-    assert len(test_phase.U) == 4
+    assert str(type(test_phase.phase_parameters.cagliotti_u))[7:17] \
+        == 'numpy.ndar'
+    assert len(test_phase.phase_parameters.U) == 5
 
-    assert len(test_phase.eta) == test_phase.eta_order
-    assert len(test_phase.lattice_parameters) == 2
-
-def test_update_params():
-    tmp_x = np.copy(test_phase.phase_x)
-    mask = np.char.startswith(tmp_x['labels'],'sca')
-    test_val = 100
-    tmp_x['values'][mask] = 100
-    test_phase.update_params(tmp_x,mask=mask)
-    assert np.isclose(test_phase.Scale['values'],test_val)
-    mask = np.char.startswith(tmp_x['labels'],'uc_a')
-    print(tmp_x['values'][mask])
-    tmp_x['values'][mask] = 2
-    print(tmp_x['values'][mask])
-    test_phase.update_params(tmp_x)
-    # print test_phase.recompute_peak_positions
-    # print test_phase.phase_x
-    # print test_phase.lattice_parameters
-    # print test_phase.unit_cell.parameters()
-    #assert False TODO: fix lattice_parameter part of test
+    assert len(test_phase.phase_parameters.eta) \
+        == test_phase.phase_parameters.eta_order
+    assert len(test_phase.phase_parameters.lattice_parameters) == 2
 
 def test_eta_polynomial():
-    assert 'eta' in test_phase.__dict__
-    test_phase.set_eta_order(2)
+    assert 'eta' in test_phase.phase_parameters.__dict__
+    test_phase.phase_parameters.set_eta_order(2)
     test_phase.assemble_phase_x()
     test_eta = np.array([0.5,0.005])
-    test_phase.eta['values'] = test_eta
+    test_phase.phase_parameters.update_x(test_eta,
+        np.char.startswith(test_phase.phase_parameters.x['labels'], 'eta'),
+        apply_mask_to_input=False)
     tmp = test_phase.eta_polynomial()
     assert np.isclose(tmp[-1],test_eta[0]+Rp.two_theta[-1]*test_eta[1])
-    test_phase.eta['values'] = np.array([0.5,0])
+    test_phase.phase_parameters.update_x(np.array([0.5,0]),
+        np.char.startswith(test_phase.phase_parameters.x['labels'], 'eta'),
+        apply_mask_to_input=False)
 
 def test_compute_relative_intensities():
     tp_dict = test_phase.phase_data

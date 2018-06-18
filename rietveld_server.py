@@ -27,7 +27,7 @@ server"""
     rietveld_history = []
     plot_data = None
     plot = RietveldPlot()
-    show_plot = True
+    show_plot = False
 
     def connectionMade(self):
         # pass
@@ -62,7 +62,6 @@ server"""
         """exit: shuts down the TCP server"""
         self.sendLine(b'Goodbye.')
         self.transport.loseConnection()
-        reactor.stop()
 
     def _set_refinery_model(self, ref_model):
         RietveldServer.refinery_model = ref_model
@@ -95,12 +94,12 @@ server"""
 
     def call_load_profile(self, refinery_model_string, global_parameters):
         try:
-            assert isinstance(refinery_model_string, unicode)
+            assert isinstance(refinery_model_string, basestring)
             self._set_refinery_model(json.loads(refinery_model_string))
             phase_temp = copy.deepcopy(RietveldServer.phase_list)
             RietveldServer.phase_list = []
 
-            assert isinstance(global_parameters, unicode)
+            assert isinstance(global_parameters, basestring)
             self._set_global_parameters(json.loads(global_parameters))
 
             for phase in phase_temp:
@@ -130,7 +129,7 @@ server"""
         # except KeyError:
         #    cif_path = phase_dict["input_cif_path"]
         # print('scale:', phase_dict['scale']['value'])
-        assert isinstance(cif_path, unicode)
+        assert isinstance(cif_path, basestring)
         RietveldServer.phase_list.append(rp.RietveldPhases(cif_path,
             phase_parameter_dict=phase_dict))
 
@@ -174,7 +173,7 @@ PhaseParameters object in json-serialized form.
         RietveldServer.plot_data = profile
 
     def _refine(self):
-        RietveldServer.rietveld_refinery.minimize(
+        RietveldServer.rietveld_refinery.minimize_all_rounds(
             callback_functions=[self._update_plot_data])
 
     def _run(self):

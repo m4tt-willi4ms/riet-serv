@@ -22,7 +22,7 @@ def get_sample_path(key):
     return os.path.join(os.path.dirname(__file__),
             'data/server_input/' + key + '_sample.json')
 
-def load_json_sample(key):
+def load_json_sample(key, cif_name=None):
     with open(get_sample_path(key), 'r') as file:
         SAMPLES[key] = json.dumps(json.load(file))
 

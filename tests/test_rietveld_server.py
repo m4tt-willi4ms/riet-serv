@@ -3,32 +3,28 @@ import os
 import numpy as np
 import json
 from twisted.test import proto_helpers
-import pytest
+from twisted.trial import unittest
 
 from rietveld_server import RietveldServer
 import rietveld_client as rc
 
-@pytest.fixture(scope="module")
-def tr():
-    return proto_helpers.StringTransport()
+class RietveldServerTestCase(unittest.TestCase):
+    def setUp(self):
+        self.tr = proto_helpers.StringTransport()
+        self.proto = RietveldServer()
+        self.proto.makeConnection(self.tr)
 
-@pytest.fixture(scope="module")
-def server(tr):
-    server = RietveldServer()
-    server.makeConnection(tr)
-    return server
+    def _test(self, cmd, expected, result=None):
+        cmd_parts = cmd.split(self.proto.split_character)
+        self.tr.clear()
+        d = getattr(self.proto, 'call_' + cmd_parts[0])(*cmd_parts[1:])
+        assert self.tr.value() == expected
 
-def _test(tr, server, cmd, expected, result=None):
-    cmd_parts = cmd.split(server.split_character)
-    tr.clear()
-    d = getattr(server, 'call_' + cmd_parts[0])(*cmd_parts[1:])
-    assert tr.value() == expected
+    def test_initialize(self):
+        self._test('initialize', 'Initializing\n')
 
-def test_initialize(tr, server):
-    _test(tr, server, 'initialize', 'Initializing\n')
-
-def test_exit(tr, server):
-    _test(tr, server, 'exit', 'Goodbye.\n')
+    def test_exit(self):
+        self._test('exit', 'Goodbye.\n')
 
 
 # class ClientCalculationTestCase(unittest.TestCase):

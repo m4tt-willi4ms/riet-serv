@@ -289,6 +289,11 @@ class RietveldRefinery:
          self.rietveld_plot.updateplotprofile(self.total_profile_state,
             wse=self.relative_differences_state)
 
+   def minimize_all_rounds(self, *args, **kwargs):
+      for col in self.x_uround.T:
+         self.mask = col
+         self.minimize(*args, **kwargs)
+
    def set_compositions(self):
       Scales = self.x[self.scale_mask]
       total = np.sum(Scales)
@@ -408,7 +413,7 @@ class RietveldRefinery:
 
       output = ''
 
-      if fn is not None:
+      if fn is not None and self.result is not None:
          output += "\n" + self.result['message'] +"\n"
          output +=  "\nTime taken to run " + fn.__name__ + " with " \
             + str(self.num_params) + " parameters: " \
