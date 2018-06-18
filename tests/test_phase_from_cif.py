@@ -29,9 +29,9 @@ def test_load_cif():
 
    assert 'crystal_system' in test_phase_settings
    assert type(test_phase_settings["crystal_system"]) is str
-   pfc.load_cif(test_phase.file_path_cif)
+   pfc.load_cif(test_phase.phase_settings)
    assert test_phase_settings["crystal_system"] == 'Trigonal'
-   unit_cell.assemble_lattice_params(test_phase.phase_settings, Rp.custom_dtype)
+   unit_cell.assemble_lattice_parameters(test_phase.phase_settings)
    assert test_phase_settings["crystal_system_trigonal"] == 'H'
 
    assert 'chemical_name' in test_phase_settings

@@ -63,7 +63,7 @@ def exercise_Rietveld_Refinery_Multiphase():
 def run():
    exercise_Rietveld_Refinery_SinglePhase()
    exercise_Rietveld_Refinery_Multiphase()
-   print "OK"
+   print("OK")
 
 if (__name__ == "__main__"):
    run()

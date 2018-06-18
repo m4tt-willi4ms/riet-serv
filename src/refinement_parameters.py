@@ -14,6 +14,7 @@ keys = ("labels", "values", "uround", "l_limits", "u_limits")
 param_keys = ("name", "value", "uround", "l_limit", "u_limit")
 ignored_keys = ("vertical_offset", "uc_mask",
     "lattice_parameter_tolerances", "cif_path", "phase_name")
+list_parameters = ("lattice_parameters", "eta", "bkgd")
 
 def validate_order(order, max_polynom_order=5):
     assert isinstance(order, int)
@@ -158,11 +159,11 @@ class RefinementParameters(object):
             for name, param in self.param_gen():
                 val_array = getattr(self, name)
                 l = len(val_array)
-                if l > 1:
+                if name in list_parameters:
                     value = []
                     for i, val in enumerate(np.nditer(val_array)):
                         value.append(make_dict_from_x(n+i))
-                elif l == 1:
+                else:
                     value = make_dict_from_x(n)
                 result[name] = value
                 n += l

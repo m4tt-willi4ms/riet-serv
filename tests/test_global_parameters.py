@@ -40,10 +40,10 @@ def test_validate_order_func(phase_settings):
     assert gp.bkgd_order == 1
     assert pytest.raises(AssertionError, gp.set_bkgd_order, -.3)
 
-def test_custom_two_theta_0(gp, phase_settings):
+def test_custom_two_theta_offset(gp, phase_settings):
     gp = GlobalParameters(phase_settings,
-        two_theta_0=('two_theta_0', 0.5, [True, False], -1, 1))
-    assert gp.two_theta_0[1] == 0.5
+        two_theta_offset=('two_theta_offset', 0.5, [True, False], -1, 1))
+    assert gp.two_theta_offset[1] == 0.5
     gp = GlobalParameters(phase_settings)
 
 @pytest.fixture(scope="module")
@@ -52,54 +52,54 @@ def gp_assembled(gp):
     return gp
 
 @pytest.fixture(scope="module")
-def two_theta_0_mask(gp_assembled):
+def two_theta_offset_mask(gp_assembled):
     return np.where(np.char.startswith(gp_assembled.x['labels'], 'two_t'))
 
 @pytest.fixture(scope="module")
 def bkgd_mask(gp_assembled):
     return np.where(np.char.startswith(gp_assembled.x['labels'], 'bkgd'))
 
-def test_assemble_x(gp_assembled, two_theta_0_mask, bkgd_mask):
-    two_theta_val = gp_assembled.x['values'][two_theta_0_mask]
-    assert gp_assembled.two_theta_0 == two_theta_val
-    assert np.sum(gp_assembled.x['refine'][bkgd_mask]) == gp_assembled.bkgd_order
+def test_assemble_x(gp_assembled, two_theta_offset_mask, bkgd_mask):
+    two_theta_val = gp_assembled.x['values'][two_theta_offset_mask]
+    assert gp_assembled.two_theta_offset == two_theta_val
+    assert np.sum(gp_assembled.x['uround'][bkgd_mask]) == gp_assembled.bkgd_order
     bkgd_vals = gp_assembled.x['values'][bkgd_mask]
     assert np.all(np.isclose(gp_assembled.bkgd, bkgd_vals))
 
-def _set_new_two_theta_0_val(gp_assembled, two_theta_0_mask, val):
+def _set_new_two_theta_offset_val(gp_assembled, two_theta_offset_mask, val):
     new_x = copy.deepcopy(gp_assembled.x['values'])
-    new_x[two_theta_0_mask] = val
-    gp_assembled.update_x(new_x, two_theta_0_mask)
+    new_x[two_theta_offset_mask] = val
+    gp_assembled.update_x(new_x, two_theta_offset_mask)
     return new_x
 
-def test_update_x(gp_assembled, two_theta_0_mask):
-    new_two_theta_0_val = 0.1
-    new_x = _set_new_two_theta_0_val(gp_assembled, two_theta_0_mask,
-        new_two_theta_0_val)
+def test_update_x(gp_assembled, two_theta_offset_mask):
+    new_two_theta_offset_val = 0.1
+    new_x = _set_new_two_theta_offset_val(gp_assembled, two_theta_offset_mask,
+        new_two_theta_offset_val)
     assert np.all(np.isclose(gp_assembled.x['values'], new_x))
-    assert new_two_theta_0_val == gp_assembled.two_theta_0
+    assert new_two_theta_offset_val == gp_assembled.two_theta_offset
 
-def test_assembled_param_gen(gp_assembled, two_theta_0_mask, bkgd_mask):
-    gp_assembled.x['values'][two_theta_0_mask] = 0.5
+def test_assembled_param_gen(gp_assembled, two_theta_offset_mask, bkgd_mask):
+    gp_assembled.x['values'][two_theta_offset_mask] = 0.5
     gp_assembled.x['values'][bkgd_mask] = np.array([0, 0, 1000])
     for name, value in gp_assembled.param_gen():
-        print name, value
-        if name == 'two_theta_0':
+        print(name, value)
+        if name == 'two_theta_offset':
             assert value[1] == 0.0
             assert getattr(gp_assembled, name) == 0.5
         if name == 'bkgd':
             assert value[2][1] == 0.0
             assert getattr(gp_assembled, name)[2] == 1000
 
-def test_reset_x(phase_settings, bkgd_mask, two_theta_0_mask):
+def test_reset_x(phase_settings, bkgd_mask, two_theta_offset_mask):
     gp = GlobalParameters(phase_settings)
-    old_two_theta_0 = copy.deepcopy(gp.two_theta_0)
+    old_two_theta_offset = copy.deepcopy(gp.two_theta_offset)
     old_bkgd = copy.deepcopy(gp.bkgd)
     gp.assemble_x()
     gp.x['values'][bkgd_mask] = np.array([1., 2., 3.])
-    gp.x['values'][two_theta_0_mask] = .4
+    gp.x['values'][two_theta_offset_mask] = .4
     gp.reset_x()
-    assert old_two_theta_0 == gp.two_theta_0
+    assert old_two_theta_offset == gp.two_theta_offset
     assert old_bkgd == gp.bkgd
     assert not gp.x
     new_bkgd_0 = ('bkgd_0', 1.0, [False], -float(np.inf), float(np.inf))
@@ -113,7 +113,7 @@ def test_reset_x(phase_settings, bkgd_mask, two_theta_0_mask):
 def test_get_dict(gp, gp_assembled):
     d = gp.as_dict()
     assert 'bkgd' in d.keys()
-    assert 'two_theta_0' in d.keys()
+    assert 'two_theta_offset' in d.keys()
     assert d['bkgd'][0]['value'] == 0.0
     assert 'scale' not in d.keys()
     assert gp_assembled.x

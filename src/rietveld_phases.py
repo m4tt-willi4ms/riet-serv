@@ -363,16 +363,6 @@ class RietveldPhases(object):
             np.zeros(len(global_x_no_bkgd), dtype=bool),
             np.ones(len(self.phase_x), dtype=bool)))
 
-    # def update_params(self, phase_x, mask=None):
-    #     if mask is None:
-    #         self.phase_x = phase_x
-    #     else:
-    #         self.phase_x[mask] = phase_x[mask]
-    #     if self.phase_settings["recompute_peak_positions"]:
-    #         #TODO: only update if lattice parameter is updated
-    #         unit_cell.update_unit_cell(
-    #             self.phase_settings, self.phase_parameters.lattice_parameters)
-
     def set_masked_arrays(self):
         two_theta_peaks = self.phase_data["two_theta_peaks"]
         two_theta = RietveldPhases.two_theta
@@ -401,7 +391,7 @@ class RietveldPhases(object):
         self.eta_masked = peak_masking.get_masked_array(
             self.eta_polynomial(), dim, masks)
         if RietveldPhases.phase_settings["vertical_offset"]:
-            vals = -360/np.pi*np.cos(np.pi/360*RietveldPhases.two_theta) \
+            vals = -360/np.pi**RietveldPhases.cos_theta \
                 * RietveldPhases.two_theta_offset
             self.two_theta_offset_masked = peak_masking.get_masked_array(
                 vals, dim, masks)
@@ -486,6 +476,8 @@ class RietveldPhases(object):
         self.phase_parameters.update_x(
             global_and_phase_x[self.phase_mask],
             mask[self.phase_mask])
+        eta_mask = np.char.startswith(self.phase_parameters.x['labels'], 'eta')
+        scale_mask = np.char.startswith(self.phase_parameters.x['labels'], 'sca')
         # RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
         #     = self.global_and_phase_x[self.global_mask_no_bkgd]
         # self.phase_x = \
@@ -550,6 +542,11 @@ class RietveldPhases(object):
 if __name__ == '__main__':
     RietveldPhases.set_profile('./data/profiles/d5_05005.xye')
     phase = RietveldPhases('./data/cifs/9015662-rutile.cif')
+    import json
+    with open('./data/server_input/phase_parameters_sample.json') as f:
+        phase = RietveldPhases('./data/cifs/9015662-rutile.cif',
+            phase_parameter_dict=json.load(f))
     prof = phase.phase_profile() + RietveldPhases.background_polynomial()
     prof_grad = phase.phase_profile_grad(
         np.ones(len(phase.phase_x)+1, dtype=bool))
+    print (np.sum(prof_grad, axis=1))
