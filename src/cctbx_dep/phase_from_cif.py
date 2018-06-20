@@ -22,8 +22,9 @@ def load_cif(phase_settings):
    with open(file_path, 'r') as opened_file:
       as_cif = opened_file.read()
    cif_reader = iotbx.cif.reader(input_string=as_cif)
-   structure = cif_reader.build_crystal_structures() \
-      [os.path.split(file_path)[1][0:7]]
+   cif_built_structures = cif_reader.build_crystal_structures()
+   cif_data_key = cif_built_structures.keys()[0]
+   structure = cif_built_structures[cif_data_key]
    phase_settings["structure"] = structure
    phase_settings["unit_cell"] = structure.unit_cell()
    phase_settings["crystal_system"] = \
@@ -115,7 +116,7 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
    # self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
    weighted_intensities = np.concatenate(
       (K_alpha_factors[0]*relative_intensities, \
-       K_alpha_factors[1]*relative_intensities))
+       K_alpha_factors[-1]*relative_intensities))
    weighted_intensities.shape = (weighted_intensities.shape[0], 1)
 
    phase_data["weighted_intensities"] = weighted_intensities
@@ -134,7 +135,7 @@ def set_two_theta_peaks(phase_settings, phase_data):
    two_theta_peaks = np.concatenate((
       unit_cell.two_theta(f_miller_set.indices(), wavelengths[0], deg=True
                          ).as_numpy_array()[d_mask],
-      unit_cell.two_theta(f_miller_set.indices(), wavelengths[1], deg=True,
+      unit_cell.two_theta(f_miller_set.indices(), wavelengths[-1], deg=True,
                          ).as_numpy_array()[d_mask]
       ))
    two_theta_peaks.shape = (two_theta_peaks.shape[0], 1)

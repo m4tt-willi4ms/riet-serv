@@ -296,27 +296,24 @@ class RietveldRefinery:
             if end_of_round_callbacks is not None:
                 for callback in end_of_round_callbacks:
                     callback()
+            self.mask = self.bkgd_mask
+            self.minimize()
 
     def set_compositions(self):
         Scales = self.x[self.scale_mask]
         total = np.sum(Scales)
         weight_moments = []
-        # print "\n"
         self.composition_by_volume = np.zeros(len(self.phase_list))
         for i,val in np.ndenumerate(Scales):
             density = self.phase_list[i[0]].phase_data["crystal_density"]
             weight_moments.append(val*density)
             self.composition_by_volume[i] = val/total*100
-            # print "Phase " + str(i[0]+1) + ": " + str(val/total*100) + " %"
 
         weight_moments = np.array(weight_moments)
         weight_total = np.sum(weight_moments)
-        # print "\nBy weight:"
         self.composition_by_weight = np.zeros(len(self.phase_list))
         for i,val in np.ndenumerate(weight_moments):
             self.composition_by_weight[i] = val/weight_total*100
-            # print "Phase " + str(i[0]+1) + ": " + \
-            #    str(val/weight_total*100)  + " %"
 
     def update_phase_list(self):
         Scale_mask = self.scale_mask

@@ -18,8 +18,8 @@ Rp.set_profile(
 
 def test_data_read_in():
     assert len(Rp.two_theta) == 4250
-    assert np.isclose(Rp.phase_settings["d_min"], 1.09205)
-    assert np.isclose(Rp.phase_settings["d_max"], 17.58881)
+    assert np.isclose(Rp.phase_settings["d_min"], 1.08934)
+    assert np.isclose(Rp.phase_settings["d_max"], 17.63254)
     assert len(Rp.I) == 4250
     assert np.isclose(Rp.two_theta[-1],90)
     assert len(Rp.sigma) == 4250

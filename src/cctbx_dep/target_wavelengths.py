@@ -38,14 +38,19 @@ def set_wavelength(phase_settings, target='Cu', wavelength_model=0,
 
    phase_settings["K_alpha_factors"] = K_alpha_factors
 
-   epsilon = 0.05
-   for bound, default_val in zip(("min_two_theta", "max_two_theta"),
-                                 (0 + epsilon, 180 - epsilon)):
-      if bound in phase_settings:
-         value = phase_settings[bound]
-      else:
-         value = default_val
-      exec(bound + " = {}".format(value))
+   # epsilon = 1
+   # for bound, default_val in zip(("min_two_theta", "max_two_theta"),
+   #                               (0 + epsilon, 180 - epsilon)):
+   #    if bound in phase_settings:
+   #       value = phase_settings[bound]
+   #    else:
+   #       value = default_val
+   #    exec(bound + " = {}".format(value))
 
-   phase_settings["d_min"] = wavelengths[-1]/2/np.sin(np.pi/360*max_two_theta)
-   phase_settings["d_max"] = wavelengths[0]/2/np.sin(np.pi/360*min_two_theta)
+   try:
+      phase_settings["d_min"] = wavelengths[0]/2/np.sin(
+         np.pi/360*phase_settings["max_two_theta"])
+      phase_settings["d_max"] = wavelengths[-1]/2/np.sin(
+         np.pi/360*phase_settings["min_two_theta"])
+   except KeyError as e:
+      pass

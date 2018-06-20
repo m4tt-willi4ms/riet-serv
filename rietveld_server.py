@@ -26,7 +26,7 @@ server"""
     rietveld_refinery = None
     rietveld_history = []
     plot_data = None
-    plot = RietveldPlot()
+    # plot = RietveldPlot()
     show_plot = False
 
     def connectionMade(self):
@@ -258,11 +258,13 @@ corresponding to the present state of the RietveldRefinery on the server
         """
         self._update_plot_data()
 
+        reply = json.dumps(
+            rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";"
         with open('tmp.txt', 'w') as f:
-            f.write(json.dumps(
-            rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";")
-        self.sendLine(json.dumps(
-            rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";")
+            f.write(reply)
+        self.sendLine(reply)
+        if reply.strip() == '':
+            reactor.stop()
 
     def call_remove_phase(self, index=u'-1'):
         """remove_phase [index]: removes the phase specified by the index. If no

@@ -90,7 +90,7 @@ def get_inverse_filter(phase_settings):
         map them to a full unit-cell list. For example, for a Hexagonal crystal
         system, get_inverse_filter() will return the list::
 
-            [0, 0, 1, 90, 90 120] .
+            [0, 0, 1, 90, 90, 120] .
 
         (It should be understood that any indices not in the range(0,6) will be
         interpreted as angles.)
@@ -125,9 +125,9 @@ def get_inverse_filter(phase_settings):
         inverse_filter = [0]
         for i in xrange(1,3):
             if uc_mask[i]:
-                inverse_filter.append(1)
-        else:
                 inverse_filter.append(0)
+        else:
+                inverse_filter.append(1)
         inverse_filter.extend([90, 90, 90])
     elif np.char.startswith(crystal_system, "Trig"):
         if phase_settings["crystal_system_trigonal"] == "R":
@@ -187,8 +187,8 @@ def set_unit_cell_mask(phase_settings):
     return uc_mask
 
 def unit_cell_parameter_gen(phase_settings, uc_mask=None):
-    """returns all unit cell parameters specified by the mask
-    (a list of six booleans)
+    """Returns all unit cell parameters specified by the mask
+    (a list of six booleans).
     """
     uc_params = phase_settings["unit_cell"].parameters()
     if uc_mask is None:

@@ -172,26 +172,28 @@ class RietveldPhases(object):
         cls.two_theta = cls.two_theta[min_max_mask]
 
         cls.set_two_theta_powers_and_limits()
-        cls.set_wavelength(target, wavelength_model)
+        cls.set_wavelength(target=target, wavelength_model=wavelength_model)
 
     @classmethod
-    def set_wavelength(cls, target, wavelength_model, custom_wavelength=None):
-        target_wavelengths.set_wavelength(cls.phase_settings,
-                                          target=target,
-                                          wavelength_model=wavelength_model,
-                                          custom_wavelength=custom_wavelength,
-                                         )
+    def set_wavelength(cls, phase_settings=None, target='Cu',
+                wavelength_model=0, custom_wavelength=None):
+        if phase_settings is None:
+            phase_settings = cls.phase_settings
+        target_wavelengths.set_wavelength(
+            phase_settings, target, wavelength_model, custom_wavelength)
 
     @classmethod
-    def set_two_theta_powers_and_limits(cls):
-        cls.phase_settings["min_two_theta"] = cls.two_theta[0]
-        cls.phase_settings["max_two_theta"] = cls.two_theta[-1]
+    def set_two_theta_powers_and_limits(cls, phase_settings=None):
+        if phase_settings is None:
+            phase_settings = cls.phase_settings
+        phase_settings["min_two_theta"] = cls.two_theta[0]
+        phase_settings["max_two_theta"] = cls.two_theta[-1]
 
-        max_polynom_order = cls.phase_settings["max_polynom_order"]
+        max_polynom_order = phase_settings["max_polynom_order"]
         cls.two_theta_powers = np.power(cls.two_theta, np.array(
             xrange(0, max_polynom_order)).reshape(max_polynom_order, 1))
         #TODO: set cls.
-        if cls.phase_settings["vertical_offset"]:
+        if phase_settings["vertical_offset"]:
             cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
@@ -279,9 +281,10 @@ class RietveldPhases(object):
                  intensity_cutoff=DEFAULT_INTENSITY_CUTOFF,
                  lattice_dev=DEFAULT_LATTICE_DEV,
                  recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
-                 target='Cu',
+                 target=('Cu', 0),
                  profile='PV',
                  phase_parameter_dict=None,
+                 two_theta_limits=None,
                 ):
 
         self.phase_settings = RietveldPhases.phase_settings.copy()
@@ -320,8 +323,12 @@ class RietveldPhases(object):
                                                 param_dict=phase_parameter_dict)
 
         if RietveldPhases.two_theta is None:
-            RietveldPhases.two_theta = DEFAULT_TWO_THETAS
-            RietveldPhases.set_two_theta_powers_and_limits()
+            if two_theta_limits is None:
+                two_theta_limits=[0, 180]
+            RietveldPhases.two_theta = np.clip(
+                DEFAULT_TWO_THETAS, two_theta_limits[0], two_theta_limits[-1])
+        RietveldPhases.set_two_theta_powers_and_limits(self.phase_settings)
+        RietveldPhases.set_wavelength(self.phase_settings, *target)
 
         RietveldPhases.assemble_global_x()
         self.assemble_phase_x()

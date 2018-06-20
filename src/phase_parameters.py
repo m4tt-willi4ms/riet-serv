@@ -56,7 +56,6 @@ class PhaseParameters(RefinementParameters):
             self.W = W
             self.eta_order = eta_order
             self.eta = self.set_eta_order(self.eta_order)
-        print('eta:', self.eta)
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
