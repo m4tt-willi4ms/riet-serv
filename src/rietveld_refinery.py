@@ -91,7 +91,6 @@ class RietveldRefinery:
                     tmp = RietveldPhases.global_parameters.x[key]
             setattr(self, "x_" + key, tmp)
         self.x = self.x_values
-        print(self.x_uround[:, 0])
             # for key in refinement_parameters.keys:
             #    setattr(self, key, RietveldPhases.global_parameters.x[key])
 
@@ -283,6 +282,13 @@ class RietveldRefinery:
         elif self.rietveld_plot is not None:
             self.rietveld_plot.fig.suptitle("No parameters to be refined.")
 
+        self.num_params = int(np.sum(self.mask))
+        WSS = np.sum(self.weighted_squared_errors_state)
+        self.R_wp = np.sqrt(WSS/self.weighted_sum_of_I_squared)
+        self.R_e = np.sqrt((len(RietveldPhases.two_theta)-self.num_params
+            )/self.weighted_sum_of_I_squared)
+        self.GoF = self.R_wp/self.R_e
+        self.time_elapsed = round(self.t1-self.t0,3)
         self.set_compositions()
 
         if self.rietveld_plot is not None:
@@ -293,6 +299,7 @@ class RietveldRefinery:
         for col in self.x_uround.T:
             self.mask = col
             self.minimize(*args, **kwargs)
+            self.set_compositions()
             if end_of_round_callbacks is not None:
                 for callback in end_of_round_callbacks:
                     callback()
@@ -402,26 +409,17 @@ class RietveldRefinery:
         return param_list
 
     def display_stats(self, fn=None):
-        # self.mask = np.ones(len(self.x),dtype=bool)
-        WSS = np.sum(self.weighted_squared_errors_state)
-        R_wp = np.sqrt(WSS/self.weighted_sum_of_I_squared)
-        R_e = np.sqrt((len(RietveldPhases.two_theta)-len(self.x[self.mask])
-            )/self.weighted_sum_of_I_squared)
-
-        self.num_params = np.sum(self.mask)
-        self.GoF = R_wp/R_e
-
         output = ''
 
         if fn is not None and self.result is not None:
             output += "\n" + self.result['message'] +"\n"
             output +=  "\nTime taken to run " + fn.__name__ + " with " \
                 + str(self.num_params) + " parameters: " \
-                + str(round(self.t1-self.t0,3)) + " seconds (" \
+                + str(self.time_elapsed) + " seconds (" \
                 + str(self.result['nit']) + " iterations, " \
                 + str(self.result['nfev']) + " function calls)\n"
-        output +=  "R_wp: " + str(R_wp) +"\n"
-        output +=  "R_e: " + str(R_e) +"\n"
+        output +=  "R_wp: " + str(self.R_wp) +"\n"
+        output +=  "R_e: " + str(self.R_e) +"\n"
         output +=  "Goodness-of-Fit: " + str(self.GoF) +"\n"
 
         if not self.bkgd_refine:
@@ -439,7 +437,7 @@ class RietveldRefinery:
         return output
 
     def get_plot_data(self):
-        intensities = self.total_profile()
+        intensities = self.total_profile_state
         d = {}
         d['two_thetas'] = []
         d['errors'] = []

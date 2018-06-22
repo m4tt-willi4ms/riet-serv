@@ -76,7 +76,8 @@ server"""
         wavelength_string = RietveldServer.refinery_model["wavelength"]
         wavelength_model = RietveldServer.refinery_model["wavelength_model"]
         custom_wavelength = RietveldServer.refinery_model["wavelengthc"]
-        rp.RietveldPhases.set_wavelength(wavelength_string, wavelength_model,
+        rp.RietveldPhases.set_wavelength(
+            target=wavelength_string, wavelength_model=wavelength_model,
             custom_wavelength=custom_wavelength)
 
     def _set_global_parameters(self, global_parameters):
@@ -155,6 +156,19 @@ PhaseParameters object in json-serialized form.
         state['global_state'] = rp.RietveldPhases.global_parameters.as_dict()
         state['phase_state'] = [phase.as_dict() for phase in \
             RietveldServer.phase_list]
+        print('num_params:', RietveldServer.rietveld_refinery.num_params)
+        state['num_params_refined'] = \
+            RietveldServer.rietveld_refinery.num_params
+        print('weights:', RietveldServer.rietveld_refinery.composition_by_weight)
+        state['composition_by_weight'] = list(
+            RietveldServer.rietveld_refinery.composition_by_weight)
+        state['goodness_of_fit'] = \
+            RietveldServer.rietveld_refinery.GoF
+        state['r_wp'] = RietveldServer.rietveld_refinery.R_wp
+        state['time_elapsed'] = RietveldServer.rietveld_refinery.time_elapsed
+        state['return_message'] = \
+            RietveldServer.rietveld_refinery.result['message']
+
         RietveldServer.rietveld_history.append(state)
 
     def _calc_complete(self):
@@ -198,6 +212,7 @@ to specify the refinement options and starting point of the refinement,
 respectively
         """
         try:
+            self.rietveld_history = []
             self._set_refinery_model(json.loads(refinery_model))
 
             rs = json.loads(rietveld_state)
@@ -208,8 +223,11 @@ respectively
 
             self._bkgd_refine()
 
+            factr = RietveldServer.refinery_model.get('convergence_factor', 1e2)
+            maxiter = RietveldServer.refinery_model.get('number_of_iterations', 150)
             RietveldServer.rietveld_refinery = rr.RietveldRefinery(
-                RietveldServer.phase_list, use_uround=True)
+                RietveldServer.phase_list, factr=factr, maxiter=maxiter,
+                use_uround=True)
             # RietveldServer.rietveld_refinery.set_mask(
             #     ['two_theta_', 'bkgd', 'scale'])
             self._run()
@@ -260,8 +278,8 @@ corresponding to the present state of the RietveldRefinery on the server
 
         reply = json.dumps(
             rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";"
-        with open('tmp.txt', 'w') as f:
-            f.write(reply)
+        # with open('tmp.txt', 'w') as f:
+        #     f.write(reply)
         self.sendLine(reply)
         if reply.strip() == '':
             reactor.stop()

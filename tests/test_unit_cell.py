@@ -9,9 +9,14 @@ from src.rietveld_phases import RietveldPhases
 def test_phase():
    return RietveldPhases("./data/cifs/1000032.cif")
 
-def test_assemble_lattice_params(test_phase):
-   assert 'uc_mask' in test_phase.phase_settings
-   assert len(test_phase.phase_settings["uc_mask"]) == 6
+def test_assemble_lattice_parameters(test_phase):
+   test_phase_settings = test_phase.phase_settings
+   assert 'uc_mask' in test_phase_settings
+   assert len(test_phase_settings["uc_mask"]) == 6
+
+   assert test_phase_settings["crystal_system_trigonal"] == 'H'
+   assert 'chemical_name' in test_phase_settings
+   assert test_phase_settings["chemical_name"] == 'Corundum'
 
 def test_unit_cell_parameter_gen(test_phase):
    tp_uc_gen = uc.unit_cell_parameter_gen(test_phase.phase_settings)

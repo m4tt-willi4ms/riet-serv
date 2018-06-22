@@ -25,10 +25,16 @@ def load_cif(phase_settings):
    cif_built_structures = cif_reader.build_crystal_structures()
    cif_data_key = cif_built_structures.keys()[0]
    structure = cif_built_structures[cif_data_key]
+   for scatterer in structure.scatterers():
+      scatterer.scattering_type = eltbx.xray_scattering.get_standard_label(
+         scatterer.scattering_type)
+   structure.scattering_type_registry(table="n_gaussian") #,  "it1992",
+      # "wk1995" "n_gaussian"\
+   wavelength = phase_settings["wavelengths"][0]
+   structure.set_inelastic_form_factors(wavelength, table="sasaki")
    phase_settings["structure"] = structure
    phase_settings["unit_cell"] = structure.unit_cell()
-   phase_settings["crystal_system"] = \
-      structure.space_group().crystal_system()
+   phase_settings["crystal_system"] = structure.space_group().crystal_system()
 
    cif_model = cif_reader.model()
    try:
@@ -41,9 +47,6 @@ def load_cif(phase_settings):
       except KeyError:
          phase_settings["chemical_name"] = os.path.split(file_path)[1]
 
-   for scatterer in structure.scatterers():
-      scatterer.scattering_type = eltbx.xray_scattering.get_standard_label(
-         scatterer.scattering_type)
    return phase_settings
 
 def compute_relative_intensities(phase_settings, anomalous_flag=True):
@@ -67,9 +70,7 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
 
    f_miller_set = structure.build_miller_set(anomalous_flag, d_min=d_min).sort()
    # Let's use scattering factors from the International Tables
-   structure.scattering_type_registry(table="it1992") #,  "it1992",
-      # "wk1995" "n_gaussian"\
-   structure.set_inelastic_form_factors(wavelengths[0], table="sasaki")
+   phase_data["f_miller_set"] = f_miller_set
 
    f_calc = structure.structure_factors(d_min=d_min,
                                         anomalous_flag=anomalous_flag
@@ -77,6 +78,12 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
 
    phase_data["crystal_density"] = structure.crystal_density()
    unit_cell_volume = unit_cell.volume()
+   phase_data["unit_cell_volume"] = unit_cell_volume
+   total_weight = 0
+   for atomic_weight, scatterer in zip(
+         structure.atomic_weights(), structure.scatterers()):
+      total_weight += atomic_weight * scatterer.multiplicity() * scatterer.occupancy #* scatterer.weight()
+   phase_data["unit_cell_weight"] = total_weight
 
    f_calc_sq = f_calc.as_intensity_array().sort().data() \
       /unit_cell_volume/unit_cell_volume
@@ -98,10 +105,9 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
       d_spacings = d_spacings[d_mask]
       relative_intensities = relative_intensities[d_mask]
 
-   phase_data["f_miller_set"] = f_miller_set
+   phase_data["d_mask"] = d_mask
    phase_data["d_spacings"] = d_spacings
    phase_data["relative_intensities"] = relative_intensities
-   phase_data["d_mask"] = d_mask
 
    # two_thetas = np.zeros((2,len(self.d_spacings)))
    # # factors = np.zeros((2,len(self.d_spacings)))

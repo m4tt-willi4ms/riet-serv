@@ -2,7 +2,7 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from random import randrange
+import pytest
 
 import sys, os
 
@@ -13,24 +13,30 @@ from cctbx.eltbx import wavelengths
 from libtbx import test_utils
 import libtbx.load_env
 
-RietveldPhases.set_profile(r".//data//profiles//Jade-Al2O3-Sim.xye",number_of_columns=2)
 
-cifs = ["1000032.cif","1507774.cif"]
-
-test_phase_list = []
-test_phase_list.append(RietveldPhases(r".//data//cifs//" + cifs[0],
-          delta_theta=2.0,intensity_cutoff=0.005))
 Rp = RietveldPlot()
-test_refinery = RietveldRefinery(test_phase_list, Rp, None)
 
+@pytest.fixture(scope="module")
+def test_phase_list():
+   RietveldPhases.set_profile(r".//data//profiles//Jade-Al2O3-Sim.xye",
+      number_of_columns=2)
+   cifs = ["1000032.cif","1507774.cif"]
+   test_phase_list = []
+   test_phase_list.append(RietveldPhases(r".//data//cifs//" + cifs[0],
+             delta_theta=2.0,intensity_cutoff=0.005))
+   return test_phase_list
 
-def test_read_in():
+@pytest.fixture(scope="module")
+def test_refinery(test_phase_list):
+   return RietveldRefinery(test_phase_list, Rp, None)
+
+def test_read_in(test_refinery):
    tr_dict = test_refinery.__dict__
    assert 'phase_list' in tr_dict
    assert 'x' in tr_dict
    assert 'mask' in tr_dict
 
-def test_bkgd_refine():
+def test_bkgd_refine(test_phase_list):
    test_refinery = RietveldRefinery(test_phase_list, Rp, bkgd_refine=True)
    test_refinery.minimize()
 

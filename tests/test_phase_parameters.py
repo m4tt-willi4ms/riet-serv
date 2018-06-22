@@ -9,6 +9,7 @@ from src.phase_parameters import PhaseParameters
 import src.refinement_parameters as rp
 import src.cctbx_dep.phase_from_cif as phase_from_cif
 import src.cctbx_dep.unit_cell as unit_cell
+import src.cctbx_dep.target_wavelengths as target_wavelengths
 import src.profiles as profiles
 
 @pytest.fixture(scope="module")
@@ -16,6 +17,7 @@ def phase_settings():
     phase_settings = {
         'cif_path': './data/cifs/1000032.cif'
     }
+    target_wavelengths.set_wavelength(phase_settings)
     phase_settings = phase_from_cif.load_cif(phase_settings)
     unit_cell.set_unit_cell_mask(phase_settings)
     phase_settings["max_polynom_order"] = 5

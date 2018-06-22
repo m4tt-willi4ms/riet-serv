@@ -58,6 +58,7 @@ MESSAGES = [
     'is_complete',
     'rounds_completed',
     'get_plot_data',
+    'get_rietveld_state;0'
     # 'add_phase;' + phase_info
     # 'get_phase_info',
     # 'get_phase_profile',
