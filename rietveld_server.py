@@ -160,8 +160,6 @@ PhaseParameters object in json-serialized form.
         state['num_params_refined'] = \
             RietveldServer.rietveld_refinery.num_params
         print('weights:', RietveldServer.rietveld_refinery.composition_by_weight)
-        state['composition_by_weight'] = list(
-            RietveldServer.rietveld_refinery.composition_by_weight)
         state['goodness_of_fit'] = \
             RietveldServer.rietveld_refinery.GoF
         state['r_wp'] = RietveldServer.rietveld_refinery.R_wp
@@ -212,7 +210,7 @@ to specify the refinement options and starting point of the refinement,
 respectively
         """
         try:
-            self.rietveld_history = []
+            RietveldServer.rietveld_history = []
             self._set_refinery_model(json.loads(refinery_model))
 
             rs = json.loads(rietveld_state)
@@ -224,7 +222,8 @@ respectively
             self._bkgd_refine()
 
             factr = RietveldServer.refinery_model.get('convergence_factor', 1e2)
-            maxiter = RietveldServer.refinery_model.get('number_of_iterations', 150)
+            maxiter = RietveldServer.refinery_model.get(
+                'number_of_iterations', 150)
             RietveldServer.rietveld_refinery = rr.RietveldRefinery(
                 RietveldServer.phase_list, factr=factr, maxiter=maxiter,
                 use_uround=True)

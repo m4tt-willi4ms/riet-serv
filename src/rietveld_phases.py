@@ -21,6 +21,7 @@ DEFAULT_DELTA_THETA = 2.0
 DEFAULT_INTENSITY_CUTOFF = 0.005
 DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
 DEFAULT_LATTICE_DEV = [0.01]*6
+DEFAULT_COMPOSITION_BY_WEIGHT = 0.0
 
 DEFAULT_TWO_THETAS = np.linspace(0.05, 100, num=1000)
 
@@ -281,6 +282,7 @@ class RietveldPhases(object):
                  intensity_cutoff=DEFAULT_INTENSITY_CUTOFF,
                  lattice_dev=DEFAULT_LATTICE_DEV,
                  recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
+                 composition_by_weight=DEFAULT_COMPOSITION_BY_WEIGHT,
                  target=('Cu', 0),
                  profile='PV',
                  phase_parameter_dict=None,
@@ -304,6 +306,8 @@ class RietveldPhases(object):
         assert len(lattice_dev) == 6
         assert all([dev > 0 and dev < 1 for dev in lattice_dev])
         self.phase_settings["lattice_dev"] = lattice_dev
+
+        self.phase_settings["composition_by_weight"] = composition_by_weight
 
         assert isinstance(recompute_peak_positions, bool)
         self.phase_settings["recompute_peak_positions"] = \
@@ -525,6 +529,8 @@ class RietveldPhases(object):
                 lps.append(tmp)
         phase_dict['lattice_parameters'] = lps
         phase_dict['uc_mask'] = self.phase_settings['uc_mask']
+        phase_dict['composition_by_weight'] = \
+            self.phase_settings['composition_by_weight']
         # lattice_parameters = []
         # for param in unit_cell.unit_cell_parameter_gen(
         #         self.phase_settings, np.ones(6, dtype=bool)):

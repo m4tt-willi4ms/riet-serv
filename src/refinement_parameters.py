@@ -12,7 +12,7 @@ import copy
 
 keys = ("labels", "values", "uround", "l_limits", "u_limits")
 param_keys = ("name", "value", "uround", "l_limit", "u_limit")
-ignored_keys = ("vertical_offset", "uc_mask",
+ignored_keys = ("vertical_offset", "uc_mask", "composition_by_weight",
     "lattice_parameter_tolerances", "cif_path", "phase_name")
 list_parameters = ("lattice_parameters", "eta", "bkgd")
 
