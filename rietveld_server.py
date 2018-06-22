@@ -89,9 +89,9 @@ server"""
             self._bkgd_refine()
 
     def _bkgd_refine(self):
-        RietveldServer.rietveld_refinery = rr.RietveldRefinery(
+        bkgd_refinery = rr.RietveldRefinery(
             RietveldServer.phase_list, bkgd_refine=True)
-        RietveldServer.rietveld_refinery.minimize()
+        bkgd_refinery.minimize()
 
     def call_load_profile(self, refinery_model_string, global_parameters):
         try:
@@ -218,8 +218,6 @@ respectively
             self._set_global_parameters(rs['global_state'])
             for phase in rs['phase_state']:
                 self._add_phase(phase)
-
-            self._bkgd_refine()
 
             factr = RietveldServer.refinery_model.get('convergence_factor', 1e2)
             maxiter = RietveldServer.refinery_model.get(

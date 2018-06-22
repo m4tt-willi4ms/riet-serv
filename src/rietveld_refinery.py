@@ -4,9 +4,7 @@ import time
 import sys, subprocess
 import numpy as np
 import itertools
-from scipy.optimize import approx_fprime
-from scipy.optimize import fmin_l_bfgs_b as minimizer
-from scipy.optimize import minimize
+import scipy.optimize as opt
 import json,codecs
 import operator
 
@@ -77,6 +75,9 @@ class RietveldRefinery:
                     # self.x = np.hstack((RietveldPhases.global_x,
                     #    np.hstack((x.phase_x for x in self.phase_list))))
                     if key == "uround":
+                        # print(RietveldPhases.global_parameters.x[key])
+                        # print([phase.phase_parameters.x[key]
+                        #             for phase in self.phase_list])
                         tmp = np.concatenate((
                             RietveldPhases.global_parameters.x[key],
                             np.concatenate(
@@ -255,15 +256,14 @@ class RietveldRefinery:
         self.t0 = time.time()
 
         if np.sum(self.mask) > 0:
-            self.result = \
-                minimize(self.weighted_sum_of_squares,self.x[self.mask],
-                method = 'L-BFGS-B',#'Newton-CG',#
+            self.result = opt.minimize(
+                self.weighted_sum_of_squares,
+                self.x[self.mask],
+                method = 'L-BFGS-B', #'TNC', # 'Newton-CG', #'Newton-CG', #, #trust-const'
                 options=options,
-                # jac = False,
                 jac = self.weighted_sum_of_squares_grad,
+                # hess='2-point',
                 callback = self.callback,
-                # approx_grad = True,
-                # epsilon = self.epsilon, \
                 bounds = zip(self.x_l_limits[self.mask],
                     self.x_u_limits[self.mask]),
                 )
@@ -359,7 +359,7 @@ class RietveldRefinery:
             map(operator.methodcaller('__call__'), list(self.callback_functions))
         # print self.x[self.mask]
         self.count += 1
-
+        return False
 
     def minimize_with_mask(self,mask):
         self.mask = mask
