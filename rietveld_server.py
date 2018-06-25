@@ -31,7 +31,7 @@ server"""
 
     def connectionMade(self):
         # pass
-        self.sendLine(b'Connected. Type <help> [command] for info.')
+        # self.sendLine(b'Connected. Type <help> [command] for info.')
         self.MAX_LENGTH = 4194304
         # self.setLineMode()
         # print self.__dict__
@@ -92,6 +92,7 @@ server"""
         bkgd_refinery = rr.RietveldRefinery(
             RietveldServer.phase_list, bkgd_refine=True)
         bkgd_refinery.minimize()
+        RietveldServer.plotdata = bkgd_refinery.get_plot_data()
 
     def call_load_profile(self, refinery_model_string, global_parameters):
         try:
@@ -156,10 +157,8 @@ PhaseParameters object in json-serialized form.
         state['global_state'] = rp.RietveldPhases.global_parameters.as_dict()
         state['phase_state'] = [phase.as_dict() for phase in \
             RietveldServer.phase_list]
-        print('num_params:', RietveldServer.rietveld_refinery.num_params)
         state['num_params_refined'] = \
             RietveldServer.rietveld_refinery.num_params
-        print('weights:', RietveldServer.rietveld_refinery.composition_by_weight)
         state['goodness_of_fit'] = \
             RietveldServer.rietveld_refinery.GoF
         state['r_wp'] = RietveldServer.rietveld_refinery.R_wp
@@ -178,15 +177,26 @@ PhaseParameters object in json-serialized form.
 
     def _update_plot_data(self):
         if rp.RietveldPhases.I is not None:
-            if not RietveldServer.calc_flag:
-                self._bkgd_refine()
-            profile = RietveldServer.rietveld_refinery.total_profile_state
+            if RietveldServer.rietveld_refinery is not None:
+                RietveldServer.plot_data = \
+                    RietveldServer.rietveld_refinery.total_profile_state
+            elif len(RietveldServer.phase_list) > 0:
+                RietveldServer.rietveld_refinery = rr.RietveldRefinery(
+                    RietveldServer.phase_list)
+                RietveldServer.plot_data = \
+                    RietveldServer.rietveld_refinery.total_profile_state
+            else:
+                RietveldServer.plot_data = np.zeros(
+                    len(rp.RietveldPhases.I), dtype=float)
+            # if not RietveldServer.calc_flag:
+            #     self._bkgd_refine()
         else:
-            profile = np.sum([phase.phase_profile() for phase in
-                RietveldServer.phase_list], axis=0)
+            RietveldServer.plot_data = np.sum(
+                [phase.phase_profile() for phase in
+                    RietveldServer.phase_list], axis=0)
         # with open('tmp.txt','w+') as f:
         #     f.write("profile length:" + str(len(profile)))
-        RietveldServer.plot_data = profile
+        # RietveldServer.plot_data = profile
 
     def _refine(self):
         RietveldServer.rietveld_refinery.minimize_all_rounds(
@@ -223,8 +233,7 @@ respectively
             maxiter = RietveldServer.refinery_model.get(
                 'number_of_iterations', 150)
             RietveldServer.rietveld_refinery = rr.RietveldRefinery(
-                RietveldServer.phase_list, factr=factr, maxiter=maxiter,
-                use_uround=True)
+                RietveldServer.phase_list, factr=factr, maxiter=maxiter )
             # RietveldServer.rietveld_refinery.set_mask(
             #     ['two_theta_', 'bkgd', 'scale'])
             self._run()

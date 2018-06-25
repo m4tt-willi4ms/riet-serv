@@ -12,12 +12,14 @@ from src.rietveld_phases import RietveldPhases
 from src.rietveld_plot import RietveldPlot
 import src.refinement_parameters as refinement_parameters
 
-default_factr = 1e2
-default_iprint = 1
-default_maxiter = 150
-default_m = 10
-default_pgtol = 1e-10
-default_epsilon = 1e-11
+DEFAULT_FACTR = 1e2
+DEFAULT_IPRINT = 1
+DEFAULT_MAXITER = 150
+DEFAULT_M = 10
+DEFAULT_PGTOL = 1e-10
+DEFAULT_EPSILON = 1e-11
+DEFAULT_DISPLAY = False
+
 
 # default_composition_cutoff = 3
 
@@ -38,14 +40,15 @@ class RietveldRefinery:
         bkgd_refine=False,
         store_intermediate_state=False,
         show_plots=False,
-        factr=default_factr,
+        factr=DEFAULT_FACTR,
         mask=None,
-        iprint=default_iprint,
-        maxiter=default_maxiter,
-        m=default_m,
-        pgtol=default_pgtol,
-        epsilon=default_epsilon,
-        use_uround=False,
+        iprint=DEFAULT_IPRINT,
+        maxiter=DEFAULT_MAXITER,
+        m=DEFAULT_M,
+        pgtol=DEFAULT_PGTOL,
+        epsilon=DEFAULT_EPSILON,
+        method='L-BFGS-B',
+        display=DEFAULT_DISPLAY,
         # input_weights=None,
         # composition_cutoff=default_composition_cutoff,
         ):
@@ -64,6 +67,8 @@ class RietveldRefinery:
         self.m = m
         self.pgtol = pgtol
         self.epsilon = epsilon
+        self.method = method
+        self.display = display
         # self.composition_cutoff = composition_cutoff
 
         self.weighted_sum_of_I_squared = np.sum(
@@ -113,11 +118,6 @@ class RietveldRefinery:
             self.mask = mask
         elif self.bkgd_refine:
             self.mask = self.bkgd_mask
-        elif use_uround:
-            self.mask = self.x_uround[:, 0]
-            assert self.mask.dtype == bool
-            assert len(self.mask) == len(self.x)
-            print(self.x_labels[self.mask])
         else:
             self.mask = np.zeros(len(self.x),dtype=bool)
 
@@ -216,7 +216,8 @@ class RietveldRefinery:
         return result
 
     def set_mask(self, list_of_parameter_strings=[]):
-        mask = self.make_mask(list_of_parameter_strings=list_of_parameter_strings)
+        mask = self.make_mask(
+            list_of_parameter_strings=list_of_parameter_strings)
         if np.any(mask):
             self.mask = mask
 
@@ -245,12 +246,16 @@ class RietveldRefinery:
             self.rietveld_plot.fig.suptitle("In Progress...")
 
         options = {
-            'ftol': self.factr*2.2e-16,
-            # 'xtol': self.factr*2.2e-16,
-            'gtol': self.pgtol,
-            'maxcor': self.m,
-            'maxiter': self.maxiter,
-            'disp': True,
+            'L-BFGS-B': {
+                'ftol': self.factr*2.2e-16,
+                'gtol': self.pgtol,
+                'maxcor': self.m,
+                'maxiter': self.maxiter,
+                'disp': self.display,
+                },
+            'Newton-CG': {
+                'xtol': self.factr*2.2e-16,
+                }
             }
 
         self.t0 = time.time()
@@ -259,12 +264,12 @@ class RietveldRefinery:
             self.result = opt.minimize(
                 self.weighted_sum_of_squares,
                 self.x[self.mask],
-                method = 'L-BFGS-B', #'TNC', # 'Newton-CG', #'Newton-CG', #, #trust-const'
-                options=options,
-                jac = self.weighted_sum_of_squares_grad,
+                method=self.method, #'Newton-CG', #'TNC', #, #trust-const'
+                options=options[self.method],
+                jac=self.weighted_sum_of_squares_grad,
                 # hess='2-point',
-                callback = self.callback,
-                bounds = zip(self.x_l_limits[self.mask],
+                callback=self.callback,
+                bounds=zip(self.x_l_limits[self.mask],
                     self.x_u_limits[self.mask]),
                 )
         else:
@@ -296,15 +301,16 @@ class RietveldRefinery:
                 wse=self.relative_differences_state)
 
     def minimize_all_rounds(self, end_of_round_callbacks=None, *args, **kwargs):
-        for col in self.x_uround.T:
-            self.mask = col
-            self.minimize(*args, **kwargs)
-            self.set_compositions()
-            if end_of_round_callbacks is not None:
-                for callback in end_of_round_callbacks:
-                    callback()
-            self.mask = self.bkgd_mask
-            self.minimize()
+        rounds = self.x_uround.T
+        for ind, col in enumerate(rounds):
+            # print(np.any(col - rounds[ind-1,:]))
+            if ind == 0 or (ind > 0 and np.any(col - rounds[ind-1,:])):
+                self.mask = col
+                self.minimize(*args, **kwargs)
+                self.set_compositions()
+                if end_of_round_callbacks is not None:
+                    map(operator.methodcaller('__call__'),
+                        list(end_of_round_callbacks))
 
     def set_compositions(self):
         Scales = self.x[self.scale_mask]
@@ -353,9 +359,10 @@ class RietveldRefinery:
             # print "grad:", self.weighted_sum_of_squares_grad(self.x[self.mask])
             # print "two_theta_0:", RietveldPhases.two_theta_0
             # print "scale:", self.phase_list[0].phase_parameters.scale
-        if self.rietveld_plot is not None and self.count % 5 == 0:
-            self.rietveld_plot.updateplotprofile(self.total_profile_state,
-                wse=self.relative_differences_state)
+        if self.count % 5 == 0:
+            if self.rietveld_plot is not None:
+                self.rietveld_plot.updateplotprofile(self.total_profile_state,
+                    wse=self.relative_differences_state)
             map(operator.methodcaller('__call__'), list(self.callback_functions))
         # print self.x[self.mask]
         self.count += 1
