@@ -304,7 +304,8 @@ class RietveldRefinery:
         rounds = self.x_uround.T
         for ind, col in enumerate(rounds):
             # print(np.any(col - rounds[ind-1,:]))
-            if ind == 0 or (ind > 0 and np.any(col - rounds[ind-1,:])):
+            if ind == 0 or (ind > 0 and np.any(
+                    np.logical_xor(col, rounds[ind-1,:]))):
                 self.mask = col
                 self.minimize(*args, **kwargs)
                 self.set_compositions()

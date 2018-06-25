@@ -13,6 +13,8 @@ import src.rietveld_phases as rp
 import src.rietveld_refinery as rr
 from src.rietveld_plot import RietveldPlot
 
+MAX_PROFILE_VALUE = 1000000
+
 class RietveldServer(basic.LineReceiver):
     delimiter = b'\n'
     split_character = ';'
@@ -28,6 +30,7 @@ server"""
     plot_data = None
     # plot = RietveldPlot()
     show_plot = False
+    count = 0
 
     def connectionMade(self):
         # pass
@@ -84,9 +87,9 @@ server"""
         rp.RietveldPhases.set_global_parameters(global_parameters)
         # profile_filename = os.path.split(profile_path)[1]
         # self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
-        if rp.RietveldPhases.I is not None \
-                and len(RietveldServer.phase_list) > 0:
-            self._bkgd_refine()
+        # if rp.RietveldPhases.I is not None \
+        #         and len(RietveldServer.phase_list) > 0:
+        #     self._bkgd_refine()
 
     def _bkgd_refine(self):
         bkgd_refinery = rr.RietveldRefinery(
@@ -134,6 +137,7 @@ server"""
         assert isinstance(cif_path, basestring)
         RietveldServer.phase_list.append(rp.RietveldPhases(cif_path,
             phase_parameter_dict=phase_dict))
+        self._bkgd_refine()
 
     def call_add_phase(self, phase_parameters_JSON):
         """add_phase: appends a phase to the server's phase list, given a
@@ -178,8 +182,10 @@ PhaseParameters object in json-serialized form.
     def _update_plot_data(self):
         if rp.RietveldPhases.I is not None:
             if RietveldServer.rietveld_refinery is not None:
-                RietveldServer.plot_data = \
-                    RietveldServer.rietveld_refinery.total_profile_state
+                checked_data = copy.deepcopy(
+                    RietveldServer.rietveld_refinery.total_profile_state)
+                if np.max(np.abs(checked_data)) < MAX_PROFILE_VALUE:
+                    RietveldServer.plot_data = checked_data
             elif len(RietveldServer.phase_list) > 0:
                 RietveldServer.rietveld_refinery = rr.RietveldRefinery(
                     RietveldServer.phase_list)
@@ -282,13 +288,17 @@ corresponding to the present state of the RietveldRefinery on the server
         """
         self._update_plot_data()
 
-        reply = json.dumps(
-            rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";"
-        # with open('tmp.txt', 'w') as f:
-        #     f.write(reply)
-        self.sendLine(reply)
-        if reply.strip() == '':
-            reactor.stop()
+        try:
+            reply = json.dumps(
+                rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";"
+            # DEBUG
+            if np.max(np.abs(RietveldServer.plot_data)) > MAX_PROFILE_VALUE:
+                with open('reply{0}.json'.format(RietveldServer.count), 'w') as f:
+                    f.write(reply)
+                RietveldServer.count += 1
+            self.sendLine(reply)
+        except:
+            log.err()
 
     def call_remove_phase(self, index=u'-1'):
         """remove_phase [index]: removes the phase specified by the index. If no
