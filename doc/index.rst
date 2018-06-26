@@ -7,44 +7,24 @@
 PROTO Rietveld Refinement
 +++++++++++++++++++++++++++++++++++++
 
-.. Welcome to PROTO Rietveld Refinement's documentation!
-.. =====================================================
+This page provides some details describing the behaviour of the PROTO Rietveld
+Refinement software. Questions or comments are welcome! Please email us `here`_
+with any suggestions for improvement.
+
+.. _here: mwilliams@protoxrd.com
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
 
-.. Indices and tables
-.. ==================
+   main
+   helper
+   client-server
+   cctbx_dep
 
-.. * :ref:`genindex`
-.. * :ref:`modindex`
-.. * :ref:`search`
+Indices and tables
+==================
 
-Rietveld Phases Module
-======================
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
-This module is used to store input data and build representations
-of a particular crystal phases's powder profile, based on some fitting
-parameters. The module is meant to be extendable, so that more fine-grained models of powder profiles can be implemented at a later time.
-
-      .. automodule:: src.RietveldPhases
-      .. autoclass:: RietveldPhases
-         :members:
-         :member-order: bysource
-
-Rietveld Refinery Module
-========================
-
-The module is designed to take in some list of Rietveld Phases and produce the
-ingredients necessary to run the Rietveld Refinement engine. This engine can
-then be run a number of times, and can be used to update plot data during the
-refinement.
-
-      .. automodule:: src.RietveldRefinery
-      .. autoclass:: RietveldRefinery
-         :members:
-         :member-order: bysource
-         :undoc-members:
-         :inherited-members:
-         :show-inheritance:

@@ -1,79 +1,66 @@
-from twisted.trial import unittest
+from __future__ import division, print_function, absolute_import
+import os
+import numpy as np
+import json
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
-from twisted_server import ImageDataServer
+from rietveld_server import RietveldServer
+import rietveld_client as rc
 
-
-class ClientCalculationTestCase(unittest.TestCase):
+class RietveldServerTestCase(unittest.TestCase):
     def setUp(self):
         self.tr = proto_helpers.StringTransport()
-        self.proto = ImageDataServer()
+        self.proto = RietveldServer()
         self.proto.makeConnection(self.tr)
 
     def _test(self, cmd, expected, result=None):
-        cmd_parts = cmd.split()
-        d = getattr(self.proto, 'call_' + cmd_parts[0])(*cmd_parts[1:])
-        self.assertEqual(self.tr.value(), expected)
+        cmd_parts = cmd.split(self.proto.split_character)
         self.tr.clear()
-        return d
+        d = getattr(self.proto, 'call_' + cmd_parts[0])(*cmd_parts[1:])
+        assert self.tr.value() == expected
 
-#     def test_help(self):
-#         return self._test('help',
-# '''Valid commands: exit, help, img, loadJSON, reset, roi, update_R, writeJSON\r\n''')
+    def test_initialize(self):
+        self._test('initialize', 'Initializing\n')
 
     def test_exit(self):
-        return self._test('exit', 'Goodbye.\n')
-
-    def test_img(self):
-        return self._test('img test.tif', '''New image: .\\test.tif
-   R: 85 mm
-   two-theta: 30 deg
-''')
-
-    def test_calc_last(self):
-        self.proto.dataReceived('reset')
-        self.proto.dataReceived('img test.tif')
-        self.proto.dataReceived('roi  (320,370,140,170)')
-        self.proto.dataReceived('roi_label YBCO (0,0,1)')
-        self.tr.clear()
-        self.proto.dataReceived('calc_last')
-        self.assertEqual(self.tr.value(), 'Starting calculation...\n')
-
-    def test_no_imgs(self):
-        self.proto.call_reset()
-        self.tr.clear()
-        self.proto.dataReceived('roi (320,370,140,170)')
-        self.assertEqual(self.tr.value(), 'Error: no file names specified.\n')
-        self.tr.clear()
-
-    def test_roi(self):
-        return self._test('roi YBCO',
-'''Received:
-   Material: YBCO
-   hkl: (0, 0, 1)
-   ROI Coordinates: (320, 370, 140, 170)
-   Assigned to test.tif\r\n''')
-
-    # def _test(self, operation, a, b, expected):
-    #     d = getattr(self.proto, operation)(a, b)
-    #     self.assertEqual(self.tr.value(), '%s %d %d\r\n' % (operation, a, b))
-    #     self.tr.clear()
-    #     d.addCallback(self.assertEqual, expected)
-    #     self.proto.dataReceived("%d\r\n" % (expected,))
-    #     return d
+        self._test('exit', 'Goodbye.\n')
 
 
-    # def test_add(self):
-    #     return self._test('add', 7, 6, 13)
+# class ClientCalculationTestCase(unittest.TestCase):
+
+#     def setUp(self):
+#         self.tr = proto_helpers.StringTransport()
+#         self.proto = RietveldServer()
+#         self.proto.makeConnection(self.tr)
 
 
-    # def test_subtract(self):
-    #     return self._test('subtract', 82, 78, 4)
+# #     def test_help(self):
+# #         return self._test('help',
+# # '''Valid commands: exit, help, img, loadJSON, reset, roi, update_R, writeJSON\r\n''')
 
+#     def test_exit(self):
+#         return self._test('exit', 'Goodbye.\n')
 
-    # def test_multiply(self):
-    #     return self._test('multiply', 2, 8, 16)
+#     def test_initialize(self):
+#         return self._test('initialize', 'Initializing\n')
 
-
-    # def test_divide(self):
-    #     return self._test('divide', 14, 3, 4)
+#     def test_add_phase(self):
+#         self.tr.clear()
+#         self.proto.call_add_phase(rc.SAMPLES['phase_parameters'])
+#         input_phase = json.loads(rc.SAMPLES['phase_parameters'])
+#         output_phase = json.loads(
+#             self.tr.value().split(self.proto.split_character)[0])
+#         print json.dumps(output_phase, indent=4)
+#         check_val = ('cif_path',
+#                      'lattice_parameter_tolerances',
+#                      )
+#         check_len = ('eta', 'lattice_parameter_tolerances')
+#         for key in check_len:
+#             assert len(output_phase[key]) == len(input_phase[key])
+#         for key in check_val:
+#             if isinstance(output_phase[key], list):
+#                 for i, item in enumerate(output_phase[key]):
+#                     assert np.isclose(item, input_phase[key][i])
+#             if isinstance(output_phase[key], str):
+#                 assert output_phase[key] == input_phase[key]

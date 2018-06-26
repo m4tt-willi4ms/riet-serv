@@ -1,67 +1,116 @@
-
-# Copyright (c) Twisted Matrix Laboratories.
-# See LICENSE for details.
-
-
 """
-An example client. Run simpleserv.py first before running this.
+A test client to demonstrate some simple use of the Rietveld Server
 """
+from __future__ import division, print_function, absolute_import
 import time
+import json
+import os
+from multiprocessing import Process
 
 from twisted.internet import reactor
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.protocols.basic import LineReceiver
 
+SAMPLES = {
+    'rietveld_model': None,
+    'global_parameters': None,
+    'phase_parameters': None,
+    'rietveld_state': None,
+}
 
-class EchoClient(LineReceiver):
+def get_sample_path(key):
+    return os.path.join(os.path.dirname(__file__),
+            'data/server_input/' + key + '_sample.json')
+
+def load_json_sample(key, cif_name=None):
+    with open(get_sample_path(key), 'r') as file:
+        SAMPLES[key] = json.dumps(json.load(file))
+
+def write_json_sample(key):
+    with open(get_sample_path(key), 'w') as file:
+        file.write(json.dumps(json.loads(SAMPLES[key]), indent=4))
+
+def load_json_samples():
+    for key in SAMPLES.keys():
+        load_json_sample(key)
+
+def write_json_samples():
+    for key in SAMPLES.keys():
+        write_json_sample(key)
+
+load_json_samples()
+
+MESSAGES = [
+    'help',
+    # 'help reset',
+    # 'load_profile .\data\profiles\d5_05005.xye',
+    'initialize',
+    'add_phase;' + SAMPLES['phase_parameters'],
+    'add_phase;' + SAMPLES['phase_parameters'],
+    'remove_phase;' + '-1',
+    'load_profile;' + SAMPLES['rietveld_model'] + ';' + SAMPLES['global_parameters'],
+    # 'is_complete',
+    # 'rounds_completed',
+    # 'get_rietveld_state;2',
+    'start_refine;' + SAMPLES['rietveld_model'] + ';' + SAMPLES['rietveld_state'],
+    'is_complete',
+    'rounds_completed',
+    'is_complete',
+    'rounds_completed',
+    'get_plot_data',
+    'get_rietveld_state;0'
+    # 'add_phase;' + phase_info
+    # 'get_phase_info',
+    # 'get_phase_profile',
+    # 'writeJSON',
+    # 'loadJSON',
+    # 'reset',
+    # 'exit',
+    ]
+
+class RietveldClient(LineReceiver):
     """Once connected, send a message, then print the result."""
-    messages = [
-        'help',
-        # 'help reset',
-        'load_profile .\data\profiles\d5_05005.xye',
-        'add_phase .\data\cifs\9015662-rutile.cif',
-        # 'writeJSON',
-        # 'loadJSON',
-        # 'reset',
-        # 'exit',
-        ]
-
-    def sendMessage(self, msg):
-        self.sendLine(msg)
+    data_buffer = ""
 
     def connectionMade(self):
-        self.setRawMode()
-
-    def rawDataReceived(self, data):
-        print "Received:", data
-        self.clearLineBuffer()
-        delay = 0.2
-        if len(self.messages) > 0:
-            reactor.callLater(delay,self.sendMessage, self.messages.pop(0))
+        delay = 0.02
+        if len(MESSAGES) > 0:
+            msg = MESSAGES.pop(0)
+            reactor.callLater(delay, self.sendLine, msg)
         else:
-            reactor.callLater(delay,self.transport.loseConnection)
+            # reactor.callLater(0, self.transport.loseConnection)
+            reactor.stop()
 
-    def connectionLost(self, reason):
-        print "connection lost"
+    def dataReceived(self, data):
+        self.data_buffer += data
+        if data[-1] in ["\n"]:
+            if not self.data_buffer[:9] == "Connected":
+                print("Data received. Length:", len(self.data_buffer))
+                self.transport.loseConnection()
+                print(self.data_buffer)
+            self.data_buffer = ""
 
-class EchoFactory(ClientFactory):
-    protocol = EchoClient
+    # def connectionLost(self, reason):
+    #     print "connection lost"
+
+class RietveldClientFactory(ReconnectingClientFactory):
+    def buildProtocol(self, addr):
+        self.resetDelay()
+        return RietveldClient()
+
+    # def clientConnectionLost(self, connector, reason):
+    #     print 'Disconnected.'
+    #     ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
     def clientConnectionFailed(self, connector, reason):
-        print "Connection failed - goodbye!"
-        reactor.stop()
+        print('Connection failed. Reason:', reason)
+        ReconnectingClientFactory.clientConnectionFailed(self, connector,
+                                                         reason)
 
-    def clientConnectionLost(self, connector, reason):
-        print "Connection lost - goodbye!"
-        reactor.stop()
-
-
-# this connects the protocol to a server running on port 8000
 def main():
-    f = EchoFactory()
+    f = RietveldClientFactory()
     reactor.connectTCP("localhost", 8007, f)
     reactor.run()
 
-# this only runs if the module was *not* imported
 if __name__ == '__main__':
     main()
