@@ -3,7 +3,7 @@ from twisted.internet import reactor, protocol, defer, task
 from twisted.protocols import basic
 from twisted.python import log
 
-import json, simplejson
+import json
 import sys, os
 import time
 import numpy as np

@@ -15,6 +15,7 @@ param_keys = ("name", "value", "uround", "l_limit", "u_limit")
 ignored_keys = ("vertical_offset", "uc_mask", "composition_by_weight",
     "lattice_parameter_tolerances", "cif_path", "phase_name")
 list_parameters = ("lattice_parameters", "eta", "bkgd")
+#TODO: move to children
 
 def validate_order(order, max_polynom_order=5):
     assert isinstance(order, int)

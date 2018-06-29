@@ -1,9 +1,10 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
 
+LN2 = np.sqrt(np.log(2))
+
 def pseudo_voigt(x_squared, eta):
-    return (eta/(1+x_squared)
-            + (1-eta)*np.exp2(-x_squared))
+    return eta/(1+x_squared)/LN2 + (1-eta)*np.exp2(-x_squared)
 
 def gaussian(x_squared, eta=None):
     return np.exp2(-x_squared)

@@ -10,7 +10,7 @@ import src.cctbx_dep.unit_cell as unit_cell
 
 DEFAULT_U = ('cagliotti_u', 0.00, [False], -0.1, 0.1)
 DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
-DEFAULT_W = ('cagliotti_w', 0.003, [True], 0.000001, 1)
+DEFAULT_W = ('cagliotti_w', 0.001, [True], 0.000001, 1)
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01

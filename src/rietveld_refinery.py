@@ -19,6 +19,7 @@ DEFAULT_M = 10
 DEFAULT_PGTOL = 1e-10
 DEFAULT_EPSILON = 1e-11
 DEFAULT_DISPLAY = False
+DEFAULT_METHOD = 'L-BFGS-B'#'CG', #'Newton-CG', #'TNC', #, #trust-const'
 
 
 # default_composition_cutoff = 3
@@ -47,7 +48,7 @@ class RietveldRefinery:
         m=DEFAULT_M,
         pgtol=DEFAULT_PGTOL,
         epsilon=DEFAULT_EPSILON,
-        method='L-BFGS-B',
+        method=DEFAULT_METHOD,
         display=DEFAULT_DISPLAY,
         # input_weights=None,
         # composition_cutoff=default_composition_cutoff,
@@ -153,13 +154,16 @@ class RietveldRefinery:
             return RietveldPhases.background_polynomial() \
                 + np.sum( x.phase_profile() for x in self.phase_list)
 
-    def weighted_squared_errors(self):
-        return (RietveldPhases.I - self.total_profile_state)**2 \
-            /RietveldPhases.sigma**2
-
     def relative_differences(self):
-        return (self.total_profile_state-RietveldPhases.I) \
-            /RietveldPhases.sigma**2
+        return (self.total_profile_state - RietveldPhases.I) \
+            / RietveldPhases.sigma
+
+    def opt_relative_differences(self, x):
+        # print self.mask
+        self.x[self.mask] = x
+        # if not self.bkgd_refine:
+        self.update_state()
+        return self.rel_diffs
 
     def update_state(self):
         # if not self.bkgd_refine:
@@ -172,10 +176,11 @@ class RietveldRefinery:
                     # self.x[self.phase_masks[i]][self.mask[self.phase_masks[i]]])
         self.total_profile_state = self.total_profile()
         # print "profile: " + str(self.phase_list[0].phase_x[3])
-        self.relative_differences_state = self.relative_differences()
+        self.rel_diffs = self.relative_differences()
+        self.relative_differences_state = self.rel_diffs / RietveldPhases.sigma
         # self.Relative_Differences_state.shape = \
         #    (self.Relative_Differences_state.shape[0],1)
-        self.weighted_squared_errors_state = self.weighted_squared_errors()
+        # self.weighted_squared_errors_state = self.rel_diffs ** 2
 
     def revert_to_x(self, x):
         self.x = x
@@ -201,7 +206,8 @@ class RietveldRefinery:
         if np.any(bkgd_mask):
             result[bkgd_mask] = \
                 np.sum(2*np.multiply(
-                    RietveldPhases.two_theta_powers[:len(RietveldPhases.bkgd)],
+                    RietveldPhases.two_theta_powers[:len(
+                        RietveldPhases.global_parameters.bkgd)],
                     self.relative_differences_state),axis=1)
 
         for i in xrange(0,len(self.phase_list)):
@@ -212,8 +218,26 @@ class RietveldRefinery:
                     phase_profile_grad(mask[self.global_and_phase_masks[i]],
                         epsilon=self.epsilon),
                     self.relative_differences_state),axis=1)
-        # print "post-grad: " + str(self.phase_list[0].phase_x[3])
         return result
+
+    def opt_relative_differences_grad(self, x):
+        self.x[self.mask] = x
+        result = np.zeros((len(self.x[self.mask]), len(RietveldPhases.I)))
+        # print "here"
+        bkgd_mask = np.logical_and(self.mask, self.bkgd_mask)[self.mask]
+        if np.any(bkgd_mask):
+            result[bkgd_mask, :] = RietveldPhases.two_theta_powers[:len(
+                        RietveldPhases.global_parameters.bkgd), :] \
+                        / RietveldPhases.sigma
+
+        for i in xrange(0,len(self.phase_list)):
+            mask = self.global_and_phase_refine_masks[i]
+            if np.any(mask):
+                result[mask[self.mask], :] += (
+                    self.phase_list[i].phase_profile_grad(
+                        mask[self.global_and_phase_masks[i]],
+                        epsilon=self.epsilon)) / RietveldPhases.sigma
+        return result.T
 
     def set_mask(self, list_of_parameter_strings=[]):
         mask = self.make_mask(
@@ -238,9 +262,16 @@ class RietveldRefinery:
         self.count = 0
 
         self.global_and_phase_refine_masks = []
-        for i in xrange(len(self.phase_list)):
+        for global_and_phase_mask in self.global_and_phase_masks:
             self.global_and_phase_refine_masks.append(
-                np.logical_and(self.mask, self.global_and_phase_masks[i]))
+                np.logical_and(self.mask, global_and_phase_mask))
+        for i, phase in enumerate(self.phase_list):
+            if np.any(np.logical_and(
+                self.global_and_phase_refine_masks[i],
+                np.char.startswith(self.x_labels, 'uc_'))):
+                phase.phase_settings["recompute_peak_positions"] = True
+            else:
+                phase.phase_settings["recompute_peak_positions"] = False
 
         if not self.bkgd_refine and self.rietveld_plot is not None:
             self.rietveld_plot.fig.suptitle("In Progress...")
@@ -255,23 +286,46 @@ class RietveldRefinery:
                 },
             'Newton-CG': {
                 'xtol': self.factr*2.2e-16,
-                }
+                },
+            'CG': {
+                'disp': self.display,
+                'maxiter': self.maxiter,
+                'adaptative': True,
+                },
             }
 
         self.t0 = time.time()
 
         if np.sum(self.mask) > 0:
-            self.result = opt.minimize(
-                self.weighted_sum_of_squares,
-                self.x[self.mask],
-                method=self.method, #'Newton-CG', #'TNC', #, #trust-const'
-                options=options[self.method],
-                jac=self.weighted_sum_of_squares_grad,
-                # hess='2-point',
-                callback=self.callback,
-                bounds=zip(self.x_l_limits[self.mask],
-                    self.x_u_limits[self.mask]),
-                )
+            # self.result = opt.minimize(
+            #     self.weighted_sum_of_squares,
+            #     self.x[self.mask],
+            #     tol=self.factr*2.2e-16,
+            #     method=self.method,
+            #     options=options[self.method],
+            #     jac=self.weighted_sum_of_squares_grad,
+            #     # hess='2-point',
+            #     callback=self.callback,
+            #     bounds=zip(self.x_l_limits[self.mask],
+            #         self.x_u_limits[self.mask]),
+            #     )
+            while(True):
+                self.result = opt.least_squares(
+                    self.opt_relative_differences,
+                    self.x[self.mask],
+                    # jac='3-point',
+                    jac=self.opt_relative_differences_grad,
+                    ftol=1e-5,
+                    xtol=3e-16,
+                    gtol=1e-5,
+                    x_scale='jac',
+                    max_nfev=10*np.sum(self.mask),
+                    bounds=(self.x_l_limits[self.mask], self.x_u_limits[self.mask]),
+                    )
+                self.callback(self.result.x)
+                # print('here')
+                if self.result.status > 0:
+                    break
         else:
             self.result = None
 
@@ -288,7 +342,7 @@ class RietveldRefinery:
             self.rietveld_plot.fig.suptitle("No parameters to be refined.")
 
         self.num_params = int(np.sum(self.mask))
-        WSS = np.sum(self.weighted_squared_errors_state)
+        WSS = np.sum(self.rel_diffs ** 2)
         self.R_wp = np.sqrt(WSS/self.weighted_sum_of_I_squared)
         self.R_e = np.sqrt((len(RietveldPhases.two_theta)-self.num_params
             )/self.weighted_sum_of_I_squared)
@@ -425,8 +479,9 @@ class RietveldRefinery:
             output +=  "\nTime taken to run " + fn.__name__ + " with " \
                 + str(self.num_params) + " parameters: " \
                 + str(self.time_elapsed) + " seconds (" \
-                + str(self.result['nit']) + " iterations, " \
-                + str(self.result['nfev']) + " function calls)\n"
+                + str(self.result['nfev']) + " function calls, " \
+                + str(self.result['njev']) + " jacobian calls.)\n"
+                # + str(self.result['nit']) + " iterations, " \
         output +=  "R_wp: " + str(self.R_wp) +"\n"
         output +=  "R_e: " + str(self.R_e) +"\n"
         output +=  "Goodness-of-Fit: " + str(self.GoF) +"\n"

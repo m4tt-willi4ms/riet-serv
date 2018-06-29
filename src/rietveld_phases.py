@@ -195,7 +195,7 @@ class RietveldPhases(object):
             xrange(0, max_polynom_order)).reshape(max_polynom_order, 1))
         #TODO: set cls.
         if phase_settings["vertical_offset"]:
-            cls.cos_theta = -360/np.pi*np.cos(np.pi/360*cls.two_theta)
+            cls.cos_theta = np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
     def get_plot_data(cls, intensities,
@@ -340,6 +340,8 @@ class RietveldPhases(object):
         self.phase_data.update(phase_from_cif.compute_relative_intensities(
             self.phase_settings))
 
+        self.mu = self.phase_data["absorption_mu"]
+
         # self.phase_data["masks"] = peak_masking.peak_masks(
         self.masks = peak_masking.peak_masks(
             RietveldPhases.two_theta,
@@ -442,7 +444,6 @@ class RietveldPhases(object):
         if self.phase_settings["recompute_peak_positions"]:
             self.update_two_thetas()
         # print "called phase_profile()", inspect.stack()[1][3]
-        result = np.zeros(self.masks.shape)
         omegaUVW_squareds = np.abs(
             self.phase_parameters.cagliotti_u*self.tan_two_theta_peaks_sq_masked
             +self.phase_parameters.cagliotti_v*self.tan_two_theta_peaks_masked
@@ -452,20 +453,17 @@ class RietveldPhases(object):
             - self.two_theta_peaks_masked)**2
         two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds
 
-        # tmp = self.phase_parameters.scale \
-        #     *self.weighted_intensities_masked \
-        #     *self.lp_factors_masked \
-        #     *self.profile(two_thetabar_squared, self.eta_masked)
-        # np.putmask(result, self.masks, tmp)
-        result[self.masks] = self.phase_parameters.scale \
-            *self.weighted_intensities_masked \
-            *self.lp_factors_masked \
+        result = np.zeros(self.masks.shape)
+        result[self.masks] = (
+            self.phase_parameters.scale
+            *self.weighted_intensities_masked
+            *self.lp_factors_masked
             *self.profile(two_thetabar_squared, self.eta_masked)
+            / omegaUVW_squareds
+            # / self.mu
+            )
 
         self.phase_profile_state = np.sum(result, axis=0)
-        # assert np.all(np.logical_and(
-        #     self.eta_masked >= 0, self.eta_masked <= 1))
-        # assert np.all(self.phase_profile_state >= 0)
         return self.phase_profile_state
 
     def increment_global_and_phase_x(self, eps, mask):
