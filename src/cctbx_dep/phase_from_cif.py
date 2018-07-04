@@ -91,10 +91,9 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
         element = scatterer.scattering_type.translate(None, '0123456789+-')
         mu_table = attenuation_coefficient.get_table(element)
         weighted_mus.append(
-            mu_table.mu_at_angstrom(wavelengths[0])*atomic_weight / 10 )
+            mu_table.mu_at_angstrom(wavelengths[0]) )
     phase_data["unit_cell_weight"] = total_weight
-    phase_data["absorption_mu"] = sum(weighted_mus) / total_weight
-    print(phase_data["absorption_mu"])
+    phase_data["absorption_mus"] = weighted_mus
 
     f_calc_sq = f_calc.as_intensity_array().sort().data() \
         /unit_cell_volume/unit_cell_volume

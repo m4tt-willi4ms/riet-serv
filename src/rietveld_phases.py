@@ -340,7 +340,7 @@ class RietveldPhases(object):
         self.phase_data.update(phase_from_cif.compute_relative_intensities(
             self.phase_settings))
 
-        self.mu = self.phase_data["absorption_mu"]
+        self.mus = self.phase_data["absorption_mus"]
 
         # self.phase_data["masks"] = peak_masking.peak_masks(
         self.masks = peak_masking.peak_masks(
@@ -459,8 +459,7 @@ class RietveldPhases(object):
             *self.weighted_intensities_masked
             *self.lp_factors_masked
             *self.profile(two_thetabar_squared, self.eta_masked)
-            / omegaUVW_squareds
-            # / self.mu
+            # / omegaUVW_squareds
             )
 
         self.phase_profile_state = np.sum(result, axis=0)

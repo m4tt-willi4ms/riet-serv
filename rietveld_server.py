@@ -31,6 +31,7 @@ server"""
     # plot = RietveldPlot()
     show_plot = False
     count = 0
+    two_thetas = None
 
     def connectionMade(self):
         # pass
@@ -92,15 +93,17 @@ server"""
         #     self._bkgd_refine()
 
     def _bkgd_refine(self):
-        bkgd_refinery = rr.RietveldRefinery(
-            RietveldServer.phase_list, bkgd_refine=True)
-        bkgd_refinery.minimize()
-        RietveldServer.plotdata = bkgd_refinery.get_plot_data()
+        if rp.RietveldPhases.I is not None:
+            bkgd_refinery = rr.RietveldRefinery(
+                RietveldServer.phase_list, bkgd_refine=True)
+            bkgd_refinery.minimize()
+            RietveldServer.plotdata = bkgd_refinery.get_plot_data()
 
     def call_load_profile(self, refinery_model_string, global_parameters):
         try:
             assert isinstance(refinery_model_string, basestring)
             self._set_refinery_model(json.loads(refinery_model_string))
+            RietveldServer.two_thetas = None
             phase_temp = copy.deepcopy(RietveldServer.phase_list)
             RietveldServer.phase_list = []
 
@@ -200,6 +203,7 @@ PhaseParameters object in json-serialized form.
             RietveldServer.plot_data = np.sum(
                 [phase.phase_profile() for phase in
                     RietveldServer.phase_list], axis=0)
+            RietveldServer.two_thetas = rp.RietveldPhases.two_theta
         # with open('tmp.txt','w+') as f:
         #     f.write("profile length:" + str(len(profile)))
         # RietveldServer.plot_data = profile
@@ -290,7 +294,8 @@ corresponding to the present state of the RietveldRefinery on the server
 
         try:
             reply = json.dumps(
-                rr.RietveldPhases.get_plot_data(RietveldServer.plot_data)) + ";"
+                rr.RietveldPhases.get_plot_data(RietveldServer.plot_data,
+                    two_thetas=RietveldServer.two_thetas)) + ";"
             # DEBUG
             if np.max(np.abs(RietveldServer.plot_data)) > MAX_PROFILE_VALUE:
                 with open('reply{0}.json'.format(RietveldServer.count), 'w') as f:
