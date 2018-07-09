@@ -132,14 +132,17 @@ server"""
 
     # def _fit_added_phase(self, phase_parameters_JSON):
 
-    def _add_phase(self, phase_dict):
+    def _add_phase(self, phase_dict, index=None):
         cif_path = phase_dict["cif_path"]
         # except KeyError:
         #    cif_path = phase_dict["input_cif_path"]
         # print('scale:', phase_dict['scale']['value'])
         assert isinstance(cif_path, basestring)
-        RietveldServer.phase_list.append(rp.RietveldPhases(cif_path,
-            phase_parameter_dict=phase_dict))
+        phase = rp.RietveldPhases(cif_path, phase_parameter_dict=phase_dict)
+        if index is None:
+            RietveldServer.phase_list.append(phase)
+        else:
+            RietveldServer.phase_list[index] = phase
         self._bkgd_refine()
 
     def call_add_phase(self, phase_parameters_JSON):
@@ -156,6 +159,17 @@ PhaseParameters object in json-serialized form.
             # print("time taken:", str(t1-t0))
         except:
             log.err()
+
+    def call_update_phase(self, index, phase_parameters_JSON):
+        try:
+            index = int(index)
+            phase_dict = json.loads(phase_parameters_JSON)
+            self._add_phase(phase_dict, index=index)
+            self.sendLine("True")
+        except:
+            log.err()
+            self.sendLine("False")
+
 
     def _append_history_entry(self):
         state = {}
