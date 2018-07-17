@@ -36,6 +36,7 @@ def load_cif(phase_settings):
     phase_settings["structure"] = structure
     phase_settings["unit_cell"] = structure.unit_cell()
     phase_settings["crystal_system"] = structure.space_group().crystal_system()
+    phase_settings["laue_group"] = structure.space_group().laue_group_type()
 
     cif_model = cif_reader.model()
     try:
@@ -88,12 +89,12 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
         total_weight += atomic_weight * (
             scatterer.multiplicity()
             * scatterer.occupancy) #* scatterer.weight()
-        element = scatterer.scattering_type.translate(None, '0123456789+-')
-        mu_table = attenuation_coefficient.get_table(element)
-        weighted_mus.append(
-            mu_table.mu_at_angstrom(wavelengths[0]) )
+        # element = scatterer.scattering_type.translate(None, '0123456789+-')
+        # mu_table = attenuation_coefficient.get_table(element)
+        # weighted_mus.append(
+        #     mu_table.mu_at_angstrom(wavelengths[0]) )
     phase_data["unit_cell_weight"] = total_weight
-    phase_data["absorption_mus"] = weighted_mus
+    # phase_data["absorption_mus"] = weighted_mus
 
     f_calc_sq = f_calc.as_intensity_array().sort().data() \
         /unit_cell_volume/unit_cell_volume

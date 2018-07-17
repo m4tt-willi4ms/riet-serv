@@ -253,7 +253,8 @@ respectively
             for phase in rs['phase_state']:
                 self._add_phase(phase)
 
-            factr = RietveldServer.refinery_model.get('convergence_factor', 1e2)
+            factr = RietveldServer.refinery_model.get('convergence_factor', 5)
+            factr = 10**(-factr)
             maxiter = RietveldServer.refinery_model.get(
                 'number_of_iterations', 150)
             RietveldServer.rietveld_refinery = rr.RietveldRefinery(

@@ -12,7 +12,7 @@ from src.rietveld_phases import RietveldPhases
 from src.rietveld_plot import RietveldPlot
 import src.refinement_parameters as refinement_parameters
 
-DEFAULT_FACTR = 1e2
+DEFAULT_FACTR = 1e-5
 DEFAULT_IPRINT = 1
 DEFAULT_MAXITER = 150
 DEFAULT_M = 10
@@ -315,11 +315,11 @@ class RietveldRefinery:
                     self.x[self.mask],
                     # jac='3-point',
                     jac=self.opt_relative_differences_grad,
-                    ftol=1e-5,
+                    ftol=self.factr, #*2.2e-16,
                     xtol=3e-16,
-                    gtol=1e-5,
+                    gtol=self.factr, #*2.2e-16,
                     x_scale='jac',
-                    max_nfev=10*np.sum(self.mask),
+                    max_nfev=self.maxiter*np.sum(self.mask),
                     bounds=(self.x_l_limits[self.mask], self.x_u_limits[self.mask]),
                     )
                 self.callback(self.result.x)

@@ -340,7 +340,7 @@ class RietveldPhases(object):
         self.phase_data.update(phase_from_cif.compute_relative_intensities(
             self.phase_settings))
 
-        self.mus = self.phase_data["absorption_mus"]
+        # self.mus = self.phase_data["absorption_mus"]
 
         # self.phase_data["masks"] = peak_masking.peak_masks(
         self.masks = peak_masking.peak_masks(
