@@ -13,7 +13,7 @@ import src.rietveld_phases as rp
 import src.rietveld_refinery as rr
 from src.rietveld_plot import RietveldPlot
 
-MAX_PROFILE_VALUE = 1000000
+MAX_PROFILE_VALUE = 10000000
 
 class RietveldServer(basic.LineReceiver):
     delimiter = b'\n'
@@ -198,7 +198,7 @@ PhaseParameters object in json-serialized form.
 
     def _update_plot_data(self):
         if rp.RietveldPhases.I is not None:
-            if RietveldServer.rietveld_refinery is not None:
+            if RietveldServer.calc_flag:
                 checked_data = copy.deepcopy(
                     RietveldServer.rietveld_refinery.total_profile_state)
                 if np.max(np.abs(checked_data)) < MAX_PROFILE_VALUE:
