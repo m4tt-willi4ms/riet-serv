@@ -3,7 +3,6 @@
 *.pyproj
 *.ipynb
 *.pylint
-*.txt
 .ipynb_checkpoints/
 1000032-Jade.hkl
 1000032-powdercell.pdf
@@ -27,3 +26,4 @@ dist/
 htmlcov/
 .cache/
 classes_UML.pdf
+*.egg-info/

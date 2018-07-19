@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+
+[packages]
+numpy = "==1.14.5"
+pandas = "==0.22.0"
+pytest = "==3.1.2"
+matplotlib = "==2.0.0b4"
+simplejson = "==3.15.0"
+scipy = "==1.1.0"
+libtbx = "==0.0.1"
+Twisted = "==17.9.0"
+
+[requires]
+python_version = "2.7"
