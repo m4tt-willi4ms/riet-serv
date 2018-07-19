@@ -3,7 +3,7 @@ import os, sys
 import shutil
 
 INPUT_DIR = "C:\\cctbx\\build"
-OUTPUT_DIR = "C:\\rietveld2_cctbx\\build"
+OUTPUT_DIR = "C:\\rietveld_cctbx\\build"
 
 DIRS_TO_CREATE = [
     "\\..\\modules",
@@ -11,7 +11,6 @@ DIRS_TO_CREATE = [
     ]
 
 PACKAGES_TO_CREATE = [
-    # "\\..\\modules\\cctbx_project\\cctbx\\xray",
     "\\..\\modules\\cctbx_project\\iotbx",
     "\\..\\modules\\cctbx_project\\iotbx\\pdb",
     "\\..\\modules\\cctbx_project\\libtbx",
@@ -159,7 +158,8 @@ def copy_file(rel_path):
     absinfile = os.path.abspath(INPUT_DIR + rel_path)
     absoutfile = os.path.abspath(OUTPUT_DIR + rel_path)
     if not os.path.exists(absoutfile):
-        print("Copying file from: {0}\n               to: {1}".format(
+        print("Copying file from: {0}\n\
+               to: {1}".format(
             absinfile, absoutfile))
         shutil.copy2(absinfile, absoutfile)
 
