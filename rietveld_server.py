@@ -135,14 +135,16 @@ server"""
 
     # def _fit_added_phase(self, phase_parameters_JSON):
 
-    def _add_phase(self, phase_dict, index=None):
+    def _add_phase(self, phase_dict, index=None, freeze_scale=False):
         cif_path = phase_dict["cif_path"]
         # except KeyError:
         #    cif_path = phase_dict["input_cif_path"]
         # print('scale:', phase_dict['scale']['value'])
         assert isinstance(cif_path, basestring)
         phase = rp.RietveldPhases(cif_path, phase_parameter_dict=phase_dict,
-            wavelengths=RietveldServer.wavelengths)
+            wavelengths=RietveldServer.wavelengths,
+            freeze_scale=freeze_scale
+            )
         if index is None:
             RietveldServer.phase_list.append(phase)
         else:
@@ -267,7 +269,7 @@ respectively
             RietveldServer.phase_list = []
             self._set_global_parameters(rs['global_state'])
             for phase in rs['phase_state']:
-                self._add_phase(phase)
+                self._add_phase(phase, freeze_scale=True)
 
             factr = RietveldServer.refinery_model.get('convergence_factor', 5)
             factr = 10**(-factr)

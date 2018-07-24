@@ -17,7 +17,7 @@ def phase_settings():
     phase_settings = {
         'cif_path': './data/cifs/1000032.cif'
     }
-    target_wavelengths.set_wavelength(phase_settings)
+    phase_settings['wavelengths'] = target_wavelengths.set_wavelength('Cu', 0)
     phase_settings = phase_from_cif.load_cif(phase_settings)
     unit_cell.set_unit_cell_mask(phase_settings)
     phase_settings["max_polynom_order"] = 5

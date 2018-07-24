@@ -303,6 +303,7 @@ class RietveldPhases(object):
                  profile='PV',
                  phase_parameter_dict=None,
                  two_theta_limits=None,
+                 freeze_scale=False,
                 ):
 
         self.phase_settings = RietveldPhases.phase_settings.copy()
@@ -371,12 +372,13 @@ class RietveldPhases(object):
         #     RietveldPhases.two_theta)
         self.set_masked_arrays()
 
-        scale = self.phase_parameters.scale*self.I_max/ \
-            np.amax(self.phase_profile())
-        scale_mask = np.char.startswith(
-            self.phase_parameters.x['labels'], 'sca')
-        self.phase_parameters.update_x(scale, scale_mask,
-                                       apply_mask_to_input=False)
+        if freeze_scale == False:
+            scale = self.phase_parameters.scale*self.I_max/ \
+                np.amax(self.phase_profile())
+            scale_mask = np.char.startswith(
+                self.phase_parameters.x['labels'], 'sca')
+            self.phase_parameters.update_x(scale, scale_mask,
+                                        apply_mask_to_input=False)
 
     def assemble_phase_x(self):
         self.phase_parameters.assemble_x()
