@@ -1,13 +1,13 @@
 from __future__ import division, print_function, absolute_import
-from twisted.internet import reactor, protocol, defer, task
-from twisted.protocols import basic
-from twisted.python import log
-
 import json
 import sys, os
 import time
 import numpy as np
 import copy
+
+from twisted.internet import reactor, protocol, defer
+from twisted.protocols import basic
+from twisted.python import log
 
 import src.rietveld_phases as rp
 import src.rietveld_refinery as rr
@@ -119,9 +119,9 @@ server"""
             rietveld_plot = rp.RietveldPhases.get_rietveld_plot(
                 RietveldServer.plot_data)
             reply = ""
-            reply += json.dumps(rietveld_plot) + split_character
+            reply += json.dumps(rietveld_plot) + self.split_character
             global_parameters = rp.RietveldPhases.global_parameters.as_dict()
-            reply += json.dumps(global_parameters) + split_character
+            reply += json.dumps(global_parameters) + self.split_character
             print("Message Length (in bytes):", len(reply.encode('utf-8')))
             # with open(os.path.join(
             #         os.path.dirname(__file__),'reply.json'), 'w') as file:
@@ -243,10 +243,10 @@ verify that the refinery model has been successfully updated.
         """
         try:
             self._set_refinery_model(json.loads(refinery_model))
-            self.sendLine(str(True) + split_character)
+            self.sendLine(str(True) + self.split_character)
         except Exception as e:
             log.err()
-            self.sendLine(str(False) + split_character)
+            self.sendLine(str(False) + self.split_character)
 
 
     def call_start_refine(self, refinery_model, rietveld_state):
@@ -276,17 +276,17 @@ respectively
             #     ['two_theta_', 'bkgd', 'scale'])
             self._run()
 
-            self.sendLine(str(True) + split_character)
+            self.sendLine(str(True) + self.split_character)
         except Exception as e:
             log.err()
-            self.sendLine(str(False) + split_character)
+            self.sendLine(str(False) + self.split_character)
 
 
     def call_rounds_completed(self):
         """rounds_completed: returns the number of rounds completed to date by
 the refinement engine
         """
-        self.sendLine(str(len(RietveldServer.rietveld_history)) + split_character)
+        self.sendLine(str(len(RietveldServer.rietveld_history)) + self.split_character)
 
     def call_get_rietveld_state(self, round_number=-1):
         """get_rietveld_state [round_number]: returns the json-serialized
@@ -298,21 +298,21 @@ rietveld_history.)
         max_round = len(RietveldServer.rietveld_history)
         if max_round > 0 and round_number < max_round:
             self.sendLine(json.dumps(
-                RietveldServer.rietveld_history[round_number]) + split_character)
+                RietveldServer.rietveld_history[round_number]) + self.split_character)
         else:
-            self.sendLine(str(False) + split_character)
+            self.sendLine(str(False) + self.split_character)
 
     def call_is_complete(self):
         """is_complete: returns either true or false, depending on whether or
 not the rietveld_refinement session has completed
         """
         print("return:", not RietveldServer.calc_flag)
-        self.sendLine(str(not RietveldServer.calc_flag) + split_character)
+        self.sendLine(str(not RietveldServer.calc_flag) + self.split_character)
 
     def call_can_ping(self):
         """can_ping: returns True (for diagnostic purposes)
         """
-        self.sendLine(str(True) + split_character)
+        self.sendLine(str(True) + self.split_character)
 
     def call_get_plot_data(self):
         """get_plot_data: returns a JSON-serialized plot_data object
@@ -323,7 +323,7 @@ corresponding to the present state of the RietveldRefinery on the server
         try:
             reply = json.dumps(
                 rr.RietveldPhases.get_plot_data(RietveldServer.plot_data,
-                    two_thetas=RietveldServer.two_thetas)) + split_character
+                    two_thetas=RietveldServer.two_thetas)) + self.split_character
             # DEBUG
             if np.max(np.abs(RietveldServer.plot_data)) > MAX_PROFILE_VALUE:
                 with open('reply{0}.json'.format(RietveldServer.count), 'w') as f:
@@ -341,10 +341,10 @@ index is specified, the most-recently loaded phase is removed
             index = int(index)
             assert index < len(self.phase_list)
             self.phase_list.pop(index)
-            self.sendLine(str(True) + split_character)
+            self.sendLine(str(True) + self.split_character)
         except Exception as e:
             log.err()
-            self.sendLine(str(False) + split_character)
+            self.sendLine(str(False) + self.split_character)
 
 
     def call_get_phase_profile(self, index=u'-1'):
