@@ -32,6 +32,7 @@ server"""
     show_plot = False
     count = 0
     two_thetas = None
+    wavelengths = None
 
     def connectionMade(self):
         # pass
@@ -77,12 +78,11 @@ server"""
             max_two_theta=max_two_theta,
             lines_to_strip_at_tof=3,
             )
-        wavelength_string = RietveldServer.refinery_model["wavelength"]
-        wavelength_model = RietveldServer.refinery_model["wavelength_model"]
-        custom_wavelength = RietveldServer.refinery_model["wavelengthc"]
-        rp.RietveldPhases.set_wavelength(
-            target=wavelength_string, wavelength_model=wavelength_model,
-            custom_wavelength=custom_wavelength)
+        RietveldServer.wavelengths = \
+            RietveldServer.refinery_model["wavelength_c"]
+        if np.isclose(wavelengths[-1], 0.0):
+            wavelengths = list(wavelenths[0])
+        rp.RietveldPhases.set_wavelengths(wavelengths)
 
     def _set_global_parameters(self, global_parameters):
         rp.RietveldPhases.set_global_parameters(global_parameters)
@@ -119,9 +119,9 @@ server"""
             rietveld_plot = rp.RietveldPhases.get_rietveld_plot(
                 RietveldServer.plot_data)
             reply = ""
-            reply += json.dumps(rietveld_plot) + ";"
+            reply += json.dumps(rietveld_plot) + split_character
             global_parameters = rp.RietveldPhases.global_parameters.as_dict()
-            reply += json.dumps(global_parameters) + ";"
+            reply += json.dumps(global_parameters) + split_character
             print("Message Length (in bytes):", len(reply.encode('utf-8')))
             # with open(os.path.join(
             #         os.path.dirname(__file__),'reply.json'), 'w') as file:
@@ -138,7 +138,8 @@ server"""
         #    cif_path = phase_dict["input_cif_path"]
         # print('scale:', phase_dict['scale']['value'])
         assert isinstance(cif_path, basestring)
-        phase = rp.RietveldPhases(cif_path, phase_parameter_dict=phase_dict)
+        phase = rp.RietveldPhases(cif_path, phase_parameter_dict=phase_dict,
+            wavelengths=RietveldServer.wavelengths)
         if index is None:
             RietveldServer.phase_list.append(phase)
         else:
@@ -157,7 +158,7 @@ PhaseParameters object in json-serialized form.
             self.sendLine(json.dumps(new_phase))
             # t1 = time.time()
             # print("time taken:", str(t1-t0))
-        except:
+        except Exception as e:
             log.err()
 
     def call_update_phase(self, index, phase_parameters_JSON):
@@ -166,7 +167,7 @@ PhaseParameters object in json-serialized form.
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict, index=index)
             self.sendLine("True")
-        except:
+        except Exception as e:
             log.err()
             self.sendLine("False")
 
@@ -236,6 +237,18 @@ PhaseParameters object in json-serialized form.
         d.addCallback(lambda x: self._calc_complete())
         reactor.callInThread(d.callback, None)
 
+    def call_update_refinery_model(self, refinery_model):
+        """update_refinery_model(refinery_model): returns a true or false, to
+verify that the refinery model has been successfully updated.
+        """
+        try:
+            self._set_refinery_model(json.loads(refinery_model))
+            self.sendLine(str(True) + split_character)
+        except Exception as e:
+            log.err()
+            self.sendLine(str(False) + split_character)
+
+
     def call_start_refine(self, refinery_model, rietveld_state):
         """start_refine(refinery_model, rietveld_state): returns a true or false
 verifying that a refinement session (possibly consisting of several rounds) has
@@ -263,17 +276,17 @@ respectively
             #     ['two_theta_', 'bkgd', 'scale'])
             self._run()
 
-            self.sendLine(str(True) + ";")
-        except:
+            self.sendLine(str(True) + split_character)
+        except Exception as e:
             log.err()
-            self.sendLine(str(False) + ";")
+            self.sendLine(str(False) + split_character)
 
 
     def call_rounds_completed(self):
         """rounds_completed: returns the number of rounds completed to date by
 the refinement engine
         """
-        self.sendLine(str(len(RietveldServer.rietveld_history)) + ";")
+        self.sendLine(str(len(RietveldServer.rietveld_history)) + split_character)
 
     def call_get_rietveld_state(self, round_number=-1):
         """get_rietveld_state [round_number]: returns the json-serialized
@@ -285,21 +298,21 @@ rietveld_history.)
         max_round = len(RietveldServer.rietveld_history)
         if max_round > 0 and round_number < max_round:
             self.sendLine(json.dumps(
-                RietveldServer.rietveld_history[round_number]) + ";")
+                RietveldServer.rietveld_history[round_number]) + split_character)
         else:
-            self.sendLine(str(False) + ";")
+            self.sendLine(str(False) + split_character)
 
     def call_is_complete(self):
         """is_complete: returns either true or false, depending on whether or
 not the rietveld_refinement session has completed
         """
         print("return:", not RietveldServer.calc_flag)
-        self.sendLine(str(not RietveldServer.calc_flag) + ";")
+        self.sendLine(str(not RietveldServer.calc_flag) + split_character)
 
     def call_can_ping(self):
         """can_ping: returns True (for diagnostic purposes)
         """
-        self.sendLine(str(True) + ";")
+        self.sendLine(str(True) + split_character)
 
     def call_get_plot_data(self):
         """get_plot_data: returns a JSON-serialized plot_data object
@@ -310,7 +323,7 @@ corresponding to the present state of the RietveldRefinery on the server
         try:
             reply = json.dumps(
                 rr.RietveldPhases.get_plot_data(RietveldServer.plot_data,
-                    two_thetas=RietveldServer.two_thetas)) + ";"
+                    two_thetas=RietveldServer.two_thetas)) + split_character
             # DEBUG
             if np.max(np.abs(RietveldServer.plot_data)) > MAX_PROFILE_VALUE:
                 with open('reply{0}.json'.format(RietveldServer.count), 'w') as f:
@@ -328,11 +341,10 @@ index is specified, the most-recently loaded phase is removed
             index = int(index)
             assert index < len(self.phase_list)
             self.phase_list.pop(index)
-            self.sendLine("")
-            self.sendLine(str(True) + ";")
-        except:
+            self.sendLine(str(True) + split_character)
+        except Exception as e:
             log.err()
-            self.sendLine(str(False) + ";")
+            self.sendLine(str(False) + split_character)
 
 
     def call_get_phase_profile(self, index=u'-1'):
