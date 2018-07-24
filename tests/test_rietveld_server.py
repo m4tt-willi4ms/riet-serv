@@ -57,6 +57,7 @@ class RietveldServerTestCase(unittest.TestCase):
         # assert 0
 
     def test_load_profile(self):
+        self.proto.call_initialize()
         self.proto.call_add_phase(self.samples['phase_parameters'])
         assert len(self.proto.phase_list[0].two_theta) == 1000
         self.proto.call_load_profile(

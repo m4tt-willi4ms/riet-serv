@@ -371,6 +371,8 @@ most-recently loaded phase is returned"""
         RietveldServer.refinery_model = None
         RietveldServer.rietveld_refinery = None
         RietveldServer.rietveld_history = []
+        rp.RietveldPhases.two_theta = None
+        rp.RietveldPhases.I = None
         rp.RietveldPhases.global_parameters.reset_x()
         self.sendLine(b'Initializing')
 
