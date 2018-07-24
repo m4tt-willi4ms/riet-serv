@@ -116,8 +116,6 @@ class RietveldPhases(object):
 
     global_parameters = GlobalParameters(phase_settings)
 
-    target_wavelengths.set_wavelength(phase_settings)
-
     phase_data = {}
 
     two_theta = None
@@ -180,8 +178,26 @@ class RietveldPhases(object):
                 wavelength_model=0, custom_wavelength=None):
         if phase_settings is None:
             phase_settings = cls.phase_settings
-        target_wavelengths.set_wavelength(
-            phase_settings, target, wavelength_model, custom_wavelength)
+        wavelengths = target_wavelengths.set_wavelength(
+            target, wavelength_model, custom_wavelength)
+        cls.set_wavelengths(wavelengths, phase_settings)
+
+    @classmethod
+    def set_wavelengths(cls, wavelengths, phase_settings=None):
+        if phase_settings is None:
+            phase_settings = cls.phase_settings
+
+        phase_settings["wavelengths"] = wavelengths
+
+        phase_settings["K_alpha_factors"] = target_wavelengths.K_ALPHA_FACTORS
+
+        try:
+            phase_settings["d_min"] = wavelengths[0]/2/np.sin(
+                np.pi/360*phase_settings["max_two_theta"])
+            phase_settings["d_max"] = wavelengths[-1]/2/np.sin(
+                np.pi/360*phase_settings["min_two_theta"])
+        except KeyError as e:
+            pass
 
     @classmethod
     def set_two_theta_powers_and_limits(cls, phase_settings=None):
@@ -283,7 +299,7 @@ class RietveldPhases(object):
                  lattice_dev=DEFAULT_LATTICE_DEV,
                  recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
                  composition_by_weight=DEFAULT_COMPOSITION_BY_WEIGHT,
-                 target=('Cu', 0),
+                 wavelengths=None,
                  profile='PV',
                  phase_parameter_dict=None,
                  two_theta_limits=None,
@@ -321,10 +337,6 @@ class RietveldPhases(object):
         self.phase_settings["delta_theta"] = delta_theta
 
         self.phase_settings["cif_path"] = file_path_cif
-        phase_from_cif.load_cif(self.phase_settings)
-
-        self.phase_parameters = PhaseParameters(self.phase_settings,
-                                                param_dict=phase_parameter_dict)
 
         if RietveldPhases.two_theta is None:
             if two_theta_limits is None:
@@ -332,15 +344,21 @@ class RietveldPhases(object):
             RietveldPhases.two_theta = np.clip(
                 DEFAULT_TWO_THETAS, two_theta_limits[0], two_theta_limits[-1])
         RietveldPhases.set_two_theta_powers_and_limits(self.phase_settings)
-        RietveldPhases.set_wavelength(self.phase_settings, *target)
+
+        if wavelengths is None:
+            wavelengths = RietveldPhases.set_wavelength(
+                self.phase_settings, 'Cu', 0)
+
+        phase_from_cif.load_cif(self.phase_settings)
+        self.phase_parameters = PhaseParameters(self.phase_settings,
+                                                param_dict=phase_parameter_dict)
+
 
         RietveldPhases.assemble_global_x()
         self.assemble_phase_x()
 
         self.phase_data.update(phase_from_cif.compute_relative_intensities(
             self.phase_settings))
-
-        # self.mus = self.phase_data["absorption_mus"]
 
         # self.phase_data["masks"] = peak_masking.peak_masks(
         self.masks = peak_masking.peak_masks(

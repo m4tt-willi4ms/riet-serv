@@ -7,12 +7,16 @@ from twisted.trial import unittest
 
 from rietveld_server import RietveldServer
 import rietveld_client as rc
+from src.rietveld_phases import RietveldPhases as RP
 
 class RietveldServerTestCase(unittest.TestCase):
     def setUp(self):
         self.tr = proto_helpers.StringTransport()
         self.proto = RietveldServer()
         self.proto.makeConnection(self.tr)
+        rc.load_json_samples()
+        self.samples = rc.SAMPLES
+        self.proto._set_global_parameters(json.loads(self.samples["global_parameters"]))
 
     def _test(self, cmd, expected, result=None):
         cmd_parts = cmd.split(self.proto.split_character)
@@ -25,6 +29,23 @@ class RietveldServerTestCase(unittest.TestCase):
 
     def test_exit(self):
         self._test('exit', 'Goodbye.\n')
+
+    def test__set_global_parameters(self):
+        self.proto._set_global_parameters(json.loads(self.samples["global_parameters"]))
+        assert len(RP.global_parameters.bkgd) == 3
+
+    def test_add_phase(self):
+        # sample = json.loads(self.phase_parameters_sample)
+        # for key in sample.keys():
+        #     if isinstance(sample[key], dict):
+        #         print(sample[key]['uround'])
+        #     elif isinstance(sample[key], list):
+        #         for item in sample[key]:
+        #             print(item.get('uround'), None)
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+        assert len(self.proto.phase_list) == 1
+
+
 
 
 # class ClientCalculationTestCase(unittest.TestCase):

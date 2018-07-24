@@ -5,7 +5,7 @@ import sys, subprocess
 import numpy as np
 import itertools
 import scipy.optimize as opt
-import json,codecs
+import json
 import operator
 
 from src.rietveld_phases import RietveldPhases
@@ -37,7 +37,8 @@ class RietveldRefinery:
         This class is used to assemble and organize the inputs required to run (a
         series of) Rietveld refinements.
     """
-    def __init__(self,phase_list, rietveld_plot=None, \
+    def __init__(self, phase_list,
+        rietveld_plot=None,
         bkgd_refine=False,
         store_intermediate_state=False,
         show_plots=False,
@@ -81,9 +82,9 @@ class RietveldRefinery:
                     # self.x = np.hstack((RietveldPhases.global_x,
                     #    np.hstack((x.phase_x for x in self.phase_list))))
                     if key == "uround":
-                        # print(RietveldPhases.global_parameters.x[key])
-                        # print([phase.phase_parameters.x[key]
-                        #             for phase in self.phase_list])
+                        print(RietveldPhases.global_parameters.x[key])
+                        print([phase.phase_parameters.x[key]
+                                    for phase in self.phase_list])
                         tmp = np.concatenate((
                             RietveldPhases.global_parameters.x[key],
                             np.concatenate(

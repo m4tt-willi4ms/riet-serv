@@ -88,7 +88,7 @@ def test_set_vertical_offset(test_phase):
     Rp.phase_settings["vertical_offset"] = True
     Rp.set_profile(r"./data/profiles/Jade-Al2O3-Sim.xye")
     assert 'cos_theta' in Rp.__dict__
-    assert np.isclose(Rp.cos_theta[-1],-360/np.pi/np.sqrt(2))
+    assert np.isclose(Rp.cos_theta[-1],1/np.sqrt(2))
 
 def test_LP_intensity_scaling():
     assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
