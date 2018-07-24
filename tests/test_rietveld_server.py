@@ -45,7 +45,24 @@ class RietveldServerTestCase(unittest.TestCase):
         self.proto.call_add_phase(self.samples['phase_parameters'])
         assert len(self.proto.phase_list) == 1
 
+    def test_update_refinery_model(self):
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+        self.proto.call_update_refinery_model(self.samples['refinery_model'])
+        assert self.proto.refinery_model['refinement_method'] == 'trf'
+        assert 'max_polynomial_degree' in self.proto.refinery_model
+        exp_wavelengths = [1.936042, 0.0]
+        assert self.proto.refinery_model['wavelength_c'] == exp_wavelengths
+        assert self.proto.phase_list[0].phase_settings['wavelengths'] \
+            == [exp_wavelengths[0]]
+        # assert 0
 
+    def test_load_profile(self):
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+        assert len(self.proto.phase_list[0].two_theta) == 1000
+        self.proto.call_load_profile(
+            self.samples['refinery_model'],
+            self.samples['global_parameters'])
+        assert len(self.proto.phase_list[0].two_theta) == 2537
 
 
 # class ClientCalculationTestCase(unittest.TestCase):

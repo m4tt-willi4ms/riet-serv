@@ -81,8 +81,11 @@ server"""
         RietveldServer.wavelengths = \
             RietveldServer.refinery_model["wavelength_c"]
         if np.isclose(RietveldServer.wavelengths[-1], 0.0):
-            RietveldServer.wavelengths = list(RietveldServer.wavelengths[0])
+            RietveldServer.wavelengths = [RietveldServer.wavelengths[0]]
         rp.RietveldPhases.set_wavelengths(RietveldServer.wavelengths)
+        if RietveldServer.phase_list is not None:
+            for i, phase in enumerate(RietveldServer.phase_list):
+                phase = self._add_phase(phase.as_dict(), i)
 
     def _set_global_parameters(self, global_parameters):
         rp.RietveldPhases.set_global_parameters(global_parameters)

@@ -82,9 +82,9 @@ class RietveldRefinery:
                     # self.x = np.hstack((RietveldPhases.global_x,
                     #    np.hstack((x.phase_x for x in self.phase_list))))
                     if key == "uround":
-                        print(RietveldPhases.global_parameters.x[key])
-                        print([phase.phase_parameters.x[key]
-                                    for phase in self.phase_list])
+                        # print(RietveldPhases.global_parameters.x[key])
+                        # print([phase.phase_parameters.x[key]
+                        #             for phase in self.phase_list])
                         tmp = np.concatenate((
                             RietveldPhases.global_parameters.x[key],
                             np.concatenate(

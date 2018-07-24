@@ -12,7 +12,7 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.protocols.basic import LineReceiver
 
 SAMPLES = {
-    'rietveld_model': None,
+    'refinery_model': None,
     'global_parameters': None,
     'phase_parameters': None,
     'rietveld_state': None,
@@ -48,11 +48,11 @@ MESSAGES = [
     'add_phase;' + SAMPLES['phase_parameters'],
     'add_phase;' + SAMPLES['phase_parameters'],
     'remove_phase;' + '-1',
-    'load_profile;' + SAMPLES['rietveld_model'] + ';' + SAMPLES['global_parameters'],
+    'load_profile;' + SAMPLES['refinery_model'] + ';' + SAMPLES['global_parameters'],
     # 'is_complete',
     # 'rounds_completed',
     # 'get_rietveld_state;2',
-    'start_refine;' + SAMPLES['rietveld_model'] + ';' + SAMPLES['rietveld_state'],
+    'start_refine;' + SAMPLES['refinery_model'] + ';' + SAMPLES['rietveld_state'],
     'is_complete',
     'rounds_completed',
     'is_complete',
