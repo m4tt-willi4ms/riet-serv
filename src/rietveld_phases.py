@@ -190,7 +190,8 @@ class RietveldPhases(object):
 
         phase_settings["wavelengths"] = wavelengths
         phase_settings["K_alpha_factors"] = target_wavelengths.K_ALPHA_FACTORS
-        cls._set_dmin_dmax(phase_settings)
+        if cls.two_theta is not None:
+            cls._set_dmin_dmax(phase_settings)
 
     @classmethod
     def _set_dmin_dmax(cls, phase_settings):
@@ -201,9 +202,15 @@ class RietveldPhases(object):
             np.pi/360*phase_settings["min_two_theta"])
 
     @classmethod
-    def set_two_theta_powers_and_limits(cls, phase_settings=None):
+    def set_two_theta_powers_and_limits(cls, phase_settings=None,
+            two_theta_limits=None):
         if phase_settings is None:
             phase_settings = cls.phase_settings
+        if cls.two_theta is None:
+            if two_theta_limits is None:
+                two_theta_limits = [0, 180]
+            RietveldPhases.two_theta = np.clip(
+                DEFAULT_TWO_THETAS, two_theta_limits[0], two_theta_limits[-1])
         phase_settings["min_two_theta"] = cls.two_theta[0]
         phase_settings["max_two_theta"] = cls.two_theta[-1]
         cls._set_dmin_dmax(phase_settings)
@@ -341,12 +348,8 @@ class RietveldPhases(object):
 
         self.phase_settings["cif_path"] = file_path_cif
 
-        if RietveldPhases.two_theta is None:
-            if two_theta_limits is None:
-                two_theta_limits=[0, 180]
-            RietveldPhases.two_theta = np.clip(
-                DEFAULT_TWO_THETAS, two_theta_limits[0], two_theta_limits[-1])
-        RietveldPhases.set_two_theta_powers_and_limits(self.phase_settings)
+        RietveldPhases.set_two_theta_powers_and_limits(self.phase_settings,
+            two_theta_limits=two_theta_limits)
 
         if wavelengths is None:
             wavelengths = RietveldPhases.set_wavelength(

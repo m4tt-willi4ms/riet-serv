@@ -73,11 +73,12 @@ server"""
         profile_path = RietveldServer.refinery_model['input_data_path']
         min_two_theta = RietveldServer.refinery_model['two_theta_roi_window'][0]
         max_two_theta = RietveldServer.refinery_model['two_theta_roi_window'][1]
-        rp.RietveldPhases.set_profile(profile_path,
-            min_two_theta=min_two_theta,
-            max_two_theta=max_two_theta,
-            lines_to_strip_at_tof=3,
-            )
+        if profile_path:
+            rp.RietveldPhases.set_profile(profile_path,
+                min_two_theta=min_two_theta,
+                max_two_theta=max_two_theta,
+                lines_to_strip_at_tof=3,
+                )
         RietveldServer.wavelengths = \
             RietveldServer.refinery_model["wavelength_c"]
         if np.isclose(RietveldServer.wavelengths[-1], 0.0):
@@ -248,10 +249,14 @@ verify that the refinery model has been successfully updated.
         """
         try:
             self._set_refinery_model(json.loads(refinery_model))
-            self.sendLine(str(True) + self.split_character)
+            print(rp.RietveldPhases.I)
+            if not RietveldServer.phase_list and rp.RietveldPhases.I is None:
+                self.sendLine(str(False) + self.split_character)
+            else:
+                self.sendLine(str(True) + self.split_character)
         except Exception as e:
             log.err()
-            self.sendLine(str(False) + self.split_character)
+            self.sendLine("Error: " + e.message)
 
 
     def call_start_refine(self, refinery_model, rietveld_state):

@@ -54,19 +54,31 @@ class RietveldServerTestCase(unittest.TestCase):
             assert np.isclose(lp['value'], param)
 
     def test_update_refinery_model(self):
-        self.tr.clear()
         self.proto.call_load_profile(
             self.samples['refinery_model'],
             self.samples['global_parameters'])
         self.proto.call_add_phase(self.samples['phase_parameters'])
+        self.tr.clear()
         self.proto.call_update_refinery_model(self.samples['refinery_model'])
+        reply = self.tr.value().strip()
+        assert reply == "True" + self.proto.split_character
         assert self.proto.refinery_model['refinement_method'] == 'trf'
         assert 'max_polynomial_degree' in self.proto.refinery_model
         exp_wavelengths = [1.936042, 0.0]
         assert self.proto.refinery_model['wavelength_c'] == exp_wavelengths
         assert self.proto.phase_list[0].phase_settings['wavelengths'] \
             == [exp_wavelengths[0]]
-        # assert 0
+
+    def test_update_refinery_model_no_phase_no_profile(self):
+        self.proto.call_initialize()
+        ref_model = json.loads(self.samples['refinery_model'])
+        ref_model['input_data_path'] = ''
+        ref_model_no_input_profile = json.dumps(ref_model)
+        self.tr.clear()
+        self.proto.call_update_refinery_model(ref_model_no_input_profile)
+        reply = self.tr.value().strip()
+        #Should reply 'False' to indicate no plot_data available
+        assert reply == "False" + self.proto.split_character
 
     def test_load_profile(self):
         self.proto.call_initialize()
