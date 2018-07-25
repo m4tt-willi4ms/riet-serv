@@ -113,6 +113,7 @@ class RietveldPhases(object):
     '''The maximum number of parameters allowed in any parameter represented
         as a polynomial (e.g. bkgd, eta)'''
     phase_settings["vertical_offset"] = DEFAULT_VERTICAL_OFFSET
+    phase_settings["wavelengths"] = target_wavelengths.set_wavelength('Cu', 0)
 
     global_parameters = GlobalParameters(phase_settings)
 
@@ -188,16 +189,16 @@ class RietveldPhases(object):
             phase_settings = cls.phase_settings
 
         phase_settings["wavelengths"] = wavelengths
-
         phase_settings["K_alpha_factors"] = target_wavelengths.K_ALPHA_FACTORS
+        cls._set_dmin_dmax(phase_settings)
 
-        try:
-            phase_settings["d_min"] = wavelengths[0]/2/np.sin(
-                np.pi/360*phase_settings["max_two_theta"])
-            phase_settings["d_max"] = wavelengths[-1]/2/np.sin(
-                np.pi/360*phase_settings["min_two_theta"])
-        except KeyError as e:
-            pass
+    @classmethod
+    def _set_dmin_dmax(cls, phase_settings):
+        wavelengths = phase_settings["wavelengths"]
+        phase_settings["d_min"] = wavelengths[0]/2/np.sin(
+            np.pi/360*phase_settings["max_two_theta"])
+        phase_settings["d_max"] = wavelengths[-1]/2/np.sin(
+            np.pi/360*phase_settings["min_two_theta"])
 
     @classmethod
     def set_two_theta_powers_and_limits(cls, phase_settings=None):
@@ -205,6 +206,7 @@ class RietveldPhases(object):
             phase_settings = cls.phase_settings
         phase_settings["min_two_theta"] = cls.two_theta[0]
         phase_settings["max_two_theta"] = cls.two_theta[-1]
+        cls._set_dmin_dmax(phase_settings)
 
         max_polynom_order = phase_settings["max_polynom_order"]
         cls.two_theta_powers = np.power(cls.two_theta, np.array(
