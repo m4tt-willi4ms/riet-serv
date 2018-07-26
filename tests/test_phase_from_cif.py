@@ -17,8 +17,11 @@ def phase_settings():
         "min_two_theta": 10,
         "max_two_theta": 90,
         "intensity_cutoff": 0.005,
+        "max_polynom_order": 5,
+        "vertical_offset": False,
         }
     Rp.set_wavelengths(tw.set_wavelength('Cu', 0), phase_settings)
+    Rp.set_two_theta_powers_and_limits(phase_settings)
     return phase_settings
 
 
