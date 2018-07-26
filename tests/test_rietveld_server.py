@@ -8,6 +8,7 @@ from twisted.trial import unittest
 from rietveld_server import RietveldServer
 import rietveld_client as rc
 from src.rietveld_phases import RietveldPhases as RP
+import src.cctbx_dep.target_wavelengths as target_wavelengths
 
 class RietveldServerTestCase(unittest.TestCase):
     def setUp(self):
@@ -16,8 +17,8 @@ class RietveldServerTestCase(unittest.TestCase):
         self.proto.makeConnection(self.tr)
         rc.load_json_samples()
         self.samples = rc.SAMPLES
-        self.proto._set_global_parameters(
-            json.loads(self.samples["global_parameters"]))
+        # self.proto._set_global_parameters(
+        #     json.loads(self.samples["global_parameters"]))
 
     def _test(self, cmd, expected, result=None):
         cmd_parts = cmd.split(self.proto.split_character)
@@ -32,7 +33,8 @@ class RietveldServerTestCase(unittest.TestCase):
         self._test('exit', 'Goodbye.\n')
 
     def test__set_global_parameters(self):
-        self.proto._set_global_parameters(json.loads(self.samples["global_parameters"]))
+        self.proto._set_global_parameters(
+            json.loads(self.samples["global_parameters"]))
         assert len(RP.global_parameters.bkgd) == 3
 
     def test_add_phase(self):
@@ -64,10 +66,16 @@ class RietveldServerTestCase(unittest.TestCase):
         assert reply == "True" + self.proto.split_character
         assert self.proto.refinery_model['refinement_method'] == 'trf'
         assert 'max_polynomial_degree' in self.proto.refinery_model
-        exp_wavelengths = [1.936042, 0.0]
-        assert self.proto.refinery_model['wavelength_c'] == exp_wavelengths
-        assert self.proto.phase_list[0].phase_settings['wavelengths'] \
-            == [exp_wavelengths[0]]
+        exp_wavelengths = target_wavelengths.set_wavelength(
+            self.proto.refinery_model['wavelength'],
+            self.proto.refinery_model['wavelength_model']
+        )
+        for x, y, exp  in zip(
+                self.proto.refinery_model['wavelength_c'],
+                self.proto.phase_list[0].phase_settings['wavelengths'],
+                exp_wavelengths):
+            assert np.isclose(x, exp, rtol=1e-3)
+            assert np.isclose(y, exp, rtol=1e-3)
 
     def test_update_refinery_model_no_phase_no_profile(self):
         self.proto.call_initialize()
@@ -87,16 +95,21 @@ class RietveldServerTestCase(unittest.TestCase):
         self.proto.call_load_profile(
             self.samples['refinery_model'],
             self.samples['global_parameters'])
-        assert len(self.proto.phase_list[0].two_theta) == 2537
+        assert len(self.proto.phase_list[0].two_theta) != 1000
 
     def _check_single_phase_single_profile(self):
         assert len(self.proto.phase_list) == 1
-        assert len(self.proto.phase_list[0].two_theta) == 2537
+        assert len(self.proto.phase_list[0].two_theta) != 1000
         assert len(RP.global_parameters.bkgd) == 3
         assert np.isclose(
             self.proto.phase_list[0].phase_data["crystal_density"],
             3.982641
             )
+
+    def test_initialize_update_refinery_model_then_add_phase(self):
+        self.proto.call_initialize()
+        self.proto.call_update_refinery_model(self.samples['refinery_model'])
+        self.proto.call_add_phase(self.samples['phase_parameters'])
 
     def test_add_phase_then_load_profile(self):
         self.proto.call_initialize()

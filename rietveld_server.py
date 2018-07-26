@@ -90,11 +90,6 @@ server"""
 
     def _set_global_parameters(self, global_parameters):
         rp.RietveldPhases.set_global_parameters(global_parameters)
-        # profile_filename = os.path.split(profile_path)[1]
-        # self.sendLine(b'Loaded the profile {0}'.format(profile_filename))
-        # if rp.RietveldPhases.I is not None \
-        #         and len(RietveldServer.phase_list) > 0:
-        #     self._bkgd_refine()
 
     def _bkgd_refine(self):
         if rp.RietveldPhases.I is not None:
@@ -116,6 +111,8 @@ server"""
 
             for phase in phase_temp:
                 self._add_phase(phase.as_dict())
+
+            self._bkgd_refine()
 
             if RietveldServer.show_plot:
                 RietveldServer.plot.setplotdata()
@@ -150,7 +147,6 @@ server"""
             RietveldServer.phase_list.append(phase)
         else:
             RietveldServer.phase_list[index] = phase
-        self._bkgd_refine()
 
     def call_add_phase(self, phase_parameters_JSON):
         """add_phase: appends a phase to the server's phase list, given a
@@ -160,6 +156,7 @@ PhaseParameters object in json-serialized form.
             # t0 = time.time()
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict)
+            self._bkgd_refine()
             new_phase = RietveldServer.phase_list[-1].as_dict()
             self.sendLine(json.dumps(new_phase))
             # t1 = time.time()
@@ -172,11 +169,11 @@ PhaseParameters object in json-serialized form.
             index = int(index)
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict, index=index)
+            self._bkgd_refine()
             self.sendLine("True")
         except Exception as e:
             log.err()
             self.sendLine("False")
-
 
     def _append_history_entry(self):
         state = {}
@@ -249,7 +246,6 @@ verify that the refinery model has been successfully updated.
         """
         try:
             self._set_refinery_model(json.loads(refinery_model))
-            print(rp.RietveldPhases.I)
             if not RietveldServer.phase_list and rp.RietveldPhases.I is None:
                 self.sendLine(str(False) + self.split_character)
             else:
@@ -275,6 +271,7 @@ respectively
             self._set_global_parameters(rs['global_state'])
             for phase in rs['phase_state']:
                 self._add_phase(phase, freeze_scale=True)
+            self._bkgd_refine()
 
             factr = RietveldServer.refinery_model.get('convergence_factor', 5)
             factr = 10**(-factr)
