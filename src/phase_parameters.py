@@ -13,8 +13,9 @@ DEFAULT_U = ('cagliotti_u', 0.00, [False], -0.1, 0.1)
 DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
 DEFAULT_W = ('cagliotti_w', 0.001, [True], 0.000001, 1)
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
-DEFAULT_PREF_OR_PARAMS = [('md_param', 1.00, [True], 0.000001, 2)]
-DEFAULT_PREF_OR_HKL = [1, 0, 4]
+DEFAULT_PREF_OR_PARAMS = [('pref_or_0', 1.00, [True], 0.000001, 2)]
+DEFAULT_PREF_OR_HKL = [0, 0, 1]
+DEFAULT_PREF_OR_METHOD = 'march_dollase'
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01
 DEFAULT_PROFILE = 'PV'
@@ -31,7 +32,11 @@ class PhaseParameters(RefinementParameters):
         W=DEFAULT_W,
         eta_order=DEFAULT_ETA_ORDER,
         profile=DEFAULT_PROFILE,
-        pref_or_params=DEFAULT_PREF_OR_PARAMS,
+        pref_or=(
+            DEFAULT_PREF_OR_PARAMS,
+            DEFAULT_PREF_OR_HKL,
+            DEFAULT_PREF_OR_METHOD,
+        ),
         param_dict=None):
         # RefinementParameters.__init__(self)
         self.phase_settings = phase_settings
@@ -59,8 +64,9 @@ class PhaseParameters(RefinementParameters):
             self.eta_order = eta_order
             self.eta = self.set_eta_order(self.eta_order)
             if gutter.active('pref_or', self):
-                self.pref_or = pref_or_params
-                self.phase_settings['pref_orient_hkl'] = DEFAULT_PREF_OR_HKL
+                self.pref_or = pref_or[0]
+                self.phase_settings['pref_orient_hkl'] = pref_or[1]
+                self.phase_settings['pref_orient_method'] = pref_or[2]
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
@@ -92,7 +98,7 @@ class PhaseParameters(RefinementParameters):
         if gutter.active('rpp', self):
             d['lattice_parameters'] = self.lattice_parameters
         if gutter.active('pref_or', self):
-            d['pref_orient'] = self.pref_or
+            d['pref_or'] = self.pref_or
         # if self.phase_settings['x']
         return d.iteritems()
 

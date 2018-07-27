@@ -40,18 +40,20 @@ def _compute_md_coefficients(sg, uc_rec, h0, h):
 
 def pref_orient_function(r, sym_equiv_angles):
     tmp = np.apply_along_axis(
-        lambda y, x: np.power(1/x+(x**2-1/x)*np.cos(np.pi/180*y)**2, -1.5), 0,
+        lambda y, x: np.power(1/x + (x**2-1/x)*np.cos(np.pi/180*y)**2, -1.5), 0,
         sym_equiv_angles, r)
     return np.sum(tmp) / len(sym_equiv_angles)
 
-def update_pref_orient_factors(phase_data, r):
-    angles = phase_data['sym_equiv_angles']
-    result = []
-    for sym_equiv_angles in angles:
-        result.append(pref_orient_function(r, sym_equiv_angles))
-    result = np.array(result)
-    phase_data['pref_orient_factors'] = result
-    return result
+def update_pref_orient_factors(phase_settings, phase_data, pref_or):
+    if phase_settings['pref_orient_method'] == 'march_dollase':
+        angles = phase_data['sym_equiv_angles']
+        result = []
+        for sym_equiv_angles in angles:
+            result.append(pref_orient_function(pref_or[0], sym_equiv_angles))
+        result = np.tile(
+            np.array(result), len(phase_settings['wavelengths']))[:, np.newaxis]
+        phase_data['pref_orient_factors'] = result
+        return result
 
 # h0 = (2, 0, 2)
 # uc_rec = uc.reciprocal()
