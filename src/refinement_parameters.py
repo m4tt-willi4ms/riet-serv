@@ -3,8 +3,7 @@ parameters. It includes functionality for importing parameters from a
 dictionary, assembling parameters into numpy arrays (which are used when running
 a refinement), and exporting the refined parameters as a dictionary.
 
-Any subclass of RefinementParameters need only implement the parameter generator
-in order to take advantage of the features detailed herein.
+A subclass of RefinementParameters need only implement the parameter generator.
 """
 from __future__ import division, print_function, absolute_import
 import numpy as np
@@ -13,7 +12,9 @@ import copy
 keys = ("labels", "values", "uround", "l_limits", "u_limits")
 param_keys = ("name", "value", "uround", "l_limit", "u_limit")
 ignored_keys = ("vertical_offset", "uc_mask", "composition_by_weight",
-    "lattice_parameter_tolerances", "cif_path", "phase_name")
+                "lattice_parameter_tolerances", "cif_path", "phase_name",
+                "peak_model",
+                "pref_orient_method", "pref_orient_hkl", "pref_orient_ell")
 list_parameters = ("lattice_parameters", "eta", "bkgd")
 #TODO: move to children
 

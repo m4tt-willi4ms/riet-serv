@@ -1,8 +1,9 @@
 from __future__ import division, print_function, absolute_import
 from collections import OrderedDict
-import numpy as np
-import json
 import copy
+import json
+import numpy as np
+from gutter.client.default import gutter
 
 from src.refinement_parameters import RefinementParameters, as_dict
 import src.profiles as profiles
@@ -12,6 +13,7 @@ DEFAULT_U = ('cagliotti_u', 0.00, [False], -0.1, 0.1)
 DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
 DEFAULT_W = ('cagliotti_w', 0.001, [True], 0.000001, 1)
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
+DEFAULT_PREF_OR_PARAMS = [('md_param', 1.00, [True], 0.000001, 2)]
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01
 DEFAULT_PROFILE = 'PV'
@@ -28,22 +30,21 @@ class PhaseParameters(RefinementParameters):
         W=DEFAULT_W,
         eta_order=DEFAULT_ETA_ORDER,
         profile=DEFAULT_PROFILE,
+        pref_or_params=DEFAULT_PREF_OR_PARAMS,
         param_dict=None):
         # RefinementParameters.__init__(self)
         self.phase_settings = phase_settings
-        if self.phase_settings["recompute_peak_positions"]:
+        self.recompute_peak_positions = \
+            self.phase_settings['recompute_peak_positions']
+        self.preferred_orientation = \
+            self.phase_settings['preferred_orientation']
+        # if self.phase_settings["recompute_peak_positions"]:
+        if gutter.active('rpp', self):
             self.lattice_parameters = unit_cell.assemble_lattice_parameters(
                 self.phase_settings)
             if param_dict is not None:
-                uc_mask = self.phase_settings['uc_mask']
-                lps = copy.deepcopy(self.lattice_parameters)
-                self.lattice_parameters = []
-                for i, lp in enumerate(lps):
-                    lp = list(lp)
-                    from itertools import compress
-                    lp[2] = list(compress(
-                        param_dict["lattice_parameters"], uc_mask))[i]['uround']
-                    self.lattice_parameters.append(tuple(lp))
+                self.lattice_parameters = self.copy_lp_urounds_from_param_dict(
+                    param_dict)
             # print("from assemble lp:", lps)
             # print("from self.lps:", self.lattice_parameters)
         # else:
@@ -56,6 +57,8 @@ class PhaseParameters(RefinementParameters):
             self.W = W
             self.eta_order = eta_order
             self.eta = self.set_eta_order(self.eta_order)
+            if gutter.active('pref_or', self):
+                self.pref_or = pref_or_params
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
@@ -84,15 +87,25 @@ class PhaseParameters(RefinementParameters):
         d['cagliotti_v'] = self.V
         d['cagliotti_w'] = self.W
         d['eta'] = self.eta
-        if self.phase_settings["recompute_peak_positions"]:
+        if gutter.active('rpp', self):
             d['lattice_parameters'] = self.lattice_parameters
+        if gutter.active('pref_or', self):
+            d['pref_orient'] = self.pref_or
+        # if self.phase_settings['x']
         return d.iteritems()
-
-    def load_json(json_str):
-        json_dict = json.loads(json_str)
-        self.phase_settings["cif_path"] = json_dict["cif_path"]
 
     def from_dict(self, d):
         d2 = d.copy()
         d2['lattice_parameters'] = as_dict(self.lattice_parameters)
         super(PhaseParameters, self).from_dict(d2)
+
+    def copy_lp_urounds_from_param_dict(self, param_dict):
+        from itertools import compress
+        uc_mask = self.phase_settings['uc_mask']
+        new_lps = []
+        for i, lp in enumerate(self.lattice_parameters):
+            lp = list(lp)
+            lp[2] = list(compress(
+                param_dict["lattice_parameters"], uc_mask))[i]['uround']
+            new_lps.append(tuple(lp))
+        return new_lps

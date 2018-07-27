@@ -20,6 +20,7 @@ DEFAULT_VERTICAL_OFFSET = False #:False = angular offset; True = Vertical Offset
 DEFAULT_DELTA_THETA = 2.0
 DEFAULT_INTENSITY_CUTOFF = 0.005
 DEFAULT_RECOMPUTE_PEAK_POSITIONS = True
+DEFAULT_PREFERRED_ORIENTATION = True
 DEFAULT_LATTICE_DEV = [0.01]*6
 DEFAULT_COMPOSITION_BY_WEIGHT = 0.0
 
@@ -307,6 +308,7 @@ class RietveldPhases(object):
                  intensity_cutoff=DEFAULT_INTENSITY_CUTOFF,
                  lattice_dev=DEFAULT_LATTICE_DEV,
                  recompute_peak_positions=DEFAULT_RECOMPUTE_PEAK_POSITIONS,
+                 preferred_orientation=DEFAULT_PREFERRED_ORIENTATION,
                  composition_by_weight=DEFAULT_COMPOSITION_BY_WEIGHT,
                  wavelengths=None,
                  profile='PV',
@@ -338,6 +340,17 @@ class RietveldPhases(object):
         assert isinstance(recompute_peak_positions, bool)
         self.phase_settings["recompute_peak_positions"] = \
             recompute_peak_positions
+        assert isinstance(preferred_orientation, bool)
+        self.phase_settings["preferred_orientation"] = \
+            preferred_orientation
+
+        @property
+        def recompute_peak_positions(self):
+            return self.phase_settings["recompute_peak_positions"]
+
+        @property
+        def preferred_orientation(self):
+            return self.phase_settings["preferred_orientation"]
 
         assert profile in profiles.PROFILES
         self.phase_settings["profile"] = profile
@@ -575,8 +588,8 @@ class RietveldPhases(object):
         return d
 
 if __name__ == '__main__':
-    RietveldPhases.set_profile('./data/profiles/d5_05005.xye')
-    phase = RietveldPhases('./data/cifs/9015662-rutile.cif')
+    # RietveldPhases.set_profile('./data/profiles/d5_05005.xye')
+    # phase = RietveldPhases('./data/cifs/9015662-rutile.cif')
     import json
     with open('./data/server_input/phase_parameters_sample.json') as f:
         phase = RietveldPhases('./data/cifs/9015662-rutile.cif',

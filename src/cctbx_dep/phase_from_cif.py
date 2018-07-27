@@ -119,6 +119,8 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
     phase_data["d_mask"] = d_mask
     phase_data["d_spacings"] = d_spacings
     phase_data["relative_intensities"] = relative_intensities
+    phase_data["f_miller_indices"] = f_miller_set.indices().as_vec3_double(
+        ).as_double().as_numpy_array().reshape(-1,3)[d_mask]
 
     # two_thetas = np.zeros((2,len(self.d_spacings)))
     # # factors = np.zeros((2,len(self.d_spacings)))
