@@ -14,6 +14,7 @@ DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
 DEFAULT_W = ('cagliotti_w', 0.001, [True], 0.000001, 1)
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
 DEFAULT_PREF_OR_PARAMS = [('md_param', 1.00, [True], 0.000001, 2)]
+DEFAULT_PREF_OR_HKL = [1, 0, 4]
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01
 DEFAULT_PROFILE = 'PV'
@@ -59,6 +60,7 @@ class PhaseParameters(RefinementParameters):
             self.eta = self.set_eta_order(self.eta_order)
             if gutter.active('pref_or', self):
                 self.pref_or = pref_or_params
+                self.phase_settings['pref_orient_hkl'] = DEFAULT_PREF_OR_HKL
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
