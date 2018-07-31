@@ -345,14 +345,6 @@ class RietveldPhases(object):
         self.phase_settings["preferred_orientation"] = \
             preferred_orientation
 
-        @property
-        def recompute_peak_positions(self):
-            return self.phase_settings["recompute_peak_positions"]
-
-        @property
-        def preferred_orientation(self):
-            return self.phase_settings["preferred_orientation"]
-
         assert profile in profiles.PROFILES
         self.phase_settings["profile"] = profile
         self.profile = profiles.PROFILES[profile]
@@ -384,7 +376,7 @@ class RietveldPhases(object):
                 pref_orient.update_pref_orient_factors(
                 self.phase_settings,
                 self.phase_data,
-                self.phase_parameters.pref_or,
+                self.phase_parameters.pref_orient,
             )
 
         # self.phase_data["masks"] = peak_masking.peak_masks(
@@ -481,7 +473,7 @@ class RietveldPhases(object):
                 pref_orient.update_pref_orient_factors(
                 self.phase_settings,
                 self.phase_data,
-                self.phase_parameters.pref_or,
+                self.phase_parameters.pref_orient,
                 )
             np.multiply(
                 self.phase_data['weighted_intensities'],

@@ -55,11 +55,18 @@ or a list of parameter-tuples.')
 
     return x
 
-def get_param_from_dict(d):
+def get_param_from_dict(x):
+    if isinstance(x, dict):
+        return tuple([x[key] for key in param_keys])
+    elif isinstance(x, list):
+        return [get_param_from_dict(item) for item in x]
+
     # if isinstance(d, tuple):
     #     return d
     # else:
-    return tuple([d[key] for key in param_keys])
+
+def get_param_list_from_dict_list(list_of_dicts):
+    return [get_param_from_dict(item) for item in list_of_dicts]
 
 def get_dict_from_param(param):
     return dict(zip(param_keys, param))

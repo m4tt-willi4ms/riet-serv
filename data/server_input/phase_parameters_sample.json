@@ -1,1 +1,333 @@
-{"phase_name":"","eta":[{"used":true,"name":"eta_0","value":0.5,"u_limit":1.0,"l_limit":0.0,"uround":[true,false,false,false,false,false,false,false,false,false,false,false],"round":2},{"used":false,"name":"eta_1","value":0.0,"u_limit":0.1,"l_limit":-0.1,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":4},{"used":false,"name":"eta_2","value":0.0,"u_limit":0.1,"l_limit":-0.1,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":4}],"cif_path":"./data/cifs/1000032.cif","cagliotti_u":{"used":false,"name":"cagliotti_u","value":0.0,"u_limit":0.1,"l_limit":-0.1,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":4},"cagliotti_v":{"used":false,"name":"cagliotti_v","value":0.0,"u_limit":0.1,"l_limit":-0.1,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":4},"cagliotti_w":{"used":true,"name":"cagliotti_w","value":0.003,"u_limit":1.0,"l_limit":0.00001,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":3},"scale":{"used":true,"name":"scale","value":0.01,"u_limit":3.40282347E+38,"l_limit":0.0,"uround":[true,false,false,false,false,false,false,false,false,false,false,false],"round":1},"lattice_parameters":[{"used":false,"name":"lattice_parameters_0","value":1000.0,"u_limit":3.40282347E+38,"l_limit":-3.40282347E+38,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":2},{"used":false,"name":"lattice_parameters_1","value":1000.0,"u_limit":3.40282347E+38,"l_limit":-3.40282347E+38,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":2},{"used":false,"name":"lattice_parameters_2","value":1000.0,"u_limit":3.40282347E+38,"l_limit":-3.40282347E+38,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":2},{"used":false,"name":"lattice_parameters_3","value":90.0,"u_limit":3.40282347E+38,"l_limit":-3.40282347E+38,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":2},{"used":false,"name":"lattice_parameters_4","value":90.0,"u_limit":3.40282347E+38,"l_limit":-3.40282347E+38,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":2},{"used":false,"name":"lattice_parameters_5","value":90.0,"u_limit":3.40282347E+38,"l_limit":-3.40282347E+38,"uround":[false,false,false,false,false,false,false,false,false,false,false,false],"round":2}],"lattice_parameter_tolerances":[0.0,0.0,0.0,0.0,0.0,0.0]}
+{
+    "phase_name": "",
+    "eta": [
+        {
+            "used": true,
+            "name": "eta_0",
+            "value": 0.5,
+            "u_limit": 1.0,
+            "l_limit": 0.0,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": false,
+            "name": "eta_1",
+            "value": 0.0,
+            "u_limit": 0.1,
+            "l_limit": -0.1,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 4
+        },
+        {
+            "used": false,
+            "name": "eta_2",
+            "value": 0.0,
+            "u_limit": 0.1,
+            "l_limit": -0.1,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 4
+        }
+    ],
+    "cif_path": "./data/cifs/1000032.cif",
+    "pref_orient_method": "march_dollase",
+    "pref_orient_hkl": [
+        1,
+        0,
+        0
+    ],
+    "pref_orient_ell": 2,
+    "pref_orient": [
+        {
+            "used": false,
+            "name": "pref_or_0",
+            "value": 1.0,
+            "l_limit": 0.000001,
+            "u_limit": 2.0,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 4
+        }
+    ],
+    "cagliotti_u": {
+        "used": false,
+        "name": "cagliotti_u",
+        "value": 0.0,
+        "u_limit": 0.1,
+        "l_limit": -0.1,
+        "uround": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ],
+        "round": 4
+    },
+    "cagliotti_v": {
+        "used": false,
+        "name": "cagliotti_v",
+        "value": 0.0,
+        "u_limit": 0.1,
+        "l_limit": -0.1,
+        "uround": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ],
+        "round": 4
+    },
+    "cagliotti_w": {
+        "used": true,
+        "name": "cagliotti_w",
+        "value": 0.003,
+        "u_limit": 1.0,
+        "l_limit": 0.00001,
+        "uround": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ],
+        "round": 3
+    },
+    "scale": {
+        "used": true,
+        "name": "scale",
+        "value": 0.01,
+        "u_limit": 3.40282347E+38,
+        "l_limit": 0.0,
+        "uround": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+        ],
+        "round": 1
+    },
+    "lattice_parameters": [
+        {
+            "used": false,
+            "name": "lattice_parameters_0",
+            "value": 1000.0,
+            "u_limit": 3.40282347E+38,
+            "l_limit": -3.40282347E+38,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": false,
+            "name": "lattice_parameters_1",
+            "value": 1000.0,
+            "u_limit": 3.40282347E+38,
+            "l_limit": -3.40282347E+38,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": false,
+            "name": "lattice_parameters_2",
+            "value": 1000.0,
+            "u_limit": 3.40282347E+38,
+            "l_limit": -3.40282347E+38,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": false,
+            "name": "lattice_parameters_3",
+            "value": 90.0,
+            "u_limit": 3.40282347E+38,
+            "l_limit": -3.40282347E+38,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": false,
+            "name": "lattice_parameters_4",
+            "value": 90.0,
+            "u_limit": 3.40282347E+38,
+            "l_limit": -3.40282347E+38,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": false,
+            "name": "lattice_parameters_5",
+            "value": 90.0,
+            "u_limit": 3.40282347E+38,
+            "l_limit": -3.40282347E+38,
+            "uround": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        }
+    ],
+    "lattice_parameter_tolerances": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ]
+}

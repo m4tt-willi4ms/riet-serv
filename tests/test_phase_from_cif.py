@@ -19,6 +19,8 @@ def phase_settings():
         "intensity_cutoff": 0.005,
         "max_polynom_order": 5,
         "vertical_offset": False,
+        "preferred_orientation": True,
+        "pref_orient_hkl": [0, 0, 1]
         }
     Rp.set_wavelengths(tw.set_wavelength('Cu', 0), phase_settings)
     Rp.set_two_theta_powers_and_limits(phase_settings)
@@ -60,7 +62,8 @@ def test_load_cif(phase_settings):
     assert test_phase_settings["crystal_system"] == 'Trigonal'
 
 def test_compute_relative_intensities(phase_settings, phase_data):
-    phase_data.update(pfc.compute_relative_intensities(phase_settings))
+    phase_settings_tmp = pfc.load_cif(phase_settings)
+    phase_data.update(pfc.compute_relative_intensities(phase_settings_tmp))
     print(phase_data["weighted_intensities"][0:10])
     assert np.all(np.isclose(phase_data["weighted_intensities"][0:10],
     np.array(
