@@ -23,6 +23,7 @@ def phase_settings():
     phase_settings["max_polynom_order"] = 5
     phase_settings["lattice_dev"] = [0.01]*6
     phase_settings["recompute_peak_positions"] = True
+    phase_settings["preferred_orientation"] = False
     return phase_settings
 
 @pytest.fixture

@@ -23,12 +23,13 @@ def set_profile():
 def test_phase():
     return Rp("./data/cifs/1000032.cif",
         intensity_cutoff=0.01,
-        delta_theta=2.0)
+        delta_theta=2.0,
+    )
 
 def test_data_read_in(set_profile):
     assert len(Rp.two_theta) == 4250
-    assert np.isclose(Rp.phase_settings["d_min"], 1.08934)
-    assert np.isclose(Rp.phase_settings["d_max"], 17.63254)
+    assert np.isclose(Rp.phase_settings["d_min"], 1.092049)
+    assert np.isclose(Rp.phase_settings["d_max"], 17.58881)
     assert len(Rp.I) == 4250
     assert np.isclose(Rp.two_theta[-1],90)
     assert len(Rp.sigma) == 4250
@@ -130,7 +131,7 @@ def test_phase_param_gen(test_phase):
     count = 0
     for x in test_phase.phase_parameters.param_gen():
         count += 1
-    assert count == 6
+    assert count == 6 + int(test_phase.phase_settings["preferred_orientation"])
 
 def test_assemble_phase_x(test_phase):
     #assemble_phase_x() is called in RietveldPhases' __init__

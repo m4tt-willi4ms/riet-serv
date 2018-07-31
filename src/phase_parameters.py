@@ -1,22 +1,25 @@
 from __future__ import division, print_function, absolute_import
 from collections import OrderedDict
 import numpy as np
-import json
-import copy
 
-from src.refinement_parameters import RefinementParameters, as_dict
+import src.refinement_parameters as rp
 import src.profiles as profiles
 import src.cctbx_dep.unit_cell as unit_cell
+import src.cctbx_dep.preferred_orientation as po
 
 DEFAULT_U = ('cagliotti_u', 0.00, [False], -0.1, 0.1)
 DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
 DEFAULT_W = ('cagliotti_w', 0.001, [True], 0.000001, 1)
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
+DEFAULT_PREF_OR_PARAMS = [('pref_or_0', 1.00, [True], 0.000001, 2)]
+DEFAULT_PREF_OR_HKL = [0, 0, 1]
+DEFAULT_PREF_OR_METHOD = 'march_dollase'
+DEFAULT_PREF_OR_ELL = 4
 DEFAULT_ETA_ORDER = 2
 DEFAULT_LATTICE_DEV = 0.01
 DEFAULT_PROFILE = 'PV'
 
-class PhaseParameters(RefinementParameters):
+class PhaseParameters(rp.RefinementParameters):
     '''
     A class used to keep track of phase-specific parameters used in computing
     powder diffraction profiles.
@@ -28,27 +31,34 @@ class PhaseParameters(RefinementParameters):
         W=DEFAULT_W,
         eta_order=DEFAULT_ETA_ORDER,
         profile=DEFAULT_PROFILE,
+        pref_or=(
+            DEFAULT_PREF_OR_PARAMS,
+            DEFAULT_PREF_OR_HKL,
+            DEFAULT_PREF_OR_METHOD,
+            DEFAULT_PREF_OR_ELL,
+        ),
         param_dict=None):
-        # RefinementParameters.__init__(self)
         self.phase_settings = phase_settings
-        if self.phase_settings["recompute_peak_positions"]:
+        if self.phase_settings['recompute_peak_positions']:
             self.lattice_parameters = unit_cell.assemble_lattice_parameters(
                 self.phase_settings)
             if param_dict is not None:
-                uc_mask = self.phase_settings['uc_mask']
-                lps = copy.deepcopy(self.lattice_parameters)
-                self.lattice_parameters = []
-                for i, lp in enumerate(lps):
-                    lp = list(lp)
-                    from itertools import compress
-                    lp[2] = list(compress(
-                        param_dict["lattice_parameters"], uc_mask))[i]['uround']
-                    self.lattice_parameters.append(tuple(lp))
-            # print("from assemble lp:", lps)
-            # print("from self.lps:", self.lattice_parameters)
-        # else:
-        #     self.eta = self.set_eta_order(len(self.eta))
+                self.lattice_parameters = self.copy_lp_urounds_from_param_dict(
+                    param_dict)
+        if self.phase_settings['preferred_orientation'] \
+                and param_dict is not None:
+            self.phase_settings['pref_orient_hkl'] \
+                = param_dict['pref_orient_hkl']
+            self.phase_settings['pref_orient_method'] \
+                = param_dict['pref_orient_method']
+            self.phase_settings['pref_orient_ell'] \
+                = param_dict['pref_orient_ell']
+            print(param_dict['pref_orient'])
+            self.pref_orient = po.get_pref_orient_params(
+                phase_settings,
+                rp.get_param_from_dict(param_dict['pref_orient']))
         super(PhaseParameters, self).__init__(param_dict=param_dict)
+
         if param_dict is None:
             self.scale = scale
             self.U = U
@@ -56,6 +66,11 @@ class PhaseParameters(RefinementParameters):
             self.W = W
             self.eta_order = eta_order
             self.eta = self.set_eta_order(self.eta_order)
+            if self.phase_settings['preferred_orientation']:
+                self.pref_orient = pref_or[0]
+                self.phase_settings['pref_orient_hkl'] = pref_or[1]
+                self.phase_settings['pref_orient_method'] = pref_or[2]
+                self.phase_settings['pref_orient_ell'] = pref_or[3]
         assert profile in profiles.PROFILES
         self.profile = profile
         # self.profile = profiles.Profile(DEFAULT_PROFILE)
@@ -84,15 +99,31 @@ class PhaseParameters(RefinementParameters):
         d['cagliotti_v'] = self.V
         d['cagliotti_w'] = self.W
         d['eta'] = self.eta
-        if self.phase_settings["recompute_peak_positions"]:
+        if self.phase_settings['recompute_peak_positions']:
             d['lattice_parameters'] = self.lattice_parameters
+        if self.phase_settings['preferred_orientation']:
+            d['pref_orient'] = self.pref_orient
+        # if self.phase_settings['x']
         return d.iteritems()
-
-    def load_json(json_str):
-        json_dict = json.loads(json_str)
-        self.phase_settings["cif_path"] = json_dict["cif_path"]
 
     def from_dict(self, d):
         d2 = d.copy()
-        d2['lattice_parameters'] = as_dict(self.lattice_parameters)
+        d2['lattice_parameters'] = rp.as_dict(self.lattice_parameters)
         super(PhaseParameters, self).from_dict(d2)
+
+    def copy_lp_urounds_from_param_dict(self, param_dict):
+        from itertools import compress
+        uc_mask = self.phase_settings['uc_mask']
+        new_lps = []
+        for i, lp in enumerate(self.lattice_parameters):
+            lp = list(lp)
+            lp[2] = list(compress(
+                param_dict["lattice_parameters"], uc_mask))[i]['uround']
+            new_lps.append(tuple(lp))
+        return new_lps
+
+    def as_dict(self):
+        super_dict = super(PhaseParameters, self).as_dict()
+        for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
+            super_dict[key] = self.phase_settings[key]
+        return super_dict

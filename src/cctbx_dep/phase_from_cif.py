@@ -10,6 +10,8 @@ import iotbx.cif
 import cctbx.eltbx as eltbx
 from cctbx.eltbx import attenuation_coefficient
 
+import src.cctbx_dep.preferred_orientation as po
+
 def load_cif(phase_settings):
     """Reads in a unit cell, crystal structure, crystal system from iotbx
 
@@ -98,10 +100,11 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
 
     f_calc_sq = f_calc.as_intensity_array().sort().data() \
         /unit_cell_volume/unit_cell_volume
-    f_calc_mult = f_calc.multiplicities().sort().data()
+    f_calc_mult = f_calc.multiplicities().sort().data(
+        ).as_double().as_numpy_array()
 
     d_spacings = f_miller_set.d_spacings().data().as_numpy_array()
-    relative_intensities = f_calc_sq * f_calc_mult.as_double().as_numpy_array()
+    relative_intensities = f_calc_sq * f_calc_mult
     #: weight intensities by the corresponding multiplicity
     # print "Volume: " + str(self.unit_cell.volume())
 
@@ -119,6 +122,12 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
     phase_data["d_mask"] = d_mask
     phase_data["d_spacings"] = d_spacings
     phase_data["relative_intensities"] = relative_intensities
+    phase_data["multiplicities"] = f_calc_mult[d_mask]
+    phase_data["f_miller_indices"] = f_miller_set.indices().as_vec3_double(
+        ).as_double().as_numpy_array().reshape(-1,3)[d_mask]
+    if phase_settings["preferred_orientation"]:
+        phase_data["sym_equiv_angles"] = po.get_sym_equiv_angles(
+            phase_settings, phase_data)
 
     # two_thetas = np.zeros((2,len(self.d_spacings)))
     # # factors = np.zeros((2,len(self.d_spacings)))

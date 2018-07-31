@@ -132,7 +132,7 @@ class RietveldServerTestCase(unittest.TestCase):
         self.tr.clear()
         self.proto.call_load_profile(self.samples['refinery_model'],
             self.samples['global_parameters'])
-        print(self.tr.value())
+        # print(self.tr.value())
         self.proto.call_initialize()
         self.proto.call_add_phase(self.samples['phase_parameters'])
         # self.proto.call_start_refine(self.samples['refinery_model']
