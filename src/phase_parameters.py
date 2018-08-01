@@ -53,7 +53,6 @@ class PhaseParameters(rp.RefinementParameters):
                 = param_dict['pref_orient_method']
             self.phase_settings['pref_orient_ell'] \
                 = param_dict['pref_orient_ell']
-            print(param_dict['pref_orient'])
             self.pref_orient = po.get_pref_orient_params(
                 phase_settings,
                 rp.get_param_from_dict(param_dict['pref_orient']))
@@ -124,6 +123,8 @@ class PhaseParameters(rp.RefinementParameters):
 
     def as_dict(self):
         super_dict = super(PhaseParameters, self).as_dict()
+        if isinstance(super_dict['pref_orient'], dict):
+            super_dict['pref_orient'] = [super_dict['pref_orient']]
         for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
             super_dict[key] = self.phase_settings[key]
         return super_dict

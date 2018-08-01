@@ -23,7 +23,7 @@ def phase_settings():
     phase_settings["max_polynom_order"] = 5
     phase_settings["lattice_dev"] = [0.01]*6
     phase_settings["recompute_peak_positions"] = True
-    phase_settings["preferred_orientation"] = False
+    phase_settings["preferred_orientation"] = True
     return phase_settings
 
 @pytest.fixture
@@ -123,7 +123,14 @@ def test_lattice_parameters(pp_from_json, lp_mask, phase_dict):
     json_lps = phase_dict['lattice_parameters']
     assert list(pp_from_json.x['labels'][lp_mask]) == ['uc_a', 'uc_c']
 
+def test_pref_or(pp_from_json):
+    for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
+        assert key in pp_from_json.phase_settings
 
+def test_as_dict(pp_from_json):
+    phase_dict = pp_from_json.as_dict()
+    assert 'scale' in phase_dict
+    assert isinstance(phase_dict['pref_orient'], list)
 # def _set_new_two_theta_0_val(gp_assembled, two_theta_0_mask, val):
 #     new_x = copy.deepcopy(gp_assembled.x['values'])
 #     new_x[two_theta_0_mask] = val
