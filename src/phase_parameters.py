@@ -124,6 +124,7 @@ class PhaseParameters(rp.RefinementParameters):
 
     def as_dict(self):
         super_dict = super(PhaseParameters, self).as_dict()
+        super_dict['pref_orient'] = list(super_dict['pref_orient'])
         for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
             super_dict[key] = self.phase_settings[key]
         return super_dict
