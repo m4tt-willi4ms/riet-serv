@@ -10,6 +10,14 @@ import src.cctbx_dep.preferred_orientation as po
 DEFAULT_U = ('cagliotti_u', 0.00, [False], -0.1, 0.1)
 DEFAULT_V = ('cagliotti_v', 0.00, [False], -0.1, 0.1)
 DEFAULT_W = ('cagliotti_w', 0.001, [True], 0.000001, 1)
+DEFAULT_PEAK_PARAMETERS = [
+    ('pp_U', 0.00, [False], -0.1, 0.1),
+    ('pp_V', 0.00, [False], -0.1, 0.1),
+    ('pp_W', 0.001, [True], 0.000001, 1),
+    ('pp_X', 0.00, [False], -0.1, 0.1),
+    ('pp_Z', 1.0, [False], 0.001, 10),
+    ('pp_Y', 0.0, [False], -0.1, 0.1),
+]
 DEFAULT_SCALE = ('scale', 0.1, [True], 0, float('inf'))
 DEFAULT_PREF_OR_PARAMS = [('pref_or_0', 1.00, [True], 0.000001, 2)]
 DEFAULT_PREF_OR_HKL = [0, 0, 1]
@@ -24,20 +32,21 @@ class PhaseParameters(rp.RefinementParameters):
     A class used to keep track of phase-specific parameters used in computing
     powder diffraction profiles.
     '''
-    def __init__(self, phase_settings,
-        scale=DEFAULT_SCALE,
-        U=DEFAULT_U,
-        V=DEFAULT_V,
-        W=DEFAULT_W,
-        eta_order=DEFAULT_ETA_ORDER,
-        profile=DEFAULT_PROFILE,
-        pref_or=(
-            DEFAULT_PREF_OR_PARAMS,
-            DEFAULT_PREF_OR_HKL,
-            DEFAULT_PREF_OR_METHOD,
-            DEFAULT_PREF_OR_ELL,
-        ),
-        param_dict=None):
+    def __init__(
+            self, phase_settings,
+            scale=DEFAULT_SCALE,
+            U=DEFAULT_U,
+            V=DEFAULT_V,
+            W=DEFAULT_W,
+            eta_order=DEFAULT_ETA_ORDER,
+            profile=DEFAULT_PROFILE,
+            pref_or=(
+                DEFAULT_PREF_OR_PARAMS,
+                DEFAULT_PREF_OR_HKL,
+                DEFAULT_PREF_OR_METHOD,
+                DEFAULT_PREF_OR_ELL,
+            ),
+            param_dict=None):
         self.phase_settings = phase_settings
         if self.phase_settings['recompute_peak_positions']:
             self.lattice_parameters = unit_cell.assemble_lattice_parameters(
