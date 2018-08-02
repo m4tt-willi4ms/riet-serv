@@ -10,6 +10,7 @@ import src.refinement_parameters as rp
 def phase_settings():
     phase_settings = {}
     phase_settings["max_polynom_order"] = 5
+    phase_settings["vertical_offset"] = False
     return phase_settings
 
 @pytest.fixture(scope="module")
@@ -120,28 +121,23 @@ def test_get_dict(gp, gp_assembled):
     d = gp_assembled.as_dict()
     assert len(d['bkgd']) == gp_assembled.bkgd_order
 
-def test_from_dict(phase_settings):
+
+@pytest.fixture(scope='module')
+def gp_from_json(phase_settings):
     import json
     with open('./data/server_input/global_parameters_sample.json') as file:
         gp_dict = json.load(file)
-    gp = GlobalParameters(phase_settings, param_dict=gp_dict)
+    return GlobalParameters(phase_settings, param_dict=gp_dict)
+
+def test_from_dict(phase_settings, gp_from_json):
+    import json
+    with open('./data/server_input/global_parameters_sample.json') as file:
+        gp_dict = json.load(file)
     gp_dict_filtered = dict((k, v) for k, v in gp_dict.iteritems()
         if k not in rp.ignored_keys)
-    def check_dict(d1, d2):
-        for k, v in d1.iteritems():
-            assert k in d2
-            def check_paramdict(d1, d2):
-                for k, v in d1.iteritems():
-                    assert k in d2
-                    if isinstance(v, float):
-                        assert np.isclose(v, d2[k])
-                    else:
-                        assert v == d2[k]
-            if isinstance(v, list):
-                for i, item in enumerate(v):
-                    check_paramdict(item, d2[k][i])
-            elif isinstance(v, dict):
-                check_paramdict(v, d2[k])
-    check_dict(gp.as_dict(), gp_dict_filtered)
-    gp.assemble_x()
-    check_dict(gp.as_dict(), gp_dict_filtered)
+    rp.check_dict(gp_from_json.as_dict(), gp_dict_filtered)
+    gp_from_json.assemble_x()
+    rp.check_dict(gp_from_json.as_dict(), gp_dict_filtered)
+
+def test_check_vertical_offset_from_json(phase_settings, gp_from_json):
+    assert gp_from_json.phase_settings["vertical_offset"] == True

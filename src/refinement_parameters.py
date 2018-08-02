@@ -93,6 +93,23 @@ def as_param(val):
         result = get_param_from_dict(val)
     return result
 
+def check_dict(d1, d2):
+    for k, v in d1.iteritems():
+        assert k in d2
+
+        def check_paramdict(d1, d2):
+            for k, v in d1.iteritems():
+                assert k in d2
+                if isinstance(v, float):
+                    assert np.isclose(v, d2[k])
+                else:
+                    assert v == d2[k]
+        if isinstance(v, list):
+            for i, item in enumerate(v):
+                check_paramdict(item, d2[k][i])
+        elif isinstance(v, dict):
+            check_paramdict(v, d2[k])
+
 class RefinementParameters(object):
 
     def __init__(self, param_dict=None):
