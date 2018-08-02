@@ -274,7 +274,7 @@ class RietveldPhases(object):
         return np.dot(cls.bkgd, cls.two_theta_powers[:dim, :])
 
     @classmethod
-    def LP_intensity_scaling(self):
+    def LP_intensity_scaling(cls):
         r"""
             Computes the Lorentz-Polarization intensity scaling factors for a
             set of two-theta values listed in ``two_theta``, via the equation
@@ -544,8 +544,8 @@ class RietveldPhases(object):
         self.phase_parameters.update_x(
             global_and_phase_x[self.phase_mask],
             mask[self.phase_mask])
-        eta_mask = np.char.startswith(self.phase_parameters.x['labels'], 'eta')
-        scale_mask = np.char.startswith(self.phase_parameters.x['labels'], 'sca')
+        # eta_mask = np.char.startswith(self.phase_parameters.x['labels'], 'eta')
+        # scale_mask = np.char.startswith(self.phase_parameters.x['labels'], 'sca')
         # RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
         #     = self.global_and_phase_x[self.global_mask_no_bkgd]
         # self.phase_x = \
