@@ -273,6 +273,12 @@ class RietveldRefinery:
                 phase.phase_settings["recompute_peak_positions"] = True
             else:
                 phase.phase_settings["recompute_peak_positions"] = False
+            if np.any(np.logical_and(
+                    self.global_and_phase_refine_masks[i],
+                    np.char.startswith(self.x_labels, 'pref_'))):
+                phase.phase_settings["preferred_orientation"] = True
+            else:
+                phase.phase_settings["preferred_orientation"] = False
 
         if not self.bkgd_refine and self.rietveld_plot is not None:
             self.rietveld_plot.fig.suptitle("In Progress...")

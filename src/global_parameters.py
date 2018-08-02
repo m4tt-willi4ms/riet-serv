@@ -21,6 +21,9 @@ class GlobalParameters(RefinementParameters):
         if param_dict is None:
             self.two_theta_offset = two_theta_offset
             self.bkgd = [x for x in self.bkgd_param_gen()]
+        else:
+            self.phase_settings['vertical_offset'] = \
+                param_dict['vertical_offset']
         super(GlobalParameters, self).__init__(param_dict=param_dict)
 
     def set_bkgd_order(self, order):
@@ -42,7 +45,7 @@ class GlobalParameters(RefinementParameters):
         Returns
         -------
         bkgd : np.array (custom dtype)
-            A numpy array containing the coefficients :math:`c_i of the background
+            A numpy array containing the coefficients :math:`c_i` of the background
             polynomial.
         '''
 

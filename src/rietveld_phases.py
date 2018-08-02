@@ -142,27 +142,29 @@ class RietveldPhases(object):
         two_theta = []
         I = []
         sigma = []
-        with open(filename) as fn:
-            for _ in xrange(lines_to_strip_at_tof):
-                fn.readline()
-            n = len(fn.readline().split())
-        if n == 2 or n == 3:
-            number_of_columns = n
+        lines_to_skip = 0
+        if filename:
+            with open(filename) as fn:
+                for _ in xrange(lines_to_strip_at_tof):
+                    n = len(fn.readline().split())
+                    lines_to_skip += 1
+                    if n == 2 or n == 3:
+                        number_of_columns = n
+                        break
 
-
-        with open(filename) as fn:
-            for line in fn.readlines()[lines_to_strip_at_tof:]:
-                if number_of_columns == 2:
-                    two_thetatmp, Itmp = line.split()
-                # if float(two_thetatmp) < 15:
-                    I.append(float(Itmp))
-                    sigma.append(np.sqrt(float(Itmp)))
-                elif number_of_columns == 3:
-                    two_thetatmp, Itmp, sigmatmp = line.split()
-                    # I.append(float(sigmatmp)**2)
-                    I.append(float(Itmp))
-                    sigma.append(float(sigmatmp))
-                two_theta.append(float(two_thetatmp))
+            with open(filename) as fn:
+                for line in fn.readlines()[lines_to_skip:]:
+                    if number_of_columns == 2:
+                        two_thetatmp, Itmp = line.split()
+                    # if float(two_thetatmp) < 15:
+                        I.append(float(Itmp))
+                        sigma.append(np.sqrt(float(Itmp)))
+                    elif number_of_columns == 3:
+                        two_thetatmp, Itmp, sigmatmp = line.split()
+                        # I.append(float(sigmatmp)**2)
+                        I.append(float(Itmp))
+                        sigma.append(float(sigmatmp))
+                    two_theta.append(float(two_thetatmp))
         cls.two_theta = np.array(two_theta)
         cls.I = np.array(I)
         cls.sigma = np.array(sigma)
@@ -208,7 +210,8 @@ class RietveldPhases(object):
             two_theta_limits=None):
         if phase_settings is None:
             phase_settings = cls.phase_settings
-        if cls.two_theta is None:
+        if cls.two_theta is None \
+                or cls.two_theta is not None and cls.two_theta.size == 0:
             if two_theta_limits is None:
                 two_theta_limits = [0, 180]
             RietveldPhases.two_theta = np.clip(
@@ -274,7 +277,7 @@ class RietveldPhases(object):
         return np.dot(cls.bkgd, cls.two_theta_powers[:dim, :])
 
     @classmethod
-    def LP_intensity_scaling(self):
+    def LP_intensity_scaling(cls):
         r"""
             Computes the Lorentz-Polarization intensity scaling factors for a
             set of two-theta values listed in ``two_theta``, via the equation
@@ -325,7 +328,7 @@ class RietveldPhases(object):
         if I_max is not None:
             self.I_max = I_max
         elif RietveldPhases.I is not None:
-            self.I_max = np.amax(RietveldPhases.I)
+            self.I_max = np.amax(RietveldPhases.I, initial=100)
         else:
             self.I_max = 100
 
@@ -544,8 +547,8 @@ class RietveldPhases(object):
         self.phase_parameters.update_x(
             global_and_phase_x[self.phase_mask],
             mask[self.phase_mask])
-        eta_mask = np.char.startswith(self.phase_parameters.x['labels'], 'eta')
-        scale_mask = np.char.startswith(self.phase_parameters.x['labels'], 'sca')
+        # eta_mask = np.char.startswith(self.phase_parameters.x['labels'], 'eta')
+        # scale_mask = np.char.startswith(self.phase_parameters.x['labels'], 'sca')
         # RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
         #     = self.global_and_phase_x[self.global_mask_no_bkgd]
         # self.phase_x = \

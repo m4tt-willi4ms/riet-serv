@@ -28,8 +28,6 @@ server"""
     rietveld_refinery = None
     rietveld_history = []
     plot_data = None
-    # plot = RietveldPlot()
-    show_plot = False
     count = 0
     two_thetas = None
     wavelengths = None
@@ -73,12 +71,12 @@ server"""
         profile_path = RietveldServer.refinery_model['input_data_path']
         min_two_theta = RietveldServer.refinery_model['two_theta_roi_window'][0]
         max_two_theta = RietveldServer.refinery_model['two_theta_roi_window'][1]
-        if profile_path:
-            rp.RietveldPhases.set_profile(profile_path,
-                min_two_theta=min_two_theta,
-                max_two_theta=max_two_theta,
-                lines_to_strip_at_tof=3,
-                )
+        rp.RietveldPhases.set_profile(
+            profile_path,
+            min_two_theta=min_two_theta,
+            max_two_theta=max_two_theta,
+            lines_to_strip_at_tof=5,
+            )
         RietveldServer.wavelengths = \
             RietveldServer.refinery_model["wavelength_c"]
         if np.isclose(RietveldServer.wavelengths[-1], 0.0):
@@ -114,8 +112,6 @@ server"""
 
             self._bkgd_refine()
 
-            if RietveldServer.show_plot:
-                RietveldServer.plot.setplotdata()
             self._update_plot_data()
             rietveld_plot = rp.RietveldPhases.get_rietveld_plot(
                 RietveldServer.plot_data)
@@ -199,6 +195,7 @@ PhaseParameters object in json-serialized form.
     def _refine_error(self):
         RietveldServer.err_flag = True
         log.err()
+        reactor.stop()
 
     def _update_plot_data(self):
         if rp.RietveldPhases.I is not None:
@@ -246,7 +243,7 @@ verify that the refinery model has been successfully updated.
         """
         try:
             self._set_refinery_model(json.loads(refinery_model))
-            if not RietveldServer.phase_list and rp.RietveldPhases.I is None:
+            if not RietveldServer.phase_list and rp.RietveldPhases.I.size == 0:
                 self.sendLine(str(False) + self.split_character)
             else:
                 self.sendLine(str(True) + self.split_character)
