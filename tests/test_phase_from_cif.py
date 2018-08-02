@@ -26,6 +26,13 @@ def phase_settings():
     Rp.set_two_theta_powers_and_limits(phase_settings)
     return phase_settings
 
+@pytest.fixture(scope="module")
+def phase_settings_small_window(phase_settings):
+    phase_settings_small_window = phase_settings.copy()
+    phase_settings_small_window['min_two_theta'] = 10
+    phase_settings_small_window['max_two_theta'] = 20
+    return phase_settings_small_window
+
 
 @pytest.fixture(scope="module")
 def phase_data():
@@ -94,3 +101,8 @@ def test_set_two_theta_peaks(phase_settings, phase_data):
     [ 59.71809269],
     [ 61.10698338],
     [ 61.28247987]])))
+
+def test_compute_relative_intensities_no_peaks(phase_settings_small_window):
+    pfc.load_cif(phase_settings_small_window)
+    pfc.compute_relative_intensities(phase_settings_small_window)
+    

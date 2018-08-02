@@ -87,6 +87,24 @@ class RietveldServerTestCase(unittest.TestCase):
         reply = self.tr.value().strip()
         #Should reply 'False' to indicate no plot_data available
         assert reply == "False" + self.proto.split_character
+        assert len(RP.two_theta) == 1000
+        assert RP.I.size == 0 and RP.I is not None
+
+    def test_update_refinery_model_change_roi_then_get_plot_data(self):
+        self.proto.call_initialize()
+        self.proto.call_load_profile(
+            self.samples['refinery_model'],
+            self.samples['global_parameters'])
+        rm_changed_roi = json.loads(self.samples['refinery_model'])
+        rm_changed_roi['two_theta_roi_window'] = [10, 20]
+        assert len(RP.two_theta) == 7249
+        self.proto.call_update_refinery_model(json.dumps(rm_changed_roi))
+        assert len(RP.two_theta) == 501
+        self.tr.clear()
+        self.proto.call_get_plot_data()
+        plot_data = json.loads(self.tr.value().split(
+            self.proto.split_character)[0])
+        assert len(plot_data['intensities']) == 501
 
     def test_load_profile(self):
         self.proto.call_initialize()

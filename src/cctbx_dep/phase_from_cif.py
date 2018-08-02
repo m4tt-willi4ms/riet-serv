@@ -69,7 +69,6 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
     structure = phase_settings["structure"]
     unit_cell = phase_settings["unit_cell"]
 
-    wavelengths = phase_settings["wavelengths"]
     d_min = phase_settings["d_min"]
 
     f_miller_set = structure.build_miller_set(
@@ -112,7 +111,7 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
     d_max = phase_settings["d_max"]
 
     # Drop any peaks below the Intensity Cutoff
-    rel_I_max_calc = np.amax(relative_intensities)
+    rel_I_max_calc = np.amax(relative_intensities, initial=1)
     if relative_intensities.shape[0] != 0:
         d_mask = np.logical_and(relative_intensities > intensity_cutoff \
             *rel_I_max_calc, d_spacings < d_max)

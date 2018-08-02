@@ -28,58 +28,6 @@ def update_unit_cell(phase_settings, lattice_parameters):
 
     assert len(uc_params) == 6
     unit_cell = uctbx.unit_cell(uc_params)
-
-
-    # x = tuple(float(x) for x in np.nditer(lattice_parameters))
-    # print(type(x[0]))
-    # if np.char.startswith(crystal_system, "Tric"):
-    #     unit_cell = uctbx.unit_cell(
-    #         tuple(float(x) for x in np.nditer(lattice_parameters)))
-    # elif np.char.startswith(crystal_system, "M"):
-    #     a = lattice_parameters[0]
-    #     b = lattice_parameters[1]
-    #     c = lattice_parameters[2]
-    #     if uc_mask[3]:
-    #         alpha = lattice_parameters[3]
-    #     else: alpha = 90
-    #     if uc_mask[4]:
-    #         beta = lattice_parameters[3]
-    #     else: beta = 90
-    #     if uc_mask[5]:
-    #         gamma = lattice_parameters[3]
-    #     else: gamma = 90
-    #     unit_cell = uctbx.unit_cell((a, b, c, alpha, beta, gamma))
-    # elif np.char.startswith(crystal_system, "O"):
-    #     a = lattice_parameters[0]
-    #     b = lattice_parameters[1]
-    #     c = lattice_parameters[2]
-    #     unit_cell = uctbx.unit_cell((a, b, c, 90, 90, 90))
-    # elif np.char.startswith(crystal_system, "Te"):
-    #     a = lattice_parameters[0]
-    #     if uc_mask[1]:
-    #         b = lattice_parameters[1]
-    #     else: b = a
-    #     if uc_mask[2]:
-    #         c = lattice_parameters[1]
-    #     else: c = a
-    #     unit_cell = uctbx.unit_cell((a, b, c, 90, 90, 90))
-    # elif np.char.startswith(crystal_system, "Tr"):
-    #     if phase_settings["crystal_system_trigonal"] == "R":
-    #         a = lattice_parameters[0]
-    #         alpha = lattice_parameters[1]
-    #         unit_cell = uctbx.unit_cell((a, a, a, alpha, alpha, alpha))
-    #     elif phase_settings["crystal_system_trigonal"] == "H":
-    #         a = lattice_parameters[0]
-    #         c = lattice_parameters[1]
-    #         unit_cell = uctbx.unit_cell((a, a, c, 90, 90, 120))
-    # elif np.char.startswith(crystal_system, "He"):
-    #     a = lattice_parameters[0]
-    #     c = lattice_parameters[1]
-    #     unit_cell = uctbx.unit_cell((a, a, c, 90, 90, 120))
-    # elif np.char.startswith(crystal_system, "C"):
-    #     a = lattice_parameters[0]
-    #     unit_cell = uctbx.unit_cell((a, a, a, 90, 90, 90))
-
     phase_settings["unit_cell"] = unit_cell
 
 def get_inverse_filter(phase_settings):
