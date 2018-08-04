@@ -12,8 +12,12 @@ def gaussian(x_squared, eta=None):
 def lorentz(x_squared,eta=None):
     return 1/(1+x_squared)
 
+def pseudo_voigtTCH(two_theta, gamma_l, gamma_g):
+    pass
+
 PROFILES = {
     'PV': pseudo_voigt,
+    'PV-TCH': pseudo_voigtTCH,
     'Lorentz': lorentz,
     'Gaussian': gaussian,
 }
@@ -27,6 +31,8 @@ class PseudoVoigtProfile(ProfileBase):
 
 
 class Profile:
-    def __init__(profile_name):
+    def __init__(profile_name, two_theta):
         assert profile_name in PROFILES
         self.profile_name = profile_name
+        self.two_theta = two_theta
+        

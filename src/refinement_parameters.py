@@ -86,8 +86,10 @@ def as_param(val):
     result = None
     if isinstance(val, list):
         result = []
+        uround_0 = val[0]['uround']
         for item in val:
             assert isinstance(item, dict)
+            item['uround'] = uround_0
             result.append(get_param_from_dict(item))
     elif isinstance(val, dict):
         result = get_param_from_dict(val)
