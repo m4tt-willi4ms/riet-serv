@@ -255,7 +255,7 @@ class RietveldRefinery:
                 mask = np.logical_or(mask, np.char.startswith(self.x_labels, param))
         return mask
 
-    # @with_stats
+    @with_stats
     def minimize(self, callback_functions=[]):
         self.callback_functions = callback_functions
         # self.mask = np.logical_and(self.del_mask,self.mask)

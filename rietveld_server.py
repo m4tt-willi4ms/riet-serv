@@ -55,7 +55,7 @@ server"""
             self.sendLine(b'Error: no such command.')
         else:
             try:
-                print(command, args)
+                # print(command, args)
                 method(*args)
             except Exception as e:
                 # pass
@@ -91,10 +91,11 @@ server"""
 
     def _bkgd_refine(self):
         if rp.RietveldPhases.I is not None:
-            bkgd_refinery = rr.RietveldRefinery(
-                RietveldServer.phase_list, bkgd_refine=True)
-            bkgd_refinery.minimize()
-            RietveldServer.plotdata = bkgd_refinery.get_plot_data()
+            if rp.RietveldPhases.I.size != 0:
+                bkgd_refinery = rr.RietveldRefinery(
+                    RietveldServer.phase_list, bkgd_refine=True)
+                bkgd_refinery.minimize()
+                RietveldServer.plotdata = bkgd_refinery.get_plot_data()
 
     def call_load_profile(self, refinery_model_string, global_parameters):
         try:
@@ -310,7 +311,6 @@ rietveld_history.)
         """is_complete: returns either true or false, depending on whether or
 not the rietveld_refinement session has completed
         """
-        print("return:", not RietveldServer.calc_flag)
         self.sendLine(str(not RietveldServer.calc_flag) + self.split_character)
 
     def call_can_ping(self):

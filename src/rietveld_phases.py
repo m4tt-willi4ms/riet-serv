@@ -393,7 +393,7 @@ class RietveldPhases(object):
         #     RietveldPhases.two_theta)
         self.set_masked_arrays()
 
-        if freeze_scale == False:
+        if not freeze_scale:
             scale = self.phase_parameters.scale*self.I_max/ \
                 np.amax(self.phase_profile())
             scale_mask = np.char.startswith(
@@ -417,7 +417,7 @@ class RietveldPhases(object):
             np.zeros(len(global_x_no_bkgd), dtype=bool),
             np.ones(len(self.phase_x), dtype=bool)))
 
-    def set_masked_arrays(self):
+    def set_two_theta_peaks_masked_arrays(self):
         two_theta_peaks = self.phase_data["two_theta_peaks"]
         two_theta = RietveldPhases.two_theta
         masks = self.masks
@@ -432,12 +432,18 @@ class RietveldPhases(object):
             tan_two_theta_peaks, dim, masks)
         self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2
 
+    def set_weighted_intensity_masked_arrays(self):
+        masks = self.masks
+        dim = masks.shape
         weighted_intensities = self.phase_data["weighted_intensities"]
         self.weighted_intensities_masked = peak_masking.get_masked_array(
             weighted_intensities, dim, masks)
         self.lp_factors_masked = peak_masking.get_masked_array(
             RietveldPhases.LP_intensity_scaling(), dim, masks)
-        # self.update_param_arrays()
+
+    def set_masked_arrays(self):
+        self.set_two_theta_peaks_masked_arrays()
+        self.set_weighted_intensity_masked_arrays()
 
     def update_param_arrays(self):
         masks = self.masks
@@ -463,7 +469,7 @@ class RietveldPhases(object):
             self.phase_settings, self.phase_data)
         # peak_masking.set_masked_arrays(self.phase_settings,
         #     RietveldPhases.two_theta)
-        self.set_masked_arrays()
+        self.set_two_theta_peaks_masked_arrays()
 
     def update_weighted_intensities(self):
         if self.phase_settings["preferred_orientation"]:
@@ -483,7 +489,7 @@ class RietveldPhases(object):
                 self.phase_data["po_factors"],
                 out=self.phase_data['weighted_intensities'],
             )
-            self.set_masked_arrays()
+            self.set_weighted_intensity_masked_arrays()
 
     def eta_polynomial(self):
         r""" Returns a numpy array populated by the values of the eta

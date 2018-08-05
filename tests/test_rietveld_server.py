@@ -55,6 +55,13 @@ class RietveldServerTestCase(unittest.TestCase):
             self.proto.phase_list[0].phase_settings["unit_cell"].parameters()):
             assert np.isclose(lp['value'], param)
 
+    def test_initialize_update_refinery_model_then_add_phase(self):
+        self.proto.call_initialize()
+        self.proto._set_global_parameters(
+            json.loads(self.samples['global_parameters']))
+        self.proto.call_update_refinery_model(self.samples['refinery_model'])
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+
     def test_update_refinery_model(self):
         self.proto.call_load_profile(
             self.samples['refinery_model'],
@@ -123,11 +130,6 @@ class RietveldServerTestCase(unittest.TestCase):
             self.proto.phase_list[0].phase_data["crystal_density"],
             3.982641
             )
-
-    def test_initialize_update_refinery_model_then_add_phase(self):
-        self.proto.call_initialize()
-        self.proto.call_update_refinery_model(self.samples['refinery_model'])
-        self.proto.call_add_phase(self.samples['phase_parameters'])
 
     def test_add_phase_then_load_profile(self):
         self.proto.call_initialize()
