@@ -56,9 +56,10 @@ def update_pref_orient_factors(phase_settings, phase_data, pref_or):
         phase_data['pref_orient_factors'] = result
         return result
 
-# h0 = (2, 0, 2)
-# uc_rec = uc.reciprocal()
-# print uc_rec.parameters()
-# for x in sei.indices():
-#    ang = uc_rec.angle(h0, (0, 0, 0), x.h())
-#    print x.h(), ang
+def set_pref_orient_settings(phase_settings, phase_dict):
+    phase_settings['pref_orient_hkl'] \
+        = phase_dict.get('pref_orient_hkl', [0, 0, 1])
+    phase_settings['pref_orient_method'] \
+        = phase_dict.get('pref_orient_method', 'march_dollase')
+    phase_settings['pref_orient_ell'] \
+        = phase_dict.get('pref_orient_ell', 2)

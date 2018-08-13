@@ -1,6 +1,138 @@
 {
     "phase_name": "",
-    "eta": [
+    "peak_parameters": [
+        {
+            "used": true,
+            "name": "pvg_U",
+            "value": 0.0,
+            "u_limit": 0.1,
+            "l_limit": -0.1,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": true,
+            "name": "pvg_V",
+            "value": 0.0,
+            "u_limit": 0.1,
+            "l_limit": -0.1,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": true,
+            "name": "pvg_W",
+            "value": 0.001,
+            "u_limit": 1.0,
+            "l_limit": 0.000001,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": true,
+            "name": "pvg_P",
+            "value": 0.0,
+            "u_limit": 0.1,
+            "l_limit": -0.1,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": true,
+            "name": "pvl_X",
+            "value": 0.01,
+            "u_limit": 100.0,
+            "l_limit": 0.0001,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
+        {
+            "used": true,
+            "name": "pvl_Y",
+            "value": 0.0,
+            "u_limit": 0.1,
+            "l_limit": -0.1,
+            "uround": [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            ],
+            "round": 2
+        },
         {
             "used": true,
             "name": "eta_0",
@@ -100,72 +232,6 @@
             "round": 4
         }
     ],
-    "cagliotti_u": {
-        "used": false,
-        "name": "cagliotti_u",
-        "value": 0.0,
-        "u_limit": 0.1,
-        "l_limit": -0.1,
-        "uround": [
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false
-        ],
-        "round": 4
-    },
-    "cagliotti_v": {
-        "used": false,
-        "name": "cagliotti_v",
-        "value": 0.0,
-        "u_limit": 0.1,
-        "l_limit": -0.1,
-        "uround": [
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false
-        ],
-        "round": 4
-    },
-    "cagliotti_w": {
-        "used": true,
-        "name": "cagliotti_w",
-        "value": 0.003,
-        "u_limit": 1.0,
-        "l_limit": 0.00001,
-        "uround": [
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false
-        ],
-        "round": 3
-    },
     "scale": {
         "used": true,
         "name": "scale",

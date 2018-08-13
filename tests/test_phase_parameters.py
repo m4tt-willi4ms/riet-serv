@@ -18,53 +18,44 @@ def phase_settings():
         'cif_path': './data/cifs/1000032.cif'
     }
     phase_settings['wavelengths'] = target_wavelengths.set_wavelength('Cu', 0)
+    phase_settings['K_alpha_factors'] = target_wavelengths.K_ALPHA_FACTORS
     phase_settings = phase_from_cif.load_cif(phase_settings)
     unit_cell.set_unit_cell_mask(phase_settings)
     phase_settings["max_polynom_order"] = 5
     phase_settings["lattice_dev"] = [0.01]*6
     phase_settings["recompute_peak_positions"] = True
-    phase_settings["preferred_orientation"] = True
+    phase_settings["preferred_orientation"] = False
+    phase_settings["vertical_offset"] = False
+    phase_settings["d_min"] = 1.0
+    phase_settings["d_max"] = 5.0
+    phase_settings["intensity_cutoff"] = 0.01
+    phase_settings["delta_theta"] = 2.0
     return phase_settings
 
-@pytest.fixture
-def pp(phase_settings):
-    return PhaseParameters(phase_settings)
+@pytest.fixture(scope='module')
+def phase_data(phase_settings):
+    return phase_from_cif.compute_relative_intensities(phase_settings)
 
-def test_set_eta_order(pp):
-    pp.set_eta_order(3)
-    assert len(pp.eta) == 3
-    n=0
-    for tup in pp.eta_param_gen():
-        assert int(tup[0][-1]) == n
-        if n == 0:
-            assert tup[1] == 0.5
-        else:
-            assert tup[1] == 0.0
-        n += 1
-    assert n == 3
+@pytest.fixture
+def pp(phase_settings, phase_data):
+    PV_profile = profiles.PROFILE_CLASSES['PV'](
+        phase_settings, phase_data, np.linspace(0.5, 100, 100))
+    return PhaseParameters(
+        phase_settings, peak_parameters=[item for item in PV_profile])
 
 def test_set_U(pp):
     pp.reset_x()
     new_U_val = 0.01
     pp.assemble_x()
-    U_mask = np.where(np.char.startswith(pp.x['labels'], 'cagliotti_u'))
+    U_mask = np.where(np.char.startswith(pp.x['labels'], 'pp_U'))
     pp.update_x(new_U_val, U_mask, apply_mask_to_input=False)
     assert pp.x['values'][U_mask] == new_U_val
-    assert pp.cagliotti_u == new_U_val
+    assert pp.peak_parameters[0] == new_U_val
 
 def test_assemble_x(pp):
     pp.assemble_x()
     for key in rp.keys:
         assert key in pp.x
-
-def test_validate_order_func(phase_settings):
-    phase_settings["max_polynom_order"] = 3
-    pp = PhaseParameters(phase_settings)
-    pp.set_eta_order(7)
-    assert pp.eta_order == 3
-    pp.set_eta_order(-5)
-    assert pp.eta_order == 1
-    assert pytest.raises(AssertionError, pp.set_eta_order, -.3)
 
 def test_custom_scale(phase_settings):
     pp = PhaseParameters(phase_settings,
@@ -101,7 +92,8 @@ def test_assemble_x(pp_assembled, scale_mask, eta_mask):
     assert pp_assembled.scale == scale_val
     assert np.sum(pp_assembled.x['uround'][scale_mask]) == 1
     eta_vals = pp_assembled.x['values'][eta_mask]
-    assert np.all(np.isclose(pp_assembled.eta, eta_vals))
+    assert np.all(np.isclose(
+        pp_assembled.peak_parameters[6:6+np.sum(eta_mask)], eta_vals))
 
 @pytest.fixture(scope="module")
 def phase_dict():
@@ -122,10 +114,6 @@ def lp_mask(pp_from_json):
 def test_lattice_parameters(pp_from_json, lp_mask, phase_dict):
     json_lps = phase_dict['lattice_parameters']
     assert list(pp_from_json.x['labels'][lp_mask]) == ['uc_a', 'uc_c']
-
-def test_pref_or(pp_from_json):
-    for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
-        assert key in pp_from_json.phase_settings
 
 def test_as_dict(pp_from_json):
     phase_dict = pp_from_json.as_dict()

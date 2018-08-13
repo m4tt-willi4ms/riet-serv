@@ -6,7 +6,7 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 
 import src.profiles as profiles
-import src.peak_masking as peak_masking
+# import src.peak_masking as peak_masking
 
 import src.cctbx_dep.phase_from_cif as phase_from_cif
 import src.cctbx_dep.unit_cell as unit_cell
@@ -223,9 +223,6 @@ class RietveldPhases(object):
         max_polynom_order = phase_settings["max_polynom_order"]
         cls.two_theta_powers = np.power(cls.two_theta, np.array(
             xrange(0, max_polynom_order)).reshape(max_polynom_order, 1))
-        #TODO: set cls.
-        if phase_settings["vertical_offset"]:
-            cls.cos_theta = np.cos(np.pi/360*cls.two_theta)
 
     @classmethod
     def get_plot_data(cls, intensities,
@@ -348,10 +345,6 @@ class RietveldPhases(object):
         self.phase_settings["preferred_orientation"] = \
             preferred_orientation
 
-        assert profile in profiles.PROFILES
-        self.phase_settings["profile"] = profile
-        self.profile = profiles.PROFILES[profile]
-
         assert delta_theta > 0
         self.phase_settings["delta_theta"] = delta_theta
 
@@ -365,14 +358,30 @@ class RietveldPhases(object):
                 self.phase_settings, 'Cu', 0)
 
         phase_from_cif.load_cif(self.phase_settings)
-        self.phase_parameters = PhaseParameters(self.phase_settings,
-                                                param_dict=phase_parameter_dict)
 
-        RietveldPhases.assemble_global_x()
-        self.assemble_phase_x()
+        if self.phase_settings['preferred_orientation']:
+            phase_dict = {} if phase_parameter_dict is None else phase_parameter_dict
+            pref_orient.set_pref_orient_settings(
+                self.phase_settings, phase_dict)
 
         self.phase_data.update(phase_from_cif.compute_relative_intensities(
             self.phase_settings))
+
+        assert profile in profiles.PROFILE_CLASSES
+        self.phase_settings["profile"] = profile
+        self.profile = profiles.PROFILE_CLASSES[profile](
+            self.phase_settings, self.phase_data, RietveldPhases.two_theta)
+
+        peak_parameters = [item for item in self.profile] \
+            if phase_parameter_dict is None else []
+        self.phase_parameters = PhaseParameters(
+            self.phase_settings,
+            param_dict=phase_parameter_dict,
+            peak_parameters=peak_parameters,
+        )
+
+        RietveldPhases.assemble_global_x()
+        self.assemble_phase_x()
 
         if self.phase_settings["preferred_orientation"]:
             self.phase_data["po_factors"] = \
@@ -382,15 +391,6 @@ class RietveldPhases(object):
                 self.phase_parameters.pref_orient,
             )
 
-        # self.phase_data["masks"] = peak_masking.peak_masks(
-        self.masks = peak_masking.peak_masks(
-            RietveldPhases.two_theta,
-            RietveldPhases.two_theta_offset,
-            self.phase_data["two_theta_peaks"],
-            self.phase_settings["delta_theta"])
-
-        # peak_masking.set_masked_arrays(self.phase_data,
-        #     RietveldPhases.two_theta)
         self.set_masked_arrays()
 
         if not freeze_scale:
@@ -407,8 +407,6 @@ class RietveldPhases(object):
 
         global_x_no_bkgd = RietveldPhases.global_x \
             [RietveldPhases.global_x_no_bkgd_mask]
-        # self.global_and_phase_x = np.hstack((global_x_no_bkgd,
-        #     self.phase_x))
 
         self.global_mask_no_bkgd = np.hstack((
             np.ones(len(global_x_no_bkgd), dtype=bool),
@@ -417,46 +415,20 @@ class RietveldPhases(object):
             np.zeros(len(global_x_no_bkgd), dtype=bool),
             np.ones(len(self.phase_x), dtype=bool)))
 
-    def set_two_theta_peaks_masked_arrays(self):
-        two_theta_peaks = self.phase_data["two_theta_peaks"]
-        two_theta = RietveldPhases.two_theta
-        masks = self.masks
-        dim = masks.shape
-        self.two_theta_masked = peak_masking.get_masked_array(
-            two_theta, dim, masks)
-        self.two_theta_peaks_masked = peak_masking.get_masked_array(
-            two_theta_peaks, dim, masks)
-
-        tan_two_theta_peaks = self.phase_data["tan_two_theta_peaks"]
-        self.tan_two_theta_peaks_masked = peak_masking.get_masked_array(
-            tan_two_theta_peaks, dim, masks)
-        self.tan_two_theta_peaks_sq_masked = self.tan_two_theta_peaks_masked**2
-
     def set_weighted_intensity_masked_arrays(self):
-        masks = self.masks
+        masks = self.profile.masks
         dim = masks.shape
         weighted_intensities = self.phase_data["weighted_intensities"]
-        self.weighted_intensities_masked = peak_masking.get_masked_array(
+        self.weighted_intensities_masked = profiles.get_masked_array(
             weighted_intensities, dim, masks)
-        self.lp_factors_masked = peak_masking.get_masked_array(
+        self.lp_factors_masked = profiles.get_masked_array(
             RietveldPhases.LP_intensity_scaling(), dim, masks)
 
     def set_masked_arrays(self):
-        self.set_two_theta_peaks_masked_arrays()
+        self.profile.set_two_theta_peaks_masked_arrays()
         self.set_weighted_intensity_masked_arrays()
 
     def update_param_arrays(self):
-        masks = self.masks
-        dim = masks.shape
-        self.eta_masked = peak_masking.get_masked_array(
-            self.eta_polynomial(), dim, masks)
-        if RietveldPhases.phase_settings["vertical_offset"]:
-            vals = -360/np.pi**RietveldPhases.cos_theta \
-                * RietveldPhases.two_theta_offset
-            self.two_theta_offset_masked = peak_masking.get_masked_array(
-                vals, dim, masks)
-        else:
-            self.two_theta_offset_masked = RietveldPhases.two_theta_offset
         if self.phase_settings["recompute_peak_positions"]:
             self.update_two_thetas()
         if self.phase_settings["preferred_orientation"]:
@@ -467,9 +439,7 @@ class RietveldPhases(object):
             self.phase_settings, self.phase_parameters.lattice_parameters)
         phase_from_cif.set_two_theta_peaks(
             self.phase_settings, self.phase_data)
-        # peak_masking.set_masked_arrays(self.phase_settings,
-        #     RietveldPhases.two_theta)
-        self.set_two_theta_peaks_masked_arrays()
+        self.profile.set_two_theta_peaks_masked_arrays()
 
     def update_weighted_intensities(self):
         if self.phase_settings["preferred_orientation"]:
@@ -491,43 +461,26 @@ class RietveldPhases(object):
             )
             self.set_weighted_intensity_masked_arrays()
 
-    def eta_polynomial(self):
-        r""" Returns a numpy array populated by the values of the eta
-        polynomial, :math:`\eta(2\theta)`, with input parameters :math:`\eta_i`
-        stored in the class variable ``RietveldPhases.eta``:
-
-        .. math:: P(2\theta) = \sum_{i=0}^{M} \eta_i (2\theta)^i
-
-        where *M* is the length of the numpy array ``RietveldPhases.eta``.
-
-        :param np.array two_theta: a list of :math:`(2\theta)` values
-        :return: the values of the eta polynomial at points in
-            ``two_theta``
-        :rtype: np.array
-
-        """
-        eta = self.phase_parameters.eta
-        return np.clip(np.dot(
-            eta, RietveldPhases.two_theta_powers[:len(eta), :]), 0.0, 1.0)
-
     def phase_profile(self):
         self.update_param_arrays()
         # print "called phase_profile()", inspect.stack()[1][3]
-        omegaUVW_squareds = np.abs(
-            self.phase_parameters.cagliotti_u*self.tan_two_theta_peaks_sq_masked
-            +self.phase_parameters.cagliotti_v*self.tan_two_theta_peaks_masked
-            +self.phase_parameters.cagliotti_w)
-        two_theta_all_squared = (
-            self.two_theta_masked - self.two_theta_offset_masked
-            - self.two_theta_peaks_masked)**2
-        two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds
+        # omegaUVW_squareds = np.abs(
+        #     self.phase_parameters.cagliotti_u*self.tan_two_theta_peaks_sq_masked
+        #     +self.phase_parameters.cagliotti_v*self.tan_two_theta_peaks_masked
+        #     +self.phase_parameters.cagliotti_w)
+        # two_theta_all_squared = (
+        #     self.two_theta_masked - self.two_theta_offset_masked
+        #     - self.two_theta_peaks_masked)**2
+        # two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds
 
-        result = np.zeros(self.masks.shape)
-        result[self.masks] = (
+        result = np.zeros(self.profile.masks.shape)
+        result[self.profile.masks] = (
             self.phase_parameters.scale
             *self.weighted_intensities_masked
             *self.lp_factors_masked
-            *self.profile(two_thetabar_squared, self.eta_masked)
+            *self.profile.profile(
+                self.phase_parameters.peak_parameters,
+                RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask])
             # / omegaUVW_squareds
             )
 
@@ -597,6 +550,9 @@ class RietveldPhases(object):
         phase_dict['uc_mask'] = self.phase_settings['uc_mask']
         phase_dict['composition_by_weight'] = \
             self.phase_settings['composition_by_weight']
+        if self.phase_settings['preferred_orientation']:
+            for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
+                phase_dict[key] = self.phase_settings[key]
         # lattice_parameters = []
         # for param in unit_cell.unit_cell_parameter_gen(
         #         self.phase_settings, np.ones(6, dtype=bool)):
@@ -615,6 +571,7 @@ class RietveldPhases(object):
 
     def as_dict(self):
         d = self.phase_parameters.as_dict()
+        print(d)
         self.update_phase_info(d)
         return d
 
@@ -628,4 +585,5 @@ if __name__ == '__main__':
     prof = phase.phase_profile() + RietveldPhases.background_polynomial()
     prof_grad = phase.phase_profile_grad(
         np.ones(len(phase.phase_x)+1, dtype=bool))
-    print (np.sum(prof_grad, axis=1))
+    print(np.sum(prof_grad, axis=1))
+    print(phase.as_dict()['peak_parameters'])

@@ -77,7 +77,7 @@ class RietveldServerTestCase(unittest.TestCase):
             self.proto.refinery_model['wavelength'],
             self.proto.refinery_model['wavelength_model']
         )
-        for x, y, exp  in zip(
+        for x, y, exp in zip(
                 self.proto.refinery_model['wavelength_c'],
                 self.proto.phase_list[0].phase_settings['wavelengths'],
                 exp_wavelengths):

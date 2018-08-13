@@ -163,11 +163,5 @@ def set_two_theta_peaks(phase_settings, phase_data):
         unit_cell.two_theta(f_miller_set.indices(), wavelengths[-1], deg=True,
                                  ).as_numpy_array()[d_mask]
         ))
-    two_theta_peaks.shape = (two_theta_peaks.shape[0], 1)
-
-    tan_two_theta_peaks = np.tan(np.pi/360.0*two_theta_peaks)
-    tan_two_theta_peaks.shape = (tan_two_theta_peaks.shape[0], 1)
-    #TODO: use [:,np.newaxis] instead
-
-    phase_data["two_theta_peaks"] = two_theta_peaks
-    phase_data["tan_two_theta_peaks"] = tan_two_theta_peaks
+    # two_theta_peaks.shape = (two_theta_peaks.shape[0], 1)
+    phase_data["two_theta_peaks"] = two_theta_peaks[:, np.newaxis]

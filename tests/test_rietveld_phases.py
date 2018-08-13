@@ -11,10 +11,11 @@ import src.rietveld_phases as rp
 import src.phase_parameters as pp
 from src.rietveld_phases import RietveldPhases as Rp
 from src.rietveld_refinery import RietveldRefinery
+import src.profiles as profiles
 
 import src.cctbx_dep.target_wavelengths
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def set_profile():
     return Rp.set_profile(
     r"./data/profiles/Jade-Al2O3-Sim.xye", number_of_columns=2)
@@ -43,11 +44,8 @@ def test_global_parameters_exist():
 def test_parameters_exist(test_phase):
     tp_dict = test_phase.phase_parameters.__dict__
     print(tp_dict.keys())
-    assert 'U' in tp_dict
-    assert 'V' in tp_dict
-    assert 'W' in tp_dict
     assert 'scale' in tp_dict
-    assert 'eta' in tp_dict
+    assert 'peak_parameters' in tp_dict
     assert 'lattice_parameters' in tp_dict
 
 def test_set_bkgd_order(test_phase):
@@ -78,20 +76,13 @@ def test_background_polynomial():
         np.zeros(len(Rp.two_theta),dtype=float)))
 
 def test_U_default(test_phase):
-    test_U = test_phase.phase_parameters.U
-    for x, y in zip(test_U, pp.DEFAULT_U):
+    test_U = [x for x in test_phase.profile][0]
+    for x, y in zip(test_U, test_phase.phase_parameters.parameters[1][0]):
         assert x == y
-    assert getattr(test_phase.phase_parameters, test_U[0]) == pp.DEFAULT_U[1]
+    assert getattr(test_phase.phase_parameters, 'peak_parameters')[0] \
+        == test_U[1]
 
-def test_set_vertical_offset(test_phase):
-    assert test_phase.phase_settings["vertical_offset"] == False
-    assert 'cos_theta' not in test_phase.__dict__
-    Rp.phase_settings["vertical_offset"] = True
-    Rp.set_profile(r"./data/profiles/Jade-Al2O3-Sim.xye")
-    assert 'cos_theta' in Rp.__dict__
-    assert np.isclose(Rp.cos_theta[-1],1/np.sqrt(2))
-
-def test_LP_intensity_scaling():
+def test_LP_intensity_scaling(set_profile):
     assert len(Rp.two_theta) == len(Rp.LP_intensity_scaling())
 
     two_theta = Rp.two_theta
@@ -131,7 +122,7 @@ def test_phase_param_gen(test_phase):
     count = 0
     for x in test_phase.phase_parameters.param_gen():
         count += 1
-    assert count == 6 + int(test_phase.phase_settings["preferred_orientation"])
+    assert count == 3 + int(test_phase.phase_settings["preferred_orientation"])
 
 def test_assemble_phase_x(test_phase):
     #assemble_phase_x() is called in RietveldPhases' __init__
@@ -144,27 +135,11 @@ def test_assemble_phase_x(test_phase):
     assert x == len(test_phase.phase_x) + 1
     assert x == len(test_phase.phase_mask)
 
-    assert str(type(test_phase.phase_parameters.cagliotti_u))[7:17] \
-        == 'numpy.ndar'
-    assert len(test_phase.phase_parameters.U) == 5
+    assert str(type(test_phase.phase_parameters.peak_parameters[0]))[7:18] \
+        == 'numpy.float'
+    assert len(test_phase.phase_parameters.parameters[1][0]) == 5
 
-    assert len(test_phase.phase_parameters.eta) \
-        == test_phase.phase_parameters.eta_order
     assert len(test_phase.phase_parameters.lattice_parameters) == 2
-
-def test_eta_polynomial(test_phase):
-    assert 'eta' in test_phase.phase_parameters.__dict__
-    test_phase.phase_parameters.set_eta_order(2)
-    test_phase.assemble_phase_x()
-    test_eta = np.array([0.5,0.005])
-    test_phase.phase_parameters.update_x(test_eta,
-        np.char.startswith(test_phase.phase_parameters.x['labels'], 'eta'),
-        apply_mask_to_input=False)
-    tmp = test_phase.eta_polynomial()
-    assert np.isclose(tmp[-1],test_eta[0]+Rp.two_theta[-1]*test_eta[1])
-    test_phase.phase_parameters.update_x(np.array([0.5,0]),
-        np.char.startswith(test_phase.phase_parameters.x['labels'], 'eta'),
-        apply_mask_to_input=False)
 
 def test_compute_relative_intensities(test_phase):
     tp_dict = test_phase.phase_data
@@ -216,3 +191,7 @@ def test_set_profile():
 def test_set_profile_empty_path():
     Rp.set_profile('')
     assert len(Rp.two_theta) == 1000
+
+def test_pref_or(test_phase):
+    for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
+        assert key in test_phase.phase_settings
