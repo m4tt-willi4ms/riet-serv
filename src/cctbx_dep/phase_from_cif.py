@@ -139,9 +139,12 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
     K_alpha_factors = phase_settings["K_alpha_factors"]
     # Assemble into a single array
     # self.two_theta_peaks = np.concatenate((two_thetas[0],two_thetas[1]))
-    weighted_intensities = np.concatenate(
-        (K_alpha_factors[0]*relative_intensities, \
-         K_alpha_factors[-1]*relative_intensities))
+    if len(K_alpha_factors) == 2:
+        weighted_intensities = np.concatenate(
+            (K_alpha_factors[0]*relative_intensities, \
+            K_alpha_factors[1]*relative_intensities))
+    elif len(K_alpha_factors) == 1:
+        weighted_intensities = K_alpha_factors[0]*relative_intensities
     weighted_intensities.shape = (weighted_intensities.shape[0], 1)
 
     phase_data["weighted_intensities"] = weighted_intensities
@@ -157,11 +160,18 @@ def set_two_theta_peaks(phase_settings, phase_data):
     wavelengths = phase_settings["wavelengths"]
     f_miller_set = phase_data["f_miller_set"]
     d_mask = phase_data["d_mask"]
-    two_theta_peaks = np.concatenate((
-        unit_cell.two_theta(f_miller_set.indices(), wavelengths[0], deg=True
-                                 ).as_numpy_array()[d_mask],
-        unit_cell.two_theta(f_miller_set.indices(), wavelengths[-1], deg=True,
-                                 ).as_numpy_array()[d_mask]
-        ))
+    if len(wavelengths) == 2:
+        two_theta_peaks = np.concatenate((
+            unit_cell.two_theta(
+                f_miller_set.indices(), wavelengths[0], deg=True
+                ).as_numpy_array()[d_mask],
+            unit_cell.two_theta(
+                f_miller_set.indices(), wavelengths[1], deg=True,
+                ).as_numpy_array()[d_mask]
+            ))
+    elif len(wavelengths) == 1:
+        two_theta_peaks = unit_cell.two_theta(
+            f_miller_set.indices(), wavelengths[0], deg=True
+            ).as_numpy_array()[d_mask]
     # two_theta_peaks.shape = (two_theta_peaks.shape[0], 1)
     phase_data["two_theta_peaks"] = two_theta_peaks[:, np.newaxis]

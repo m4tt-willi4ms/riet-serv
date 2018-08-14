@@ -16,7 +16,18 @@ class RietveldServerTestCase(unittest.TestCase):
         self.proto = RietveldServer()
         self.proto.makeConnection(self.tr)
         rc.load_json_samples()
-        self.samples = rc.SAMPLES
+        self.samples = rc.SAMPLES.copy()
+
+        ref_model_no_input_profile = json.loads(self.samples['refinery_model'])
+        ref_model_no_input_profile['input_data_path'] = ''
+        ref_model_no_input_profile = json.dumps(ref_model_no_input_profile)
+        self.samples['refinery_model_no_input'] = ref_model_no_input_profile
+
+        ref_model_no_kalpha2 = json.loads(self.samples['refinery_model'])
+        wavelengths = ref_model_no_kalpha2['wavelength_c']
+        ref_model_no_kalpha2['wavelength_c'] = [wavelengths[0], 0.0]
+        ref_model_no_kalpha2 = json.dumps(ref_model_no_kalpha2)
+        self.samples['refinery_model_no_kalpha2'] = ref_model_no_kalpha2
         # self.proto._set_global_parameters(
         #     json.loads(self.samples["global_parameters"]))
 
@@ -63,6 +74,7 @@ class RietveldServerTestCase(unittest.TestCase):
         self.proto.call_add_phase(self.samples['phase_parameters'])
 
     def test_update_refinery_model(self):
+        self.proto.call_initialize()
         self.proto.call_load_profile(
             self.samples['refinery_model'],
             self.samples['global_parameters'])
@@ -73,6 +85,8 @@ class RietveldServerTestCase(unittest.TestCase):
         assert reply == "True" + self.proto.split_character
         assert self.proto.refinery_model['refinement_method'] == 'trf'
         assert 'max_polynomial_degree' in self.proto.refinery_model
+        assert self.proto.phase_list[0].phase_settings['max_polynom_order'] == \
+            self.proto.refinery_model['max_polynomial_degree'] + 1
         exp_wavelengths = target_wavelengths.set_wavelength(
             self.proto.refinery_model['wavelength'],
             self.proto.refinery_model['wavelength_model']
@@ -84,20 +98,27 @@ class RietveldServerTestCase(unittest.TestCase):
             assert np.isclose(x, exp, rtol=1e-3)
             assert np.isclose(y, exp, rtol=1e-3)
 
+
     def test_update_refinery_model_no_phase_no_profile(self):
         self.proto.call_initialize()
-        ref_model = json.loads(self.samples['refinery_model'])
-        ref_model['input_data_path'] = ''
-        ref_model_no_input_profile = json.dumps(ref_model)
         self.tr.clear()
-        self.proto.call_update_refinery_model(ref_model_no_input_profile)
+        self.proto.call_update_refinery_model(
+            self.samples['refinery_model_no_input'])
         reply = self.tr.value().strip()
         #Should reply 'False' to indicate no plot_data available
         assert reply == "False" + self.proto.split_character
         assert len(RP.two_theta) == 1000
-        assert RP.I.size == 0 and RP.I is not None
+        assert RP.I is None
+        ref_model = json.loads(self.samples['refinery_model_no_input'])
         assert RP.phase_settings['max_polynom_order'] == \
             ref_model['max_polynomial_degree'] + 1
+
+    def test_remove_phase(self):
+        self.proto.call_initialize()
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+        self.proto.call_update_refinery_model(
+            self.samples['refinery_model_no_input'])
+        self.proto.call_get_plot_data()
 
     def test_update_refinery_model_change_roi_then_get_plot_data(self):
         self.proto.call_initialize()
@@ -106,7 +127,7 @@ class RietveldServerTestCase(unittest.TestCase):
             self.samples['global_parameters'])
         rm_changed_roi = json.loads(self.samples['refinery_model'])
         rm_changed_roi['two_theta_roi_window'] = [10, 20]
-        assert len(RP.two_theta) == 7249
+        assert len(RP.two_theta) == 7250
         self.proto.call_update_refinery_model(json.dumps(rm_changed_roi))
         assert len(RP.two_theta) == 501
         self.tr.clear()
@@ -160,3 +181,16 @@ class RietveldServerTestCase(unittest.TestCase):
         # self.proto.call_start_refine(self.samples['refinery_model']
         #     self.samples['rietveld_client'])
         self._check_single_phase_no_profile()
+
+    def test_update_refinery_model_no_kalpha2(self):
+        self.proto.call_initialize()
+        self.proto.call_update_refinery_model(
+            self.samples['refinery_model_no_kalpha2'])
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+
+    def test_start_refine(self):
+        self.proto.call_initialize()
+        self.proto.call_update_refinery_model(self.samples['refinery_model'])
+        self.proto.call_add_phase(self.samples['phase_parameters'])
+        self.proto.call_start_refine(
+            self.samples['refinery_model'], self.samples['rietveld_state_pp'])

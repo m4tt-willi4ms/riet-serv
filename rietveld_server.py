@@ -75,13 +75,14 @@ server"""
             profile_path,
             min_two_theta=min_two_theta,
             max_two_theta=max_two_theta,
-            lines_to_strip_at_tof=5,
             )
+
         RietveldServer.wavelengths = \
             RietveldServer.refinery_model["wavelength_c"]
         if np.isclose(RietveldServer.wavelengths[-1], 0.0):
             RietveldServer.wavelengths = [RietveldServer.wavelengths[0]]
         rp.RietveldPhases.set_wavelengths(RietveldServer.wavelengths)
+
         rp.RietveldPhases.phase_settings['max_polynom_order'] = \
             RietveldServer.refinery_model['max_polynomial_degree'] + 1
         if RietveldServer.phase_list is not None:
@@ -95,11 +96,10 @@ server"""
 
     def _bkgd_refine(self):
         if rp.RietveldPhases.I is not None:
-            if rp.RietveldPhases.I.size != 0:
-                bkgd_refinery = rr.RietveldRefinery(
-                    RietveldServer.phase_list, bkgd_refine=True)
-                bkgd_refinery.minimize()
-                RietveldServer.plotdata = bkgd_refinery.get_plot_data()
+            bkgd_refinery = rr.RietveldRefinery(
+                RietveldServer.phase_list, bkgd_refine=True)
+            bkgd_refinery.minimize()
+            RietveldServer.plotdata = bkgd_refinery.get_plot_data()
 
     def call_load_profile(self, refinery_model_string, global_parameters):
         try:
@@ -157,7 +157,8 @@ PhaseParameters object in json-serialized form.
             # t0 = time.time()
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict)
-            self._bkgd_refine()
+            if rp.RietveldPhases.I is not None:
+                self._bkgd_refine()
             new_phase = RietveldServer.phase_list[-1].as_dict()
             self.sendLine(json.dumps(new_phase))
             # t1 = time.time()
@@ -248,7 +249,7 @@ verify that the refinery model has been successfully updated.
         """
         try:
             self._set_refinery_model(json.loads(refinery_model))
-            if not RietveldServer.phase_list and rp.RietveldPhases.I.size == 0:
+            if not RietveldServer.phase_list and rp.RietveldPhases.I is None:
                 self.sendLine(str(False) + self.split_character)
             else:
                 self.sendLine(str(True) + self.split_character)

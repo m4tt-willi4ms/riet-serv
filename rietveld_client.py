@@ -16,6 +16,7 @@ SAMPLES = {
     'global_parameters': None,
     'phase_parameters': None,
     'rietveld_state': None,
+    'rietveld_state_pp': None,
 }
 
 def get_sample_path(key):

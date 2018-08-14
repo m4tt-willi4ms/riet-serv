@@ -1,0 +1,385 @@
+{
+    "rietveld_data": {
+        "two_thetas": [],
+        "intensities": [],
+        "errors": []
+    },
+    "global_state": {
+        "bkgd": [
+            {
+                "name": "bkgd_0",
+                "round": 1,
+                "used": true,
+                "value": 0.0,
+                "uround": [
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "l_limit": "-Infinity",
+                "u_limit": "Infinity"
+            },
+            {
+                "name": "bkgd_1",
+                "round": 1,
+                "used": true,
+                "value": 0.0,
+                "uround": [
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "l_limit": "-Infinity",
+                "u_limit": "Infinity"
+            },
+            {
+                "name": "bkgd_2",
+                "round": 1,
+                "used": true,
+                "value": 0.0,
+                "uround": [
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "l_limit": "-Infinity",
+                "u_limit": "Infinity"
+            },
+            {
+                "name": "bkgd_3",
+                "round": 1,
+                "used": true,
+                "value": 0.0,
+                "uround": [
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "l_limit": "-Infinity",
+                "u_limit": "Infinity"
+            }
+        ],
+        "two_theta_offset": {
+            "name": "two_theta_offset",
+            "round": 1,
+            "used": false,
+            "value": 0.0,
+            "uround": [
+                false,
+                true,
+                true,
+                true,
+                true
+            ],
+            "l_limit": -0.1,
+            "u_limit": 0.1
+        },
+        "vertical_offset": true
+    },
+    "phase_state": [
+        {
+            "lattice_parameter_tolerances": [
+                0.01,
+                0.01,
+                0.01,
+                0.01,
+                0.01,
+                0.01
+            ],
+            "uc_mask": [
+                true,
+                false,
+                true,
+                false,
+                false,
+                false
+            ],
+            "cif_path": ".\\data\\cifs\\round-robin\\al2o3_73724.cif",
+            "phase_name": "al2o3_73724.cif",
+            "peak_model": "march_dollase",
+            "scale": {
+                "name": "scale",
+                "round": 1,
+                "used": false,
+                "value": 1.0,
+                "uround": [
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "l_limit": 0.00001,
+                "u_limit": "Infinity"
+            },
+            "peak_parameters": [
+                {
+                    "name": "pvg_U",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -0.1,
+                    "u_limit": 0.1
+                },
+                {
+                    "name": "pvg_V",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -0.1,
+                    "u_limit": 0.1
+                },
+                {
+                    "name": "pvg_W",
+                    "round": 1,
+                    "used": true,
+                    "value": 0.001,
+                    "uround": [
+                        false,
+                        false,
+                        true,
+                        true,
+                        true
+                    ],
+                    "l_limit": 0.000001,
+                    "u_limit": 1.0
+                },
+                {
+                    "name": "pvg_P",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -0.1,
+                    "u_limit": 0.1
+                },
+                {
+                    "name": "pvl_X",
+                    "round": 1,
+                    "used": false,
+                    "value": 1.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": 0.001,
+                    "u_limit": 100.0
+                },
+                {
+                    "name": "pvl_Y",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -0.1,
+                    "u_limit": 0.1
+                },
+                {
+                    "name": "eta_0",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        true,
+                        true,
+                        true,
+                        true
+                    ],
+                    "l_limit": 0.0,
+                    "u_limit": 1.0
+                },
+                {
+                    "name": "eta_1",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": 0.0,
+                    "u_limit": 1.0
+                },
+                {
+                    "name": "eta_2",
+                    "round": 1,
+                    "used": false,
+                    "value": 0.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": 0.0,
+                    "u_limit": 1.0
+                }
+            ],
+            "lattice_parameters": [
+                {
+                    "name": "lattice_parameters_0",
+                    "round": 1,
+                    "used": false,
+                    "value": 4.754,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -3.40282347E+38,
+                    "u_limit": 3.40282347E+38
+                },
+                {
+                    "name": "lattice_parameters_1",
+                    "round": 1,
+                    "used": false,
+                    "value": 4.754,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -3.40282347E+38,
+                    "u_limit": 3.40282347E+38
+                },
+                {
+                    "name": "lattice_parameters_2",
+                    "round": 1,
+                    "used": false,
+                    "value": 12.982,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -3.40282347E+38,
+                    "u_limit": 3.40282347E+38
+                },
+                {
+                    "name": "lattice_parameters_3",
+                    "round": 1,
+                    "used": false,
+                    "value": 90.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -3.40282347E+38,
+                    "u_limit": 3.40282347E+38
+                },
+                {
+                    "name": "lattice_parameters_4",
+                    "round": 1,
+                    "used": false,
+                    "value": 90.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -3.40282347E+38,
+                    "u_limit": 3.40282347E+38
+                },
+                {
+                    "name": "lattice_parameters_5",
+                    "round": 1,
+                    "used": false,
+                    "value": 120.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": -3.40282347E+38,
+                    "u_limit": 3.40282347E+38
+                }
+            ],
+            "composition_by_weight": 0.0,
+            "pref_orient_method": "march_dollase",
+            "pref_orient_hkl": [
+                1,
+                0,
+                0
+            ],
+            "pref_orient_ell": 1,
+            "pref_orient": [
+                {
+                    "name": "pref_or_0",
+                    "round": 1,
+                    "used": false,
+                    "value": 1.0,
+                    "uround": [
+                        false,
+                        false,
+                        false,
+                        false,
+                        false
+                    ],
+                    "l_limit": 0.000001,
+                    "u_limit": 2.0
+                }
+            ]
+        }
+    ],
+    "num_params_refined": 0,
+    "goodness_of_fit": 0.0,
+    "r_wp": 0.0,
+    "time_elapsed": 0.0,
+    "display_summary": "",
+    "return_message": ""
+}

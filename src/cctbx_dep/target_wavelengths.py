@@ -16,7 +16,7 @@ for w in wavelengths.characteristic_iterator():
 
 TARGETS = tuple(set([label[0:2] for label, val in WAVELENGTHS_DICT.items()]))
 
-K_ALPHA_FACTORS = [1.0, 0.48]
+K_ALPHA_FACTORS = [1.0, 0.502]
 
 def set_wavelength(
         target='Cu', wavelength_model=0, custom_wavelength=None):

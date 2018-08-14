@@ -165,17 +165,23 @@ class RietveldPhases(object):
                         I.append(float(Itmp))
                         sigma.append(float(sigmatmp))
                     two_theta.append(float(two_thetatmp))
-        cls.two_theta = np.array(two_theta)
-        cls.I = np.array(I)
-        cls.sigma = np.array(sigma)
 
-        min_max_mask = np.logical_and(cls.two_theta >= min_two_theta,
-                                      cls.two_theta <= max_two_theta)
-        cls.I = cls.I[min_max_mask]
-        cls.sigma = cls.sigma[min_max_mask]
-        cls.two_theta = cls.two_theta[min_max_mask]
+            cls.two_theta = np.array(two_theta)
+            cls.I = np.array(I)
+            cls.sigma = np.array(sigma)
 
-        cls.set_two_theta_powers_and_limits()
+            min_max_mask = np.logical_and(cls.two_theta >= min_two_theta,
+                                        cls.two_theta <= max_two_theta)
+            cls.I = cls.I[min_max_mask]
+            cls.sigma = cls.sigma[min_max_mask]
+            cls.two_theta = cls.two_theta[min_max_mask]
+        else:
+            cls.two_theta = None
+            cls.I = None
+            cls.sigma = None
+
+        cls.set_two_theta_powers_and_limits(
+            two_theta_limits=[min_two_theta, max_two_theta])
         cls.set_wavelength(target=target, wavelength_model=wavelength_model)
 
     @classmethod
@@ -193,7 +199,12 @@ class RietveldPhases(object):
             phase_settings = cls.phase_settings
 
         phase_settings["wavelengths"] = wavelengths
-        phase_settings["K_alpha_factors"] = target_wavelengths.K_ALPHA_FACTORS
+        if len(wavelengths) == 2:
+            phase_settings["K_alpha_factors"] = \
+                target_wavelengths.K_ALPHA_FACTORS
+        elif len(wavelengths) == 1:
+            phase_settings["K_alpha_factors"] = \
+                [target_wavelengths.K_ALPHA_FACTORS[0]]
         if cls.two_theta is not None:
             cls._set_dmin_dmax(phase_settings)
 
@@ -207,13 +218,11 @@ class RietveldPhases(object):
 
     @classmethod
     def set_two_theta_powers_and_limits(cls, phase_settings=None,
-            two_theta_limits=None):
+            two_theta_limits=[0, 180]):
         if phase_settings is None:
             phase_settings = cls.phase_settings
         if cls.two_theta is None \
                 or cls.two_theta is not None and cls.two_theta.size == 0:
-            if two_theta_limits is None:
-                two_theta_limits = [0, 180]
             RietveldPhases.two_theta = np.clip(
                 DEFAULT_TWO_THETAS, two_theta_limits[0], two_theta_limits[-1])
         phase_settings["min_two_theta"] = cls.two_theta[0]
@@ -314,7 +323,7 @@ class RietveldPhases(object):
                  wavelengths=None,
                  profile='PV',
                  phase_parameter_dict=None,
-                 two_theta_limits=None,
+                 two_theta_limits=[0, 180],
                  freeze_scale=False,
                 ):
 
@@ -538,7 +547,6 @@ class RietveldPhases(object):
 
     def as_dict(self):
         d = self.phase_parameters.as_dict()
-        print(d)
         self.update_phase_info(d)
         return d
 

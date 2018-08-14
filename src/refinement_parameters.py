@@ -15,8 +15,7 @@ ignored_keys = ("vertical_offset", "uc_mask", "composition_by_weight",
                 "lattice_parameter_tolerances", "cif_path", "phase_name",
                 "peak_model",
                 "pref_orient_method", "pref_orient_hkl", "pref_orient_ell")
-list_parameters = ("lattice_parameters", "eta", "bkgd", "pref_or",
-                   "peak_parameters")
+list_parameters = ("lattice_parameters", "bkgd", "pref_or", "peak_parameters")
 #TODO: move to children
 
 def validate_order(order, max_polynom_order=5):

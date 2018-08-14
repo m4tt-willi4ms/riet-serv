@@ -1,1 +1,26 @@
-{"input_data_path":".\\data\\\\profiles\\\\round-robin\\\\CPD-1A.xye","counts_per_second":false,"two_theta_roi_window":[0.0,180.0],"wavelength":"Cu","wavelength_c":[1.540593,1.544427],"wavelength_model":0,"goniometer_radius":0.0,"remove_low_weight_phases":false,"low_weight_percent_cutoff":0.0,"max_polynomial_degree":11,"polynomial_degree":3,"peak_model":"PV","refinement_method":"trf","zero_offset":0.0,"max_number_of_rounds":5,"convergence_factor":5.0,"number_of_iterations":150,"sample_displacement":0.0}
+{
+    "input_data_path": ".\\data\\\\profiles\\\\round-robin\\\\CPD-1A.xye",
+    "counts_per_second": false,
+    "two_theta_roi_window": [
+        0.0,
+        180.0
+    ],
+    "wavelength": "Cu",
+    "wavelength_c": [
+        1.540593,
+        1.544427
+    ],
+    "wavelength_model": 0,
+    "goniometer_radius": 0.0,
+    "remove_low_weight_phases": false,
+    "low_weight_percent_cutoff": 0.0,
+    "max_polynomial_degree": 11,
+    "polynomial_degree": 3,
+    "peak_model": "PV",
+    "refinement_method": "trf",
+    "zero_offset": 0.0,
+    "max_number_of_rounds": 5,
+    "convergence_factor": 5.0,
+    "number_of_iterations": 150,
+    "sample_displacement": 0.0
+}
