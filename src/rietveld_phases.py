@@ -464,14 +464,6 @@ class RietveldPhases(object):
     def phase_profile(self):
         self.update_param_arrays()
         # print "called phase_profile()", inspect.stack()[1][3]
-        # omegaUVW_squareds = np.abs(
-        #     self.phase_parameters.cagliotti_u*self.tan_two_theta_peaks_sq_masked
-        #     +self.phase_parameters.cagliotti_v*self.tan_two_theta_peaks_masked
-        #     +self.phase_parameters.cagliotti_w)
-        # two_theta_all_squared = (
-        #     self.two_theta_masked - self.two_theta_offset_masked
-        #     - self.two_theta_peaks_masked)**2
-        # two_thetabar_squared = two_theta_all_squared/omegaUVW_squareds
 
         result = np.zeros(self.profile.masks.shape)
         result[self.profile.masks] = (
@@ -481,7 +473,6 @@ class RietveldPhases(object):
             *self.profile.profile(
                 self.phase_parameters.peak_parameters,
                 RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask])
-            # / omegaUVW_squareds
             )
 
         self.phase_profile_state = np.sum(result, axis=0)
@@ -506,21 +497,11 @@ class RietveldPhases(object):
         self.phase_parameters.update_x(
             global_and_phase_x[self.phase_mask],
             mask[self.phase_mask])
-        # eta_mask = np.char.startswith(self.phase_parameters.x['labels'], 'eta')
-        # scale_mask = np.char.startswith(self.phase_parameters.x['labels'], 'sca')
-        # RietveldPhases.global_x[RietveldPhases.global_x_no_bkgd_mask] \
-        #     = self.global_and_phase_x[self.global_mask_no_bkgd]
-        # self.phase_x = \
-        #     self.global_and_phase_x[self.phase_mask]
 
     def phase_profile_grad(self, global_and_phase_mask, epsilon=1e-6):
         num_params = np.sum(global_and_phase_mask)
         result = np.zeros((num_params, len(RietveldPhases.two_theta)))
         epsilons = epsilon*np.identity(num_params)
-
-        # global_x_no_bkgd = RietveldPhases.global_x \
-        #     [RietveldPhases.global_x_no_bkgd_mask]
-        # global_and_phase_x = np.hstack((global_x_no_bkgd, self.phase_x))
 
         prev_state = np.copy(self.phase_profile_state)
 
@@ -529,7 +510,6 @@ class RietveldPhases(object):
             result[i, :] = (self.phase_profile()-prev_state)/epsilon
             self.increment_global_and_phase_x(-eps, global_and_phase_mask)
 
-        # print np.sum(result, axis=1)
         return result
 
     def update_phase_info(self, phase_dict):
@@ -553,19 +533,6 @@ class RietveldPhases(object):
         if self.phase_settings['preferred_orientation']:
             for key in ('pref_orient_hkl', 'pref_orient_method', 'pref_orient_ell'):
                 phase_dict[key] = self.phase_settings[key]
-        # lattice_parameters = []
-        # for param in unit_cell.unit_cell_parameter_gen(
-        #         self.phase_settings, np.ones(6, dtype=bool)):
-        #     d = {}
-        #     d['name'] = param[0]
-        #     d['value'] = param[1]
-        #     d['l_limit'] = param[3]
-        #     d['u_limit'] = param[4]
-        #     d['used'] = bool(np.any(np.array(param[2], dtype=bool)))
-        #     d['uround'] = [bool(x) for x in np.nditer(param[2])]
-        #     d['round'] = 2
-        #     lattice_parameters.append(d)
-        # phase_dict['lattice_parameters'] = lattice_parameters
         phase_dict['lattice_parameter_tolerances'] = \
             self.phase_settings['lattice_dev']
 

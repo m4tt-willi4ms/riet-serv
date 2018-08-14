@@ -82,9 +82,13 @@ server"""
         if np.isclose(RietveldServer.wavelengths[-1], 0.0):
             RietveldServer.wavelengths = [RietveldServer.wavelengths[0]]
         rp.RietveldPhases.set_wavelengths(RietveldServer.wavelengths)
+        rp.RietveldPhases.phase_settings['max_polynom_order'] = \
+            RietveldServer.refinery_model['max_polynomial_degree'] + 1
         if RietveldServer.phase_list is not None:
             for i, phase in enumerate(RietveldServer.phase_list):
-                phase = self._add_phase(phase.as_dict(), i)
+                self._add_phase(phase.as_dict(), i)
+                phase.phase_settings['max_polynom_order'] = \
+                    RietveldServer.refinery_model['max_polynomial_degree'] + 1
 
     def _set_global_parameters(self, global_parameters):
         rp.RietveldPhases.set_global_parameters(global_parameters)

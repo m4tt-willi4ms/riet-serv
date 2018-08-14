@@ -96,6 +96,8 @@ class RietveldServerTestCase(unittest.TestCase):
         assert reply == "False" + self.proto.split_character
         assert len(RP.two_theta) == 1000
         assert RP.I.size == 0 and RP.I is not None
+        assert RP.phase_settings['max_polynom_order'] == \
+            ref_model['max_polynomial_degree'] + 1
 
     def test_update_refinery_model_change_roi_then_get_plot_data(self):
         self.proto.call_initialize()
