@@ -26,6 +26,7 @@ server"""
     # phase_dict_list = []
     refinery_model = None
     rietveld_refinery = None
+    global_parameters = None
     rietveld_history = []
     plot_data = None
     count = 0
@@ -55,7 +56,7 @@ server"""
             self.sendLine(b'Error: no such command.')
         else:
             try:
-                # print(command, args)
+                print(command, args)
                 method(*args)
             except Exception as e:
                 # pass
@@ -92,10 +93,12 @@ server"""
                     RietveldServer.refinery_model['max_polynomial_degree'] + 1
 
     def _set_global_parameters(self, global_parameters):
+        RietveldServer.global_parameters = global_parameters
         rp.RietveldPhases.set_global_parameters(global_parameters)
 
     def _bkgd_refine(self):
-        if rp.RietveldPhases.I is not None:
+        if RietveldServer.global_parameters is not None \
+                and rp.RietveldPhases.I is not None:
             bkgd_refinery = rr.RietveldRefinery(
                 RietveldServer.phase_list, bkgd_refine=True)
             bkgd_refinery.minimize()
@@ -157,8 +160,7 @@ PhaseParameters object in json-serialized form.
             # t0 = time.time()
             phase_dict = json.loads(phase_parameters_JSON)
             self._add_phase(phase_dict)
-            if rp.RietveldPhases.I is not None:
-                self._bkgd_refine()
+            self._bkgd_refine()
             new_phase = RietveldServer.phase_list[-1].as_dict()
             self.sendLine(json.dumps(new_phase))
             # t1 = time.time()

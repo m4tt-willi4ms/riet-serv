@@ -16,6 +16,7 @@ ignored_keys = ("vertical_offset", "uc_mask", "composition_by_weight",
                 "peak_model",
                 "pref_orient_method", "pref_orient_hkl", "pref_orient_ell")
 list_parameters = ("lattice_parameters", "bkgd", "pref_or", "peak_parameters")
+preserve_urounds = ("peak_parameters")
 #TODO: move to children
 
 def validate_order(order, max_polynom_order=5):
@@ -82,14 +83,15 @@ def as_dict(val):
         result = get_dict_from_param(val)
     return result
 
-def as_param(val):
+def as_param(val, copy_uround=True):
     result = None
     if isinstance(val, list):
         result = []
         uround_0 = val[0]['uround']
         for item in val:
             assert isinstance(item, dict)
-            item['uround'] = uround_0
+            if copy_uround:
+                item['uround'] = uround_0
             result.append(get_param_from_dict(item))
     elif isinstance(val, dict):
         result = get_param_from_dict(val)
@@ -209,7 +211,9 @@ class RefinementParameters(object):
     def from_dict(self, d):
 
         def param_gen():
-            d_filtered = { k: as_param(d[k]) for k in d.keys()
+
+            d_filtered = {
+                k: as_param(d[k], k not in preserve_urounds) for k in d.keys()
                 if k not in ignored_keys}
             return d_filtered.iteritems()
 
