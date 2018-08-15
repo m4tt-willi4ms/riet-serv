@@ -39,10 +39,11 @@ def _compute_md_coefficients(sg, uc_rec, h0, h):
         pass
 
 def pref_orient_function(r, sym_equiv_angles):
-    tmp = np.apply_along_axis(
-        lambda theta, r: np.power(
-            1/r + (r**2-1/r)*np.cos(np.pi/180*theta)**2, -1.5),
-        0, sym_equiv_angles, r)
+    # tmp = np.apply_along_axis(
+    #     lambda theta, r: np.power(
+    #         1/r + (r**2-1/r)*np.cos(np.pi/180*theta)**2, -1.5),
+    #     0, sym_equiv_angles, r)
+    tmp = np.power(1/r + (r**2-1/r)*np.cos(np.pi/180*sym_equiv_angles)**2, -1.5)
     return np.sum(tmp) / len(sym_equiv_angles)
 
 def update_pref_orient_factors(phase_settings, phase_data, pref_or):
