@@ -42,19 +42,19 @@ def test_get_sym_equiv_angles(phase_settings, phase_data):
         assert len(angle) == multiplicities[i]
 
 def test_pref_orient_function():
-    val1 = po.pref_orient_function(1., [0.])
+    val1 = po.pref_orient_function(1., np.array([1.]))
     assert np.isclose(val1, 1.0)
-    val2 = po.pref_orient_function(1.5, [0.])
+    val2 = po.pref_orient_function(1.5, np.array([1.]))
     assert np.isclose(val2, np.power(1.5**2, -1.5))
-    val3 = po.pref_orient_function(.7, np.array([20., 30.]))
+    val3 = po.pref_orient_function(.7, np.array([0.7, 0.4]))
     assert np.isclose(val3, (
-        np.power(1/.7+(.7**2-1/.7)*np.cos(np.pi/180*20.)**2, -1.5)
-        + np.power(1/.7+(.7**2-1/.7)*np.cos(np.pi/180*30.)**2, -1.5))/2)
+        np.power(1/.7+(.7**2-1/.7)*0.7, -1.5)
+        + np.power(1/.7+(.7**2-1/.7)*0.4, -1.5))/2)
 
 def test_update_pref_orient_factors(phase_settings, phase_data):
     r1 = [1.2]
     comp = po.update_pref_orient_factors(phase_settings, phase_data, r1)
-    for index, sea in enumerate(phase_data['sym_equiv_angles']):
+    for index, sea in enumerate(phase_data['md_cos_factors']):
         assert np.isclose(comp[index], po.pref_orient_function(r1[0], sea))
 
 

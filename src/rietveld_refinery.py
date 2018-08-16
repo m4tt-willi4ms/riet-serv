@@ -326,6 +326,8 @@ class RietveldRefinery:
                     xtol=3e-16,
                     gtol=self.factr, #*2.2e-16,
                     x_scale='jac',
+                    verbose=2,
+                    tr_solver='exact',
                     max_nfev=self.maxiter*np.sum(self.mask),
                     bounds=(self.x_l_limits[self.mask], self.x_u_limits[self.mask]),
                     )
