@@ -82,12 +82,7 @@ class ProfileBase(object):
     def __iter__(self):
         raise NotImplementedError
 
-class PseudoVoigtProfile(ProfileBase):
-
-    def __init__(self, phase_settings, phase_data, two_theta, eta_order=3):
-        super(PseudoVoigtProfile, self).__init__(
-            phase_settings, phase_data, two_theta)
-        self.set_eta_order(eta_order)
+class PseudoVoigtProfileBase(ProfileBase):
 
     def __iter__(self):
         yield ('pp_U', 0.00, [False], -0.1, 0.1)
@@ -96,7 +91,32 @@ class PseudoVoigtProfile(ProfileBase):
         yield ('pp_P', 0.00, [False], -0.1, 0.1)
         yield ('pp_X', 0.01, [False], 0.0001, 100)
         yield ('pp_Y', 0.0, [False], -0.1, 0.1)
-        limit = 0.01
+
+    def calc_gamma_g(self, gauss_params):
+        return np.abs(
+            gauss_params[0]*self.tan_two_theta_peaks_sq_masked \
+            + gauss_params[1]*self.tan_two_theta_peaks_masked \
+            + gauss_params[2] \
+            + gauss_params[3]*self.cos_two_theta_peaks_inv_sq_masked
+        )
+
+    def calc_gamma_l(self, lorentz_params):
+        return np.abs(
+            lorentz_params[0]*self.tan_two_theta_peaks_masked \
+            + lorentz_params[1]*self.cos_two_theta_peaks_inv_masked
+        )
+
+class PseudoVoigtProfile(PseudoVoigtProfileBase):
+
+    def __init__(self, phase_settings, phase_data, two_theta, eta_order=3):
+        super(PseudoVoigtProfile, self).__init__(
+            phase_settings, phase_data, two_theta)
+        self.set_eta_order(eta_order)
+
+    def __iter__(self):
+        for param in super(PseudoVoigtProfile, self).__iter__():
+            yield param
+        limit = 0.1
         n = 0
         while n < self.eta_order:
             if n == 0:
@@ -119,20 +139,6 @@ class PseudoVoigtProfile(ProfileBase):
                - self.two_theta_peaks_masked - offset))**2/gamma_l
         return eta/(1+x_squared_l)/SQRTLN2 + (1-eta)*np.exp2(-x_squared_g)
 
-    def calc_gamma_g(self, gauss_params):
-        return np.abs(
-            gauss_params[0]*self.tan_two_theta_peaks_sq_masked \
-            + gauss_params[1]*self.tan_two_theta_peaks_masked \
-            + gauss_params[2] \
-            + gauss_params[3]*self.cos_two_theta_peaks_inv_sq_masked
-        )
-
-    def calc_gamma_l(self, lorentz_params):
-        return np.abs(
-            lorentz_params[0]*self.tan_two_theta_peaks_masked \
-            + lorentz_params[1]*self.cos_two_theta_peaks_inv_masked
-        )
-
     def eta_polynomial(self, eta):
         return np.clip(np.dot(
             eta, self.two_theta_powers[:len(eta), :]), 0.0, 1.0)
@@ -147,9 +153,34 @@ class PseudoVoigtProfile(ProfileBase):
         else:
             self.eta_order = order
 
-    # self.eta_masked = peak_masking.get_masked_array(
-    # self.eta_polynomial(), dim, masks)
+class PseudoVoigtTCHProfile(PseudoVoigtProfileBase):
+    def calc_gamma_eta(self, gamma_g, gamma_l):
+        gamma = np.power(
+            np.power(gamma_g, 5)
+            + 2.69269 * np.power(gamma_g, 4) * gamma_l
+            + 2.42843 * np.power(gamma_g, 3) * np.power(gamma_l, 2)
+            + 4.47163 * np.power(gamma_g, 2) * np.power(gamma_l, 3)
+            + 0.07842 * gamma_g * np.power(gamma_l, 4)
+            + np.power(gamma_l, 5), 0.2)
+        gamma_l_ov_gamma = gamma_l/gamma
+        eta = (
+            1.366 * gamma_l_ov_gamma
+            - 0.47719 * np.power(gamma_l_ov_gamma, 2)
+            + 0.11116 * np.power(gamma_l_ov_gamma, 3))
+        return gamma, eta
+
+    def profile(self, phase_pp, global_pp):
+        gamma_g = self.calc_gamma_g(phase_pp[:4])
+        gamma_l = self.calc_gamma_l(phase_pp[4:6])
+        gamma, eta = self.calc_gamma_eta(gamma_g, gamma_l)
+        offset = self.calc_offset(global_pp[0])
+        x_squared = (
+            2*(self.two_theta_masked
+                - self.two_theta_peaks_masked - offset))**2/gamma
+        return eta/(1+x_squared)/SQRTLN2 + (1-eta)*np.exp2(-SQRTLN2*x_squared)
+
 
 PROFILE_CLASSES = {
     'PV': PseudoVoigtProfile,
+    'PV_TCH': PseudoVoigtTCHProfile,
 }
