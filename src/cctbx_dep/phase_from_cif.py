@@ -33,8 +33,6 @@ def load_cif(phase_settings):
             scatterer.scattering_type)
     structure.scattering_type_registry(table="n_gaussian") #,  "it1992",
         # "wk1995" "n_gaussian"\
-    wavelength = phase_settings["wavelengths"][0]
-    structure.set_inelastic_form_factors(wavelength, table="sasaki")
     phase_settings["structure"] = structure
     phase_settings["unit_cell"] = structure.unit_cell()
     phase_settings["crystal_system"] = structure.space_group().crystal_system()
@@ -76,6 +74,8 @@ def compute_relative_intensities(phase_settings, anomalous_flag=True):
     # Let's use scattering factors from the International Tables
     phase_data["f_miller_set"] = f_miller_set
 
+    wavelength = phase_settings["wavelengths"][0]
+    structure.set_inelastic_form_factors(wavelength, table="sasaki")
     f_calc = structure.structure_factors(
         d_min=d_min,
         anomalous_flag=anomalous_flag).f_calc().sort()
